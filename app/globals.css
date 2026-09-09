@@ -24,3 +24,44 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* =======================================================
+   BEERPONG SPORTS TEC
+   Global Landing Page Styles
+======================================================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #050708;
+  color: #f5f7f7;
+}
+
+::selection {
+  background: rgba(52, 211, 153, 0.25);
+  color: #ffffff;
+}
+
+/* Smooth transitions for interactive elements */
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better mobile text rendering */
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+/* Prevent horizontal overflow from decorative elements */
+
+body {
+  overflow-x: hidden;
+}
