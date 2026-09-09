@@ -15,6 +15,7 @@ const MAX_MATCHES = 16;
 export function PerformanceChart() {
   const [points, setPoints] = useState<MatchPoint[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,7 +26,7 @@ export function PerformanceChart() {
 
         if (!profile) {
           if (!cancelled) {
-            setPoints([]);
+            setLoggedIn(false);
             setLoading(false);
           }
 
@@ -76,6 +77,14 @@ export function PerformanceChart() {
     return (
       <div className="rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 text-center text-sm font-bold text-white/40 sm:p-7">
         Lade Verlauf …
+      </div>
+    );
+  }
+
+  if (!loggedIn) {
+    return (
+      <div className="rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 text-center text-sm font-bold text-white/50 sm:p-7">
+        Melde dich an, um deinen Trefferquote-Verlauf zu sehen.
       </div>
     );
   }

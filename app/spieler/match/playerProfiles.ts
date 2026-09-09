@@ -193,3 +193,31 @@ export async function getStatsResetTimestamps(): Promise<Map<string, string | nu
     (data ?? []).map((row) => [row.id as string, (row.stats_reset_at as string | null) ?? null]),
   );
 }
+
+/*
+ * --------------------------------------------------------------------------
+ * | REGISTRIERTE SPIELER ERMITTELN
+ * --------------------------------------------------------------------------
+ *
+ * "Registriert" heißt hier: die players-Zeile ist über user_id mit einem
+ * echten Supabase-Auth-Account verknüpft (siehe getOwnProfile). Gäste
+ * (per createPlayerProfile ohne Login angelegt) haben kein user_id.
+ * Wird genutzt, um Gäste aus öffentlichen Listen (Match-Historie,
+ * Spieler-Rangliste) auszublenden.
+ * --------------------------------------------------------------------------
+ */
+
+export async function getRegisteredPlayerIds(): Promise<Set<string>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("players")
+    .select("id, user_id")
+    .not("user_id", "is", null);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Set((data ?? []).map((row) => row.id as string));
+}

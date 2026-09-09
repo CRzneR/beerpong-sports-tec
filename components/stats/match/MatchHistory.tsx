@@ -1,40 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import { getSavedMatches } from "@/app/spieler/match/matchStorage";
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
+import { getRegisteredPlayerIds } from "@/app/spieler/match/playerProfiles";
 
 interface MatchHistoryProps {
   onSelectMatch?: (match: SavedMatch) => void;
 }
 
-/*
- * --------------------------------------------------------------------------
- * | MATCH-HISTORIE
- * --------------------------------------------------------------------------
- */
-
 export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
   const [matches, setMatches] = useState<SavedMatch[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
+    setMounted(true);
+
     /*
-     * FIX: getSavedMatches() ist async (Supabase-Anfrage) und wurde
-     * hier vorher synchron aufgerufen (`const matches =
-     * getSavedMatches();`), ohne useState/useEffect. Dadurch war
-     * `matches` ein Promise-Objekt statt eines Arrays, und
-     * `matches.length`/`matches.map(...)` sind fehlgeschlagen.
+     * FIX: getSavedMatches() ist jetzt async (Supabase-Anfrage),
+     * wurde hier aber ohne await aufgerufen. Dadurch landete ein
+     * Promise-Objekt statt eines Arrays im State, und
+     * `matches.map(...)` weiter unten ist mit
+     * "matches.map is not a function" abgestürzt.
      */
-    getSavedMatches()
-      .then((result) => {
-        if (!cancelled) {
-          setMatches(result);
+    Promise.all([getSavedMatches(), getRegisteredPlayerIds()])
+      .then(([result, registeredIds]) => {
+        if (cancelled) {
+          return;
         }
+
+        /*
+         * Nur Matches zeigen, an denen ausschließlich registrierte
+         * Spieler beteiligt waren - sobald auch nur ein Gast dabei
+         * war, verschwindet das komplette Match aus dieser Liste
+         * (nicht nur der Gast selbst, sonst würde die Anzeige -
+         * Sieger, Becher-Stand - keinen Sinn mehr ergeben).
+         */
+        const onlyRegistered = result.filter((match) =>
+          match.state.players.every((player) => registeredIds.has(player.id)),
+        );
+
+        setMatches(onlyRegistered);
       })
       .catch((err) => {
         console.error("Fehler beim Laden der Match-Historie:", err);
@@ -43,11 +52,6 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
           setError("Match-Historie konnte nicht geladen werden.");
           setMatches([]);
         }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
       });
 
     return () => {
@@ -55,7 +59,14 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
     };
   }, []);
 
-  if (loading) {
+  /*
+   * Server und erster Client-Render
+   * müssen exakt dieselbe Ansicht liefern.
+   *
+   * localStorage wird deshalb erst nach
+   * dem Mount im Browser gelesen.
+   */
+  if (!mounted) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#111419] p-6 text-center">
         <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
@@ -99,7 +110,7 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
         Match-Historie
       </div>
 
-      {matches.map((match: SavedMatch) => {
+      {matches.map((match) => {
         const state = match.state;
 
         const teamACupsRemaining = state.teamACups.filter((cup: { hit: any }) => !cup.hit).length;
@@ -117,7 +128,7 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
               w-full
               rounded-2xl
               border
-                border-white/10
+              border-white/10
               bg-[#111419]
               p-4
               text-left

@@ -15,6 +15,7 @@ type Summary = {
 export function PerformanceStats() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loggedIn, setLoggedIn] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +26,7 @@ export function PerformanceStats() {
 
         if (!profile) {
           if (!cancelled) {
+            setLoggedIn(false);
             setLoading(false);
           }
 
@@ -60,11 +62,27 @@ export function PerformanceStats() {
     };
   }, []);
 
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/40">
+        Lade Statistiken …
+      </div>
+    );
+  }
+
+  if (!loggedIn) {
+    return (
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/50">
+        Melde dich an, um deine Performance-Übersicht zu sehen.
+      </div>
+    );
+  }
+
   const stats = [
-    { value: loading ? "…" : String(summary?.matches ?? 0), label: "Matches" },
-    { value: loading ? "…" : `${summary?.winrate ?? 0}%`, label: "Winrate" },
-    { value: loading ? "…" : String(summary?.cupsRemoved ?? 0), label: "Becher" },
-    { value: loading ? "…" : String(summary?.wins ?? 0), label: "Siege" },
+    { value: String(summary?.matches ?? 0), label: "Matches" },
+    { value: `${summary?.winrate ?? 0}%`, label: "Winrate" },
+    { value: String(summary?.cupsRemoved ?? 0), label: "Becher" },
+    { value: String(summary?.wins ?? 0), label: "Siege" },
   ];
 
   return (
