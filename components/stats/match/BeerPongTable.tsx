@@ -26,12 +26,23 @@ interface BeerPongTableProps {
    */
   displayTeam?: "A" | "B" | "both";
 
+  /**
+   * Ist das Feld schmal (z. B. neben Score/Letzte Aktionen auf
+   * Mobile), statt die volle verfügbare Breite zu bekommen (Desktop-
+   * Spalte, Treffer-Overlay)? Steuert nur die BECHER-Formation
+   * (breiterer Prozent-Abstand, damit sich die Becher in der
+   * schmalen Spalte nicht überlappen) - nicht die Höhe/das
+   * Seitenverhältnis, das steuert der Aufrufer selbst über die
+   * umgebende Breite.
+   */
+  narrow?: boolean;
+
   onCupClick?: (cupId: number) => void;
 }
 
 /*
 |--------------------------------------------------------------------------
-| FORMATIONEN
+| FORMATIONEN (NORMALE BREITE, z. B. DESKTOP-SPALTE)
 |--------------------------------------------------------------------------
 |
 | Wichtig:
@@ -54,17 +65,6 @@ interface BeerPongTableProps {
 |
 */
 
-/*
- * 10 BECHER
- *
- * Team A:
- *
- * ● ● ● ●
- *  ● ● ●
- *   ● ●
- *    ●
- */
-
 const FORMATION_10_TOP = [
   { x: 35, y: 15 },
   { x: 45, y: 15 },
@@ -80,15 +80,6 @@ const FORMATION_10_TOP = [
 
   { x: 50, y: 47 },
 ];
-
-/*
- * Team B:
- *
- *    ●
- *   ● ●
- *  ● ● ●
- * ● ● ● ●
- */
 
 const FORMATION_10_BOTTOM = [
   { x: 50, y: 53 },
@@ -106,20 +97,6 @@ const FORMATION_10_BOTTOM = [
   { x: 65, y: 85 },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| 6ER FORMATION
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Team A
- *
- * ● ● ●
- *  ● ●
- *   ●
- */
-
 const FORMATION_6_TOP = [
   { x: 40, y: 19 },
   { x: 50, y: 19 },
@@ -130,14 +107,6 @@ const FORMATION_6_TOP = [
 
   { x: 50, y: 43 },
 ];
-
-/*
- * Team B
- *
- *   ●
- *  ● ●
- * ● ● ●
- */
 
 const FORMATION_6_BOTTOM = [
   { x: 50, y: 57 },
@@ -150,19 +119,6 @@ const FORMATION_6_BOTTOM = [
   { x: 60, y: 81 },
 ];
 
-/*
-|--------------------------------------------------------------------------
-| 3ER FORMATION
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Team A
- *
- * ● ●
- *  ●
- */
-
 const FORMATION_3_TOP = [
   { x: 45, y: 25 },
   { x: 55, y: 25 },
@@ -170,25 +126,12 @@ const FORMATION_3_TOP = [
   { x: 50, y: 40 },
 ];
 
-/*
- * Team B
- *
- *  ●
- * ● ●
- */
-
 const FORMATION_3_BOTTOM = [
   { x: 50, y: 60 },
 
   { x: 45, y: 75 },
   { x: 55, y: 75 },
 ];
-
-/*
-|--------------------------------------------------------------------------
-| 1ER FORMATION
-|--------------------------------------------------------------------------
-*/
 
 const FORMATION_1_TOP = {
   x: 50,
@@ -202,17 +145,13 @@ const FORMATION_1_BOTTOM = {
 
 /*
 |--------------------------------------------------------------------------
-| EINZEL-TEAM FORMATIONEN (KOMPAKT)
+| EINZEL-TEAM FORMATIONEN (KOMPAKT, TREFFER-OVERLAY)
 |--------------------------------------------------------------------------
 |
-| Wird nur EIN Team angezeigt (z. B. im Treffer-Overlay, wo nur die
-| gegnerischen Becher relevant sind), macht eine halbe, halbleere
-| Spielfeldhälfte keinen Sinn. Diese Formationen zentrieren dieselbe
-| Dreiecksform stattdessen über die volle Höhe der (kompakten) Box.
-|
-| Die x-Koordinaten bleiben identisch zu TOP/BOTTOM – nur die
-| y-Koordinaten sind neu über 15–85% verteilt, statt nur eine halbe
-| Feldhälfte (15–47 bzw. 53–85) zu nutzen.
+| Wird nur EIN Team angezeigt (Treffer-Overlay, wo nur die gegnerischen
+| Becher relevant sind), macht eine halbe, halbleere Spielfeldhälfte
+| keinen Sinn. Diese Formationen zentrieren dieselbe Dreiecksform
+| stattdessen über die volle Höhe der (kompakten) Box.
 |
 */
 
@@ -257,6 +196,98 @@ const FORMATION_1_SINGLE = {
 
 /*
 |--------------------------------------------------------------------------
+| SCHMALE FORMATIONEN (z. B. Feld neben Score/Letzte Aktionen, Mobile)
+|--------------------------------------------------------------------------
+|
+| Weiterhin Team A oben / Team B unten gestapelt (wie normal), aber mit
+| deutlich BREITEREM Prozent-Abstand zwischen den Bechern einer Reihe -
+| die normale Formation geht von einer relativ breiten Spalte aus
+| (Desktop, ~460-540px); in einer schmalen ~150-180px-Spalte würden
+| sich damit vor allem die 4er-Reihen (Team A oben, Team B unten)
+| überlappen. Hier wird bis zu ~80% der Breite genutzt statt ~30%.
+|
+*/
+
+const FORMATION_10_TOP_NARROW = [
+  { x: 10, y: 15 },
+  { x: 37, y: 15 },
+  { x: 63, y: 15 },
+  { x: 90, y: 15 },
+
+  { x: 20, y: 26 },
+  { x: 50, y: 26 },
+  { x: 80, y: 26 },
+
+  { x: 32, y: 37 },
+  { x: 68, y: 37 },
+
+  { x: 50, y: 47 },
+];
+
+const FORMATION_10_BOTTOM_NARROW = [
+  { x: 50, y: 53 },
+
+  { x: 32, y: 63 },
+  { x: 68, y: 63 },
+
+  { x: 20, y: 74 },
+  { x: 50, y: 74 },
+  { x: 80, y: 74 },
+
+  { x: 10, y: 85 },
+  { x: 37, y: 85 },
+  { x: 63, y: 85 },
+  { x: 90, y: 85 },
+];
+
+const FORMATION_6_TOP_NARROW = [
+  { x: 15, y: 19 },
+  { x: 50, y: 19 },
+  { x: 85, y: 19 },
+
+  { x: 28, y: 31 },
+  { x: 72, y: 31 },
+
+  { x: 50, y: 43 },
+];
+
+const FORMATION_6_BOTTOM_NARROW = [
+  { x: 50, y: 57 },
+
+  { x: 28, y: 69 },
+  { x: 72, y: 69 },
+
+  { x: 15, y: 81 },
+  { x: 50, y: 81 },
+  { x: 85, y: 81 },
+];
+
+const FORMATION_3_TOP_NARROW = [
+  { x: 25, y: 25 },
+  { x: 75, y: 25 },
+
+  { x: 50, y: 40 },
+];
+
+const FORMATION_3_BOTTOM_NARROW = [
+  { x: 50, y: 60 },
+
+  { x: 25, y: 75 },
+  { x: 75, y: 75 },
+];
+
+const FORMATION_1_TOP_NARROW = {
+  x: 50,
+  y: 47,
+};
+
+const FORMATION_1_BOTTOM_NARROW = {
+  x: 50,
+  y: 53,
+};
+
+/*
+|--------------------------------------------------------------------------
 | FORMATIONS-STUFE ERMITTELN
 |--------------------------------------------------------------------------
 |
@@ -264,34 +295,19 @@ const FORMATION_1_SINGLE = {
 | (previousCount === 7 && remainingCount === 6, bzw. 4 → 3). Werden
 | mehrere Becher in einer einzigen Aktion getroffen (z. B. ein Bounce,
 | der 2 Becher auf einmal trifft), kann die Becherzahl eine Stufe
-| komplett überspringen (z. B. 8 → 6 statt 8 → 7 → 6) – der exakte
-| Vergleich hat dann nie gegriffen und der Re-Rack wurde übersprungen.
-|
+| komplett überspringen - der exakte Vergleich hat dann nie gegriffen.
 | Statt exakter Werte wird jetzt verglichen, ob sich die FORMATIONS-
-| STUFE geändert hat – unabhängig davon, wie viele Becher auf einmal
-| wegfallen (oder bei "Rückgängig" wieder dazukommen).
+| STUFE geändert hat.
 |
 */
 
 type FormationTier = "ten" | "six" | "three" | "single" | "none";
 
 function getFormationTier(remainingCount: number): FormationTier {
-  if (remainingCount >= 7) {
-    return "ten";
-  }
-
-  if (remainingCount >= 4) {
-    return "six";
-  }
-
-  if (remainingCount >= 2) {
-    return "three";
-  }
-
-  if (remainingCount === 1) {
-    return "single";
-  }
-
+  if (remainingCount >= 7) return "ten";
+  if (remainingCount >= 4) return "six";
+  if (remainingCount >= 2) return "three";
+  if (remainingCount === 1) return "single";
   return "none";
 }
 
@@ -299,46 +315,49 @@ function getFormationForTier(
   tier: FormationTier,
   side: "top" | "bottom",
   compact: boolean,
+  narrow: boolean,
 ): { x: number; y: number }[] {
-  if (tier === "ten") {
-    return compact ? FORMATION_10_SINGLE : side === "top" ? FORMATION_10_TOP : FORMATION_10_BOTTOM;
+  if (compact) {
+    if (tier === "ten") return FORMATION_10_SINGLE;
+    if (tier === "six") return FORMATION_6_SINGLE;
+    if (tier === "three") return FORMATION_3_SINGLE;
+    return [];
   }
 
-  if (tier === "six") {
-    return compact ? FORMATION_6_SINGLE : side === "top" ? FORMATION_6_TOP : FORMATION_6_BOTTOM;
+  if (narrow) {
+    if (tier === "ten")
+      return side === "top" ? FORMATION_10_TOP_NARROW : FORMATION_10_BOTTOM_NARROW;
+    if (tier === "six") return side === "top" ? FORMATION_6_TOP_NARROW : FORMATION_6_BOTTOM_NARROW;
+    if (tier === "three")
+      return side === "top" ? FORMATION_3_TOP_NARROW : FORMATION_3_BOTTOM_NARROW;
+    return [];
   }
 
-  if (tier === "three") {
-    return compact ? FORMATION_3_SINGLE : side === "top" ? FORMATION_3_TOP : FORMATION_3_BOTTOM;
-  }
+  if (tier === "ten") return side === "top" ? FORMATION_10_TOP : FORMATION_10_BOTTOM;
+  if (tier === "six") return side === "top" ? FORMATION_6_TOP : FORMATION_6_BOTTOM;
+  if (tier === "three") return side === "top" ? FORMATION_3_TOP : FORMATION_3_BOTTOM;
 
   return [];
 }
 
-/*
-|--------------------------------------------------------------------------
-| TYPE
-|--------------------------------------------------------------------------
-*/
-
-type CupPosition = {
-  id: number;
-  x: number;
-  y: number;
-};
+function getSingleCupPosition(
+  side: "top" | "bottom",
+  compact: boolean,
+  narrow: boolean,
+): { x: number; y: number } {
+  if (compact) return FORMATION_1_SINGLE;
+  if (narrow) return side === "top" ? FORMATION_1_TOP_NARROW : FORMATION_1_BOTTOM_NARROW;
+  return side === "top" ? FORMATION_1_TOP : FORMATION_1_BOTTOM;
+}
 
 /*
 |--------------------------------------------------------------------------
 | STABILE POSITIONEN
 |--------------------------------------------------------------------------
 |
-| Das ist der wichtige Teil:
-|
-| Ein Treffer verändert NICHT automatisch die Position
-| der anderen Becher.
-|
-| Die Positionen werden nur beim tatsächlichen Re-Rack
-| neu vergeben.
+| Ein Treffer verändert NICHT automatisch die Position der anderen
+| Becher. Die Positionen werden nur beim tatsächlichen Re-Rack neu
+| vergeben.
 |
 */
 
@@ -369,6 +388,7 @@ function CupFormation({
   cups,
   side,
   compact = false,
+  narrow = false,
   selectable,
   selectableTeam,
   selectedCupIds,
@@ -380,10 +400,15 @@ function CupFormation({
 
   /**
    * true = nur dieses eine Team wird angezeigt (Treffer-Overlay).
-   * Die Formation wird dann zentriert über die volle Boxhöhe
-   * verteilt, statt nur eine halbe Feldhälfte zu belegen.
    */
   compact?: boolean;
+
+  /**
+   * true = das Feld ist schmal (z. B. neben Score/Letzte Aktionen auf
+   * Mobile) - nutzt breiteren Prozent-Abstand zwischen den Bechern.
+   * Wird bei compact=true ignoriert.
+   */
+  narrow?: boolean;
 
   selectable?: boolean;
 
@@ -401,10 +426,6 @@ function CupFormation({
 
   const remainingCount = remainingCups.length;
 
-  /*
-   * Initialisierung
-   */
-
   useEffect(() => {
     const currentTier = getFormationTier(remainingCount);
 
@@ -413,16 +434,10 @@ function CupFormation({
         const lastCup = remainingCups[0];
 
         if (lastCup) {
-          const position = compact
-            ? FORMATION_1_SINGLE
-            : side === "top"
-              ? FORMATION_1_TOP
-              : FORMATION_1_BOTTOM;
-
-          setPositions({ [lastCup.id]: position });
+          setPositions({ [lastCup.id]: getSingleCupPosition(side, compact, narrow) });
         }
       } else {
-        const initialFormation = getFormationForTier(currentTier, side, compact);
+        const initialFormation = getFormationForTier(currentTier, side, compact, narrow);
 
         setPositions(createInitialPositions(remainingCups, initialFormation));
       }
@@ -434,65 +449,31 @@ function CupFormation({
 
     const previousTier = getFormationTier(previousRemaining.current);
 
-    /*
-     * RE-RACK NUR BEI STUFENWECHSEL
-     *
-     * Egal ob mehrere Becher auf einmal wegfallen (Stufe wird
-     * übersprungen) oder ob durch "Rückgängig" ein Becher wieder
-     * dazukommt (Stufenwechsel rückwärts) – solange sich die Stufe
-     * tatsächlich ändert, wird neu positioniert. Innerhalb derselben
-     * Stufe (z. B. 10 → 9 → 8) passiert weiterhin NICHTS, die Becher
-     * behalten ihre ursprüngliche Position.
-     */
-
     if (currentTier !== previousTier) {
       if (currentTier === "single") {
         const lastCup = remainingCups[0];
 
         if (lastCup) {
-          const position = compact
-            ? FORMATION_1_SINGLE
-            : side === "top"
-              ? FORMATION_1_TOP
-              : FORMATION_1_BOTTOM;
-
-          setPositions({ [lastCup.id]: position });
+          setPositions({ [lastCup.id]: getSingleCupPosition(side, compact, narrow) });
         }
       } else if (currentTier !== "none") {
-        const formation = getFormationForTier(currentTier, side, compact);
+        const formation = getFormationForTier(currentTier, side, compact, narrow);
 
         setPositions(createInitialPositions(remainingCups, formation));
       }
     }
 
     previousRemaining.current = remainingCount;
-  }, [remainingCount, side, compact]);
-
-  /*
-   * Positionen des aktuellen Teams.
-   *
-   * Treffer werden entfernt.
-   *
-   * Die übrigen Becher behalten ihre gespeicherte Position.
-   */
+  }, [remainingCount, side, compact, narrow]);
 
   return (
     <>
       {remainingCups.map((cup) => {
         const position = positions[cup.id];
 
-        /*
-         * Falls React gerade zwischen zwei Zuständen ist,
-         * wird der Becher noch nicht gerendert.
-         */
-
         if (!position) {
           return null;
         }
-
-        /*
-         * Nur die gegnerischen Becher dürfen ausgewählt werden.
-         */
 
         const isSelectable =
           selectable &&
@@ -511,8 +492,8 @@ function CupFormation({
             className={`
               absolute
               flex
-              h-12
-              w-12
+              h-6
+              w-6
               -translate-x-1/2
               -translate-y-1/2
               items-center
@@ -521,6 +502,8 @@ function CupFormation({
               border-2
               transition-all
               duration-150
+              lg:h-12
+              lg:w-12
 
               ${
                 isSelected
@@ -562,10 +545,12 @@ function CupFormation({
           >
             <span
               className={`
-                h-8
-                w-8
+                h-4
+                w-4
                 rounded-full
                 border
+                lg:h-8
+                lg:w-8
 
                 ${
                   isSelected
@@ -605,17 +590,12 @@ export default function BeerPongTable({
   selectableTeam,
   selectedCupIds = [],
   displayTeam = "both",
+  narrow = false,
   onCupClick,
 }: BeerPongTableProps) {
   const showTeamA = displayTeam === "both" || displayTeam === "A";
 
   const showTeamB = displayTeam === "both" || displayTeam === "B";
-
-  /*
-   * Wird nur EIN Team angezeigt (z. B. im Treffer-Overlay), rückt die
-   * Formation kompakt in die Mitte einer spürbar niedrigeren Box,
-   * statt eine halbleere Spielfeldhälfte darzustellen.
-   */
 
   const isSingleTeamView = displayTeam !== "both";
 
@@ -725,6 +705,7 @@ export default function BeerPongTable({
             cups={teamACups}
             side="top"
             compact={isSingleTeamView}
+            narrow={narrow}
             selectable={selectable}
             selectableTeam={selectableTeam}
             selectedCupIds={selectedCupIds}
@@ -739,6 +720,7 @@ export default function BeerPongTable({
             cups={teamBCups}
             side="bottom"
             compact={isSingleTeamView}
+            narrow={narrow}
             selectable={selectable}
             selectableTeam={selectableTeam}
             selectedCupIds={selectedCupIds}
@@ -749,7 +731,7 @@ export default function BeerPongTable({
 
       {/* BECHERANZAHL */}
 
-      {displayTeam === "both" && (
+      {displayTeam === "both" && !narrow && (
         <div
           className="
             mt-3

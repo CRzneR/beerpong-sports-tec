@@ -118,10 +118,11 @@ export default function HitOverlay({
       {/*
         OVERLAY
 
-        max-h an dvh statt vh gebunden (mobil-sicherer) und als
-        flex-col aufgebaut: HEADER bleibt fix (shrink-0), nur der
-        CONTENT-Bereich scrollt notfalls intern - das Overlay als
-        Ganzes wächst nie über den sichtbaren Bildschirm hinaus.
+        max-h an dvh gebunden, flex-col: HEADER bleibt fix (shrink-0).
+        Unterhalb von lg folgt ein eigener, kompakter Aufbau, der ohne
+        internes Scrollen auskommt (Trefferart als schmale Reihe statt
+        großer Karten mit Beschreibung, kleinere Abstände/Buttons) -
+        ab lg exakt der bisherige Aufbau, unverändert.
       */}
 
       <div
@@ -150,18 +151,21 @@ export default function HitOverlay({
             justify-between
             border-b
             border-white/[0.06]
-            px-7
-            py-6
+            px-4
+            py-3
+            lg:px-7
+            lg:py-6
           "
         >
           <div>
             <div
               className="
-                text-[10px]
+                text-[9px]
                 font-black
                 uppercase
                 tracking-[0.2em]
                 text-cyan-400
+                lg:text-[10px]
               "
             >
               Treffer erfassen
@@ -169,11 +173,13 @@ export default function HitOverlay({
 
             <h2
               className="
-                mt-2
-                text-3xl
+                mt-1
+                text-xl
                 font-black
                 uppercase
                 tracking-tight
+                lg:mt-2
+                lg:text-3xl
               "
             >
               {playerName}
@@ -187,17 +193,20 @@ export default function HitOverlay({
             onClick={onClose}
             className="
               flex
-              h-12
-              w-12
+              h-9
+              w-9
               items-center
               justify-center
               rounded-full
               bg-white/[0.05]
-              text-2xl
+              text-lg
               text-white/40
               transition
               hover:bg-white/[0.1]
               hover:text-white
+              lg:h-12
+              lg:w-12
+              lg:text-2xl
             "
             aria-label="Overlay schließen"
           >
@@ -205,16 +214,129 @@ export default function HitOverlay({
           </button>
         </div>
 
-        {/* CONTENT */}
+        {/* CONTENT - MOBILE (< lg): eigener kompakter Aufbau, passt ohne Scroll */}
+
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 lg:hidden">
+          {/* TREFFERART - schmale Reihe statt gestapelter Karten mit Beschreibung */}
+
+          <div className="shrink-0">
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
+              01 · Trefferart
+            </div>
+
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {shotTypes.map((type) => {
+                const active = shotType === type.id;
+
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setShotType(type.id)}
+                    className={`rounded-xl border p-2 text-center transition ${
+                      active
+                        ? "border-cyan-400 bg-cyan-400/[0.08]"
+                        : "border-white/[0.08] bg-white/[0.015]"
+                    }`}
+                  >
+                    <div
+                      className={`text-[10px] font-black uppercase ${
+                        active ? "text-cyan-400" : "text-white"
+                      }`}
+                    >
+                      {type.title}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* BECHER-AUSWAHL */}
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center justify-between">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
+                02 · Getroffene Becher
+              </div>
+
+              <div className="text-xs font-black text-cyan-400">
+                {selectedCups.length} ausgewählt
+              </div>
+            </div>
+
+            <div className="mt-2 min-h-0 flex-1 rounded-2xl border border-white/[0.06] bg-black/20 p-2">
+              <BeerPongTable
+                teamACups={teamACups}
+                teamBCups={teamBCups}
+                selectable={true}
+                selectableTeam={opponentTeam}
+                displayTeam={opponentTeam}
+                selectedCupIds={selectedCups}
+                onCupClick={toggleCup}
+              />
+            </div>
+          </div>
+
+          {/* SPEICHERN / ABBRECHEN */}
+
+          <div className="shrink-0 space-y-1.5">
+            <button
+              type="button"
+              disabled={selectedCups.length === 0}
+              onClick={handleSave}
+              className="
+                w-full
+                rounded-xl
+                bg-cyan-400
+                px-4
+                py-3
+                text-xs
+                font-black
+                uppercase
+                tracking-[0.12em]
+                text-black
+                transition
+                hover:bg-cyan-300
+                disabled:cursor-not-allowed
+                disabled:bg-white/[0.05]
+                disabled:text-white/20
+              "
+            >
+              Treffer speichern
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="
+                w-full
+                py-1.5
+                text-[9px]
+                font-black
+                uppercase
+                tracking-[0.15em]
+                text-white/25
+                transition
+                hover:text-white
+              "
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+
+        {/* CONTENT - DESKTOP (ab lg): unverändert */}
 
         <div
           className="
-            grid
+            hidden
             min-h-0
             flex-1
             gap-8
             overflow-y-auto
             p-7
+            lg:grid
             lg:grid-cols-[320px_1fr]
           "
         >
