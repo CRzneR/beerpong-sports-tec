@@ -1,9 +1,24 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function CommunitySection() {
   return (
     <section className="relative overflow-hidden bg-[#050708] py-32 lg:py-44">
-      {/* Decorative background */}
+      {/* Foto-Hintergrund */}
+
+      <div className="absolute inset-0">
+        <Image
+          src="/images/landing/community-photo.png"
+          alt=""
+          fill
+          className="object-cover object-center"
+        />
+
+        <div className="absolute inset-0 bg-[#050708]/80" />
+
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050708] via-transparent to-[#050708]" />
+      </div>
+
       <div className="absolute inset-0">
         {/* Main glow */}
         <div className="absolute left-1/2 top-1/2 h-[450px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/[0.07] blur-[140px]" />
