@@ -209,17 +209,17 @@ const FORMATION_1_SINGLE = {
 */
 
 const FORMATION_10_TOP_NARROW = [
-  { x: 10, y: 15 },
-  { x: 37, y: 15 },
-  { x: 63, y: 15 },
-  { x: 90, y: 15 },
+  { x: 25, y: 15 },
+  { x: 42, y: 15 },
+  { x: 58, y: 15 },
+  { x: 75, y: 15 },
 
-  { x: 20, y: 26 },
+  { x: 33, y: 26 },
   { x: 50, y: 26 },
-  { x: 80, y: 26 },
+  { x: 67, y: 26 },
 
-  { x: 32, y: 37 },
-  { x: 68, y: 37 },
+  { x: 42, y: 37 },
+  { x: 58, y: 37 },
 
   { x: 50, y: 47 },
 ];
@@ -227,26 +227,26 @@ const FORMATION_10_TOP_NARROW = [
 const FORMATION_10_BOTTOM_NARROW = [
   { x: 50, y: 53 },
 
-  { x: 32, y: 63 },
-  { x: 68, y: 63 },
+  { x: 42, y: 63 },
+  { x: 58, y: 63 },
 
-  { x: 20, y: 74 },
+  { x: 33, y: 74 },
   { x: 50, y: 74 },
-  { x: 80, y: 74 },
+  { x: 67, y: 74 },
 
-  { x: 10, y: 85 },
-  { x: 37, y: 85 },
-  { x: 63, y: 85 },
-  { x: 90, y: 85 },
+  { x: 25, y: 85 },
+  { x: 42, y: 85 },
+  { x: 58, y: 85 },
+  { x: 75, y: 85 },
 ];
 
 const FORMATION_6_TOP_NARROW = [
-  { x: 15, y: 19 },
+  { x: 32, y: 19 },
   { x: 50, y: 19 },
-  { x: 85, y: 19 },
+  { x: 68, y: 19 },
 
-  { x: 28, y: 31 },
-  { x: 72, y: 31 },
+  { x: 40, y: 31 },
+  { x: 60, y: 31 },
 
   { x: 50, y: 43 },
 ];
@@ -254,17 +254,17 @@ const FORMATION_6_TOP_NARROW = [
 const FORMATION_6_BOTTOM_NARROW = [
   { x: 50, y: 57 },
 
-  { x: 28, y: 69 },
-  { x: 72, y: 69 },
+  { x: 40, y: 69 },
+  { x: 60, y: 69 },
 
-  { x: 15, y: 81 },
+  { x: 32, y: 81 },
   { x: 50, y: 81 },
-  { x: 85, y: 81 },
+  { x: 68, y: 81 },
 ];
 
 const FORMATION_3_TOP_NARROW = [
-  { x: 25, y: 25 },
-  { x: 75, y: 25 },
+  { x: 38, y: 25 },
+  { x: 62, y: 25 },
 
   { x: 50, y: 40 },
 ];
@@ -272,8 +272,8 @@ const FORMATION_3_TOP_NARROW = [
 const FORMATION_3_BOTTOM_NARROW = [
   { x: 50, y: 60 },
 
-  { x: 25, y: 75 },
-  { x: 75, y: 75 },
+  { x: 38, y: 75 },
+  { x: 62, y: 75 },
 ];
 
 const FORMATION_1_TOP_NARROW = {
@@ -492,8 +492,7 @@ function CupFormation({
             className={`
               absolute
               flex
-              h-6
-              w-6
+              ${selectable ? "h-6 w-6" : "h-4 w-4"}
               -translate-x-1/2
               -translate-y-1/2
               items-center
@@ -545,8 +544,7 @@ function CupFormation({
           >
             <span
               className={`
-                h-4
-                w-4
+                ${selectable ? "h-4 w-4" : "h-2.5 w-2.5"}
                 rounded-full
                 border
                 lg:h-8

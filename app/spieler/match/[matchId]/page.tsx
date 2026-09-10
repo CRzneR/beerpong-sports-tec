@@ -796,7 +796,7 @@ export default function MatchPage() {
         {/* SPIELFELD LINKS, SCORE + LETZTE AKTIONEN RECHTS DANEBEN */}
 
         <div className="flex shrink-0 gap-2">
-          <div className="w-[42%] shrink-0">
+          <div className="w-[34%] shrink-0">
             <BeerPongTable teamACups={teamACups} teamBCups={teamBCups} selectable={false} narrow />
           </div>
 
@@ -855,49 +855,95 @@ export default function MatchPage() {
           </div>
         </div>
 
-        {/* TEAM-PANELS - das Team, das gerade dran ist, steht zuerst; Statistik direkt darunter */}
+        {/* TEAM-PANELS - feste Reihenfolge (Team A immer oben, Team B immer unten); wer dran ist, zeigt allein das "Am Zug"-Badge + die Abdunkelung */}
 
-        {(turnState.activeTeam === "A" ? (["A", "B"] as const) : (["B", "A"] as const)).map(
-          (team) => (
-            <div key={team} className="shrink-0 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`text-[9px] font-black uppercase tracking-[0.15em] ${
-                    team === "A" ? "text-cyan-400" : "text-fuchsia-400"
+        {(["A", "B"] as const).map((team) => (
+          <div key={team} className="shrink-0 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div
+                className={`text-[9px] font-black uppercase tracking-[0.15em] ${
+                  team === "A" ? "text-cyan-400" : "text-fuchsia-400"
+                }`}
+              >
+                Team {team}
+              </div>
+
+              {startingTeam && turnState.activeTeam === team && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] ${
+                    team === "A"
+                      ? "bg-cyan-400/10 text-cyan-300"
+                      : "bg-fuchsia-400/10 text-fuchsia-300"
                   }`}
                 >
-                  Team {team}
-                </div>
-
-                {startingTeam && turnState.activeTeam === team && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] ${
-                      team === "A"
-                        ? "bg-cyan-400/10 text-cyan-300"
-                        : "bg-fuchsia-400/10 text-fuchsia-300"
-                    }`}
-                  >
-                    Am Zug
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                {players
-                  .filter((player) => player.team === team)
-                  .map((player) => (
-                    <PlayerCard
-                      key={player.id}
-                      player={player}
-                      onHit={handleHit}
-                      onMiss={handleMiss}
-                      disabled={!canPlayerAct(player)}
-                    />
-                  ))}
-              </div>
+                  Am Zug
+                </span>
+              )}
             </div>
-          ),
-        )}
+
+            <div className="rounded-2xl border border-white/[0.08] bg-[#111419] p-2.5">
+              {players
+                .filter((player) => player.team === team)
+                .map((player, index) => {
+                  const hitRate =
+                    player.throws > 0 ? Math.round((player.hits / player.throws) * 100) : 0;
+
+                  const playerDisabled = !canPlayerAct(player);
+
+                  return (
+                    <div
+                      key={player.id}
+                      className={`transition-opacity ${
+                        playerDisabled ? "opacity-45" : "opacity-100"
+                      } ${index > 0 ? "mt-2 border-t border-white/[0.06] pt-2" : ""}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-black ${
+                              team === "A"
+                                ? "bg-cyan-400/10 text-cyan-400"
+                                : "bg-fuchsia-400/10 text-fuchsia-400"
+                            }`}
+                          >
+                            {player.initials}
+                          </div>
+
+                          <span className="truncate text-[11px] font-black uppercase tracking-tight text-white">
+                            {player.name}
+                          </span>
+                        </div>
+
+                        <span className="shrink-0 text-[10px] font-black text-white">
+                          {hitRate}%
+                        </span>
+                      </div>
+
+                      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleMiss(player)}
+                          disabled={playerDisabled}
+                          className="min-h-7 rounded-lg border border-white/[0.08] bg-white/[0.025] text-[9px] font-black uppercase tracking-[0.1em] text-white/50 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Daneben
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleHit(player)}
+                          disabled={playerDisabled}
+                          className="min-h-7 rounded-lg bg-cyan-400 text-[9px] font-black uppercase tracking-[0.1em] text-black transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-cyan-400/30"
+                        >
+                          Getroffen
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        ))}
 
         {/* UNDO */}
 
