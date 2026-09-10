@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { QRCodeSVG } from "qrcode.react";
 
@@ -18,6 +18,8 @@ import {
   subscribeMatchLobby,
   type MatchLobby,
 } from "@/app/spieler/match/matchLobby";
+
+import { createClient } from "@/lib/supabase/client";
 
 import type { MatchPlayer } from "@/components/stats/match/PlayerCard";
 
@@ -77,6 +79,54 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       cancelled = true;
     };
   }, []);
+
+  /*
+   * ECHTES PROFIL PER E-MAIL REGISTRIEREN
+   *
+   * Nutzt denselben Magic-Link-Mechanismus wie /login, aber mit einem
+   * next-Parameter, der genau auf DIESE Lobby zeigt - app/auth/callback
+   * liest diesen Parameter bereits aus und legt beim ersten Login
+   * automatisch ein players-Profil an (ensureOwnProfile), daher muss
+   * hier nichts an Login/Callback selbst geändert werden.
+   */
+
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerSending, setRegisterSending] = useState(false);
+  const [registerSent, setRegisterSent] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
+  const handleRegister = async (event: FormEvent) => {
+    event.preventDefault();
+
+    const trimmed = registerEmail.trim();
+
+    if (!trimmed || registerSending) {
+      return;
+    }
+
+    setRegisterSending(true);
+    setRegisterError(null);
+
+    const supabase = createClient();
+
+    const { error: sendError } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+          `/spieler/match/${lobbyId}`,
+        )}`,
+      },
+    });
+
+    if (sendError) {
+      console.error("Fehler beim Registrieren:", sendError);
+      setRegisterError("Login-Link konnte nicht gesendet werden.");
+    } else {
+      setRegisterSent(true);
+    }
+
+    setRegisterSending(false);
+  };
 
   /*
    * PROFILE + LOBBY LADEN
@@ -356,13 +406,58 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
           </div>
         )}
 
-        {/* NEUEN SPIELER ANLEGEN UND BEITRETEN (Profil oder Gast) */}
+        {/* ECHTES PROFIL ERSTELLEN - nur relevant, solange niemand eingeloggt ist */}
+
+        {!ownProfile && (
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
+              Noch kein Account?
+            </div>
+
+            <p className="mt-2 text-xs text-white/40">
+              Registriere dich mit deiner E-Mail für ein echtes Profil mit eigener, dauerhafter
+              Statistik. Das freie Namensfeld unten legt dagegen nur ein Gast-Profil ohne Login an.
+            </p>
+
+            {registerSent ? (
+              <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-4 py-3 text-xs font-bold text-cyan-400/80">
+                Login-Link an {registerEmail} gesendet. E-Mail prüfen und Link öffnen — du landest
+                danach automatisch wieder hier in dieser Lobby.
+              </div>
+            ) : (
+              <form onSubmit={handleRegister} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="email"
+                  required
+                  value={registerEmail}
+                  onChange={(event) => setRegisterEmail(event.target.value)}
+                  placeholder="deine@email.de"
+                  className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:border-cyan-400/40 focus:outline-none"
+                />
+
+                <button
+                  type="submit"
+                  disabled={registerSending}
+                  className="rounded-xl border border-cyan-400/30 bg-cyan-400/[0.1] px-4 py-3 text-xs font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18] disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {registerSending ? "Sende Link …" : "Login-Link senden"}
+                </button>
+              </form>
+            )}
+
+            {registerError && (
+              <div className="mt-3 text-xs font-bold text-red-400/80">{registerError}</div>
+            )}
+          </div>
+        )}
+
+        {/* NEUEN SPIELER ANLEGEN UND BEITRETEN (Gast-Profil ohne Login) */}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <input
             type="text"
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="Dein Name (neues Profil oder Gast)"
+            placeholder="Name (Gast-Profil ohne Login)"
             className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:border-cyan-400/40 focus:outline-none"
           />
 

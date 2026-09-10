@@ -50,7 +50,7 @@ export function Footer() {
             </h3>
 
             <nav className="mt-5 space-y-3">
-              <FooterLink href="/ueber-uns">Über uns</FooterLink>
+              <FooterLink href="/about">Über uns</FooterLink>
 
               <FooterLink href="/kontakt">Kontakt</FooterLink>
 

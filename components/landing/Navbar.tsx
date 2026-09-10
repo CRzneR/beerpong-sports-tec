@@ -47,7 +47,7 @@ export function Navbar() {
           </Link>
 
           <Link
-            href="/ueber-uns"
+            href="/about"
             className="text-sm font-medium text-white/60 transition hover:text-white"
           >
             Über uns

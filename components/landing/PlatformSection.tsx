@@ -185,13 +185,15 @@ function ProductCard({
         {/* CTA */}
         <Link
           href={href}
-          className={`mt-7 inline-flex items-center text-sm font-bold transition group-hover:gap-3 ${
-            isLeague ? "text-yellow-400" : "text-cyan-400"
+          className={`mt-7 inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-black uppercase tracking-wide text-black transition duration-300 ${
+            isLeague
+              ? "bg-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.18)] hover:-translate-y-0.5 hover:bg-yellow-300 hover:shadow-[0_0_35px_rgba(250,204,21,0.3)]"
+              : "bg-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.18)] hover:-translate-y-0.5 hover:bg-cyan-300 hover:shadow-[0_0_35px_rgba(34,211,238,0.3)]"
           }`}
         >
           {isLeague ? "Pong League entdecken" : "Pong Stats entdecken"}
 
-          <span className="ml-2 transition-transform group-hover:translate-x-1">→</span>
+          <span className="transition-transform group-hover:translate-x-1">→</span>
         </Link>
       </div>
     </div>
