@@ -823,20 +823,21 @@ export default function MatchPage() {
               </div>
             </div>
 
-            {/* LETZTE AKTIONEN - einziger Bereich, der bei Bedarf intern scrollt */}
+            {/* LETZTE AKTIONEN - feste Größe, wächst nicht mit dem Feld daneben, max. 4 Einträge */}
 
-            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
-              <div className="mb-1 shrink-0 text-[7px] font-black uppercase tracking-[0.18em] text-white/30">
+            <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
+              <div className="mb-1 text-[7px] font-black uppercase tracking-[0.18em] text-white/30">
                 Letzte Aktionen
               </div>
 
-              <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+              <div className="space-y-1">
                 {events.length === 0 ? (
                   <div className="text-[9px] text-white/20">Noch keine Aktionen.</div>
                 ) : (
                   events
                     .slice()
                     .reverse()
+                    .slice(0, 4)
                     .map((event) => (
                       <div
                         key={event.id}
