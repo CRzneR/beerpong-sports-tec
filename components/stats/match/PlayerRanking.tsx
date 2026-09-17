@@ -11,6 +11,8 @@ const VISIBLE_LIMIT = 8;
 
 export default function PlayerRanking({ onSelectPlayer }: PlayerRankingProps) {
   const [players, setPlayers] = useState<PlayerOverallStats[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /*
    * ALLE ANZEIGEN
@@ -26,15 +28,24 @@ export default function PlayerRanking({ onSelectPlayer }: PlayerRankingProps) {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPlayers() {
-      const playerStats = await getAllPlayerOverallStats();
+    getAllPlayerOverallStats()
+      .then((playerStats) => {
+        if (!cancelled) {
+          setPlayers(playerStats);
+        }
+      })
+      .catch((err) => {
+        console.error("Fehler beim Laden der Spieler-Rangliste:", err);
 
-      if (!cancelled) {
-        setPlayers(playerStats);
-      }
-    }
-
-    void loadPlayers();
+        if (!cancelled) {
+          setError("Rangliste konnte nicht geladen werden.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -56,7 +67,11 @@ export default function PlayerRanking({ onSelectPlayer }: PlayerRankingProps) {
           Spieler-Rangliste
         </div>
 
-        {players.length === 0 ? (
+        {loading ? (
+          <div className="mt-4 text-sm font-bold text-white/40">Lade Rangliste …</div>
+        ) : error ? (
+          <div className="mt-4 text-sm font-bold text-red-400/70">{error}</div>
+        ) : players.length === 0 ? (
           <div className="mt-4 text-sm font-bold text-white/40">
             Noch keine Spielerstatistiken vorhanden
           </div>

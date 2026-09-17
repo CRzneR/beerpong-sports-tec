@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSavedMatches } from "@/app/spieler/match/matchStorage";
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
+import { getRegisteredPlayerIds } from "@/app/spieler/match/playerProfiles";
 
 interface MatchHistoryProps {
   onSelectMatch?: (match: SavedMatch) => void;
@@ -25,11 +26,24 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
      * `matches.map(...)` weiter unten ist mit
      * "matches.map is not a function" abgestürzt.
      */
-    getSavedMatches()
-      .then((result) => {
-        if (!cancelled) {
-          setMatches(result);
+    Promise.all([getSavedMatches(), getRegisteredPlayerIds()])
+      .then(([result, registeredIds]) => {
+        if (cancelled) {
+          return;
         }
+
+        /*
+         * Nur Matches zeigen, an denen ausschließlich registrierte
+         * Spieler beteiligt waren - sobald auch nur ein Gast dabei
+         * war, verschwindet das komplette Match aus dieser Liste
+         * (nicht nur der Gast selbst, sonst würde die Anzeige -
+         * Sieger, Becher-Stand - keinen Sinn mehr ergeben).
+         */
+        const onlyRegistered = result.filter((match) =>
+          match.state.players.every((player) => registeredIds.has(player.id)),
+        );
+
+        setMatches(onlyRegistered);
       })
       .catch((err) => {
         console.error("Fehler beim Laden der Match-Historie:", err);
@@ -96,7 +110,7 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
         Match-Historie
       </div>
 
-      {matches.map((match) => {
+      {matches.slice(0, 4).map((match) => {
         const state = match.state;
 
         const teamACupsRemaining = state.teamACups.filter((cup: { hit: any }) => !cup.hit).length;

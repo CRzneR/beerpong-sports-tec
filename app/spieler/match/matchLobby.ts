@@ -196,6 +196,37 @@ export async function startMatchLobby(lobbyId: string): Promise<MatchLobby> {
 
 /*
  * --------------------------------------------------------------------------
+ * | LOBBY ALS BEENDET MARKIEREN
+ * --------------------------------------------------------------------------
+ *
+ * NEU: Wird von der Live-Match-Seite aufgerufen, sobald das Match
+ * beendet und gespeichert ist. Nur DAS Gerät, das "Match starten"
+ * geklickt hat, spielt das Match tatsächlich (siehe PlayerSetup.tsx) -
+ * alle anderen Geräte hängen in einem "Warte auf Ergebnis"-Zustand fest
+ * und bekommen über genau diesen Statuswechsel per Realtime mit, dass
+ * sie zur Match-Historie weiterleiten können.
+ * --------------------------------------------------------------------------
+ */
+
+export async function finishMatchLobby(lobbyId: string): Promise<MatchLobby> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("match_lobbies")
+    .update({ status: "finished" })
+    .eq("id", lobbyId)
+    .select(LOBBY_COLUMNS)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapRow(data as LobbyRow);
+}
+
+/*
+ * --------------------------------------------------------------------------
  * | LIVE-UPDATES ABONNIEREN
  * --------------------------------------------------------------------------
  *

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 
 import { QRCodeSVG } from "qrcode.react";
 
@@ -8,6 +9,7 @@ import {
   createPlayerProfile,
   getAllPlayerProfiles,
   getOwnProfile,
+  getRegisteredPlayerIds,
   type PlayerProfile,
 } from "@/app/spieler/match/playerProfiles";
 
@@ -38,6 +40,21 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   const [newName, setNewName] = useState("");
   const [busyPlayerId, setBusyPlayerId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+
+  /*
+   * NUR DAS GERÄT, DAS "MATCH STARTEN" GEKLICKT HAT, SPIELT WIRKLICH
+   *
+   * Die Live-Match-Seite synchronisiert Würfe/Treffer NICHT über
+   * mehrere Geräte hinweg (reiner lokaler React-State). Würde jedes
+   * Gerät, das gerade in der Lobby war, beim Status-Wechsel auf "live"
+   * eigenständig in die Match-Ansicht wechseln, bekäme jeder sein
+   * eigenes, unabhängiges Abbild des Spiels - Treffer auf einem Gerät
+   * würden auf keinem anderen auftauchen. isHost wird deshalb nur auf
+   * DEM Gerät true, das den Start tatsächlich ausgelöst hat; alle
+   * anderen zeigen stattdessen einen Warte-Bildschirm (siehe unten).
+   */
+
+  const [isHost, setIsHost] = useState(false);
 
   /*
    * BEITRITTS-LINK FÜR DEN QR-CODE
@@ -132,17 +149,20 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
    * PROFILE + LOBBY LADEN
    */
 
+  const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([getAllPlayerProfiles(), getMatchLobby(lobbyId)])
-      .then(([profileResult, lobbyResult]) => {
+    Promise.all([getAllPlayerProfiles(), getMatchLobby(lobbyId), getRegisteredPlayerIds()])
+      .then(([profileResult, lobbyResult, registeredResult]) => {
         if (cancelled) {
           return;
         }
 
         setProfiles(profileResult);
         setLobby(lobbyResult);
+        setRegisteredIds(registeredResult);
 
         if (!lobbyResult) {
           setError("Match wurde nicht gefunden.");
@@ -195,8 +215,19 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   const available = useMemo(() => {
     const joinedIds = new Set([...(lobby?.teamAPlayerIds ?? []), ...(lobby?.teamBPlayerIds ?? [])]);
 
-    return profiles.filter((profile) => !joinedIds.has(profile.id));
-  }, [profiles, lobby]);
+    /*
+     * FIX: Registrierte (echte, eingeloggte) Profile dürfen hier nicht
+     * mehr auftauchen - sonst könnte jeder in der Lobby den Account
+     * einer anderen Person per Klick einem Team zuordnen, ohne dass
+     * diese Person überhaupt anwesend ist oder zugestimmt hat. Ein
+     * echtes Profil kann sich nur noch selbst über die "Das bist du"-
+     * Karte hinzufügen (dort zwingend an den eigenen Login gebunden).
+     * Diese Liste zeigt deshalb nur noch Gast-Profile.
+     */
+    return profiles.filter(
+      (profile) => !joinedIds.has(profile.id) && !registeredIds.has(profile.id),
+    );
+  }, [profiles, lobby, registeredIds]);
 
   /*
    * IST DAS EIGENE PROFIL SCHON IN DER LOBBY?
@@ -219,12 +250,15 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   /*
    * SOBALD status: "live" WIRD, INS MATCH WECHSELN
    *
-   * Läuft auf JEDEM verbundenen Gerät unabhängig, da jedes Gerät seine
-   * eigene Realtime-Subscription hat.
+   * Läuft auf JEDEM verbundenen Gerät unabhängig (jedes hat seine eigene
+   * Realtime-Subscription) - aber NUR das Host-Gerät (das "Match
+   * starten" tatsächlich geklickt hat) wechselt wirklich in die
+   * Match-Ansicht. Alle anderen bleiben hier und zeigen stattdessen den
+   * Warte-Bildschirm weiter unten.
    */
 
   useEffect(() => {
-    if (lobby?.status !== "live") {
+    if (lobby?.status !== "live" || !isHost) {
       return;
     }
 
@@ -245,7 +279,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     // teamA/teamB bewusst nicht in den Deps: der Wechsel soll nur einmal
     // beim status-Wechsel ausgelöst werden, nicht bei jeder Team-Änderung.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lobby?.status]);
+  }, [lobby?.status, isHost]);
 
   const handleJoin = async (playerId: string, team: "A" | "B") => {
     setBusyPlayerId(playerId);
@@ -310,6 +344,13 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     setStarting(true);
     setError(null);
 
+    /*
+     * Muss VOR dem eigentlichen Start-Aufruf gesetzt werden: die
+     * Realtime-Antwort (status wechselt auf "live") kann theoretisch
+     * schneller zurückkommen, als dieser Funktionsaufruf fertig ist.
+     */
+    setIsHost(true);
+
     try {
       await startMatchLobby(lobbyId);
       // Der Wechsel ins Match passiert über den Realtime-Listener oben,
@@ -318,6 +359,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       console.error("Fehler beim Starten des Matches:", err);
       setError("Match konnte nicht gestartet werden.");
       setStarting(false);
+      setIsHost(false);
     }
   };
 
@@ -334,6 +376,58 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       <main className="min-h-screen bg-[#07090d] px-5 py-6 text-white">
         <div className="mx-auto max-w-3xl text-sm font-bold text-red-400/70">
           {error ?? "Match wurde nicht gefunden."}
+        </div>
+      </main>
+    );
+  }
+
+  /*
+   * WARTE-BILDSCHIRM (Nicht-Host-Geräte, während das Match woanders läuft)
+   */
+
+  if (lobby.status === "live" && !isHost) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-5 py-6 text-center text-white">
+        <div className="max-w-xs">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
+            Pong Stats
+          </div>
+
+          <h1 className="mt-2 text-lg font-black uppercase">Match läuft</h1>
+
+          <p className="mt-3 text-sm text-white/40">
+            Das Match wird gerade auf einem anderen Gerät gespielt. Sobald es beendet ist, erscheint
+            das Ergebnis automatisch hier.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  /*
+   * MATCH BEENDET (Nicht-Host-Geräte, sobald das Host-Gerät fertig gespeichert hat)
+   */
+
+  if (lobby.status === "finished") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-5 py-6 text-center text-white">
+        <div className="max-w-xs">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
+            Pong Stats
+          </div>
+
+          <h1 className="mt-2 text-lg font-black uppercase">Match beendet</h1>
+
+          <p className="mt-3 text-sm text-white/40">
+            Das Ergebnis findest du in deiner Match-Historie.
+          </p>
+
+          <Link
+            href="/spieler"
+            className="mt-6 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-6 py-3 text-xs font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
+          >
+            Zur Match-Historie
+          </Link>
         </div>
       </main>
     );
@@ -485,7 +579,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
         {/* VORHANDENE PROFILE */}
         <div className="mt-8">
           <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
-            Mit vorhandenem Profil beitreten
+            Mit bestehendem Gast-Profil beitreten
           </div>
 
           {available.length === 0 ? (

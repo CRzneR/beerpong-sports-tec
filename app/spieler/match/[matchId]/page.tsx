@@ -15,6 +15,7 @@ import type { MatchAction, MatchState } from "../matchLogic";
 import { getMatchStats } from "../matchStats";
 import MatchResult from "@/components/stats/match/MatchResult";
 import { saveMatch } from "../matchStorage";
+import { finishMatchLobby } from "../matchLobby";
 type MatchEvent =
   | {
       id: string;
@@ -345,20 +346,35 @@ export default function MatchPage() {
     savedFinishedMatchRef.current = true;
     setSaveError(null);
 
-    saveMatch(matchState).catch((error) => {
-      console.error("Match konnte nicht gespeichert werden:", error);
+    saveMatch(matchState)
+      .then(() => {
+        /*
+         * Andere Geräte, die in der Lobby "Warte auf Ergebnis" anzeigen
+         * (siehe PlayerSetup.tsx - nur das Host-Gerät spielt wirklich),
+         * bekommen über diesen Statuswechsel per Realtime mit, dass das
+         * Match fertig ist. Rein informativ: schlägt das fehl, ist das
+         * Match trotzdem korrekt gespeichert, nur die Benachrichtigung
+         * an die wartenden Geräte bleibt aus - deshalb eigener, stiller
+         * Catch statt des Fehlerbanners.
+         */
+        finishMatchLobby(lobbyId).catch((err) => {
+          console.error("Lobby konnte nicht als beendet markiert werden:", err);
+        });
+      })
+      .catch((error) => {
+        console.error("Match konnte nicht gespeichert werden:", error);
 
-      /*
-       * Ref zurücksetzen, damit ein Retry-Klick (siehe handleRetrySave)
-       * tatsächlich einen neuen Speicherversuch auslösen kann, statt
-       * durch den "schon versucht"-Guard blockiert zu werden.
-       */
-      savedFinishedMatchRef.current = false;
+        /*
+         * Ref zurücksetzen, damit ein Retry-Klick (siehe handleRetrySave)
+         * tatsächlich einen neuen Speicherversuch auslösen kann, statt
+         * durch den "schon versucht"-Guard blockiert zu werden.
+         */
+        savedFinishedMatchRef.current = false;
 
-      setSaveError(
-        "Match konnte nicht gespeichert werden. Die Statistik wurde vermutlich nicht aktualisiert.",
-      );
-    });
+        setSaveError(
+          "Match konnte nicht gespeichert werden. Die Statistik wurde vermutlich nicht aktualisiert.",
+        );
+      });
   };
 
   const handleRetrySave = () => {

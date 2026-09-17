@@ -7,7 +7,11 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-400/10">
-            <span className="text-lg">🍺</span>
+            <img
+              src="images/icons/LogoBST.png"
+              alt="Logo"
+              className="h-full w-full object-contain"
+            />
           </div>
 
           <div className="leading-none">
