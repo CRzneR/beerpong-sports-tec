@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import MatchHistory from "../MatchHistory";
-import MatchHistoryDetail from "../MatchHistoryDetail";
+import MatchHistoryDetail from "./MatchHistoryDetail";
 import PlayerRanking from "./PlayerRanking";
 import PlayerDetail from "./PlayerDetail";
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
