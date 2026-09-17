@@ -63,16 +63,32 @@ export default function TurnierePage() {
     setTournaments((current) => current.filter((tournament) => tournament.id !== tournamentId));
   };
 
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
   return (
     <main className="min-h-screen bg-[#07090d] px-5 py-10 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
-        <Link
-          href="/"
-          className="group mb-8 inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
-        >
-          <span className="transition-transform group-hover:-translate-x-1">←</span>
-          Zurück zur Startseite
-        </Link>
+        <div className="mb-8 flex items-center justify-between">
+          <Link
+            href="/"
+            className="group inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
+          >
+            <span className="transition-transform group-hover:-translate-x-1">←</span>
+            Zurück zur Startseite
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="text-xs font-semibold text-white/30 transition hover:text-white"
+          >
+            Abmelden
+          </button>
+        </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
