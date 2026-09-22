@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 
-import BeerPongTable, { Cup } from "@/components/stats/match/BeerPongTable";
+import BeerPongTable, { Cup, useCupSlotAssignment } from "@/components/stats/match/BeerPongTable";
 
 import PlayerCard, { MatchPlayer } from "@/components/stats/match/PlayerCard";
 
@@ -103,6 +103,25 @@ export default function MatchPage() {
    */
 
   const [teamBCups, setTeamBCups] = useState<Cup[]>(createCups);
+
+  /*
+   * BECHER-SLOT-ZUORDNUNG (zentral, EINMAL pro Team)
+   *
+   * FIX: Vorher berechnete jede BeerPongTable-Instanz (Mobile-Layout,
+   * Desktop-Layout, und bei jedem Öffnen erneut das Treffer-Overlay)
+   * ihre eigene Zuordnung "Becher-ID → Formations-Slot" unabhängig
+   * voneinander. Eine frisch mountende Instanz (z. B. das Overlay)
+   * berechnete dabei aus den zu diesem Zeitpunkt verbleibenden Bechern
+   * eine ANDERE Zuordnung als die längst laufende Instanz auf dem
+   * Hauptbildschirm - das Overlay zeigte dieselben Becher an anderen
+   * Stellen. Jetzt wird die Zuordnung hier EINMAL berechnet und per
+   * Props an alle drei Stellen weitergereicht, siehe
+   * useCupSlotAssignment in BeerPongTable.tsx.
+   */
+
+  const teamACupSlots = useCupSlotAssignment(teamACups);
+
+  const teamBCupSlots = useCupSlotAssignment(teamBCups);
 
   /*
    * AKTIONEN
@@ -731,6 +750,13 @@ export default function MatchPage() {
    *   (Team A links mit eigener Statistik + Letzte Aktionen,
    *   Spielfeld mittig, Team B rechts mit eigener Statistik + Score
    *   + Undo unten).
+   *
+   * WICHTIG (Becher-Anordnung): teamACupSlots/teamBCupSlots werden
+   * oben EINMAL zentral berechnet (useCupSlotAssignment) und an JEDE
+   * BeerPongTable-Instanz unten weitergereicht (Mobile, Desktop, und
+   * über die Props von HitOverlay auch an dessen zwei interne
+   * BeerPongTable-Aufrufe) - damit zeigen alle exakt dieselbe
+   * Becher-Anordnung, siehe Kommentar bei der Deklaration oben.
    */
 
   return (
@@ -813,7 +839,14 @@ export default function MatchPage() {
 
         <div className="flex shrink-0 gap-2">
           <div className="w-[34%] shrink-0">
-            <BeerPongTable teamACups={teamACups} teamBCups={teamBCups} selectable={false} narrow />
+            <BeerPongTable
+              teamACups={teamACups}
+              teamBCups={teamBCups}
+              teamACupSlots={teamACupSlots}
+              teamBCupSlots={teamBCupSlots}
+              selectable={false}
+              narrow
+            />
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -1141,7 +1174,13 @@ export default function MatchPage() {
         {/* MITTE: SPIELFELD */}
 
         <div className="order-first flex min-h-0 items-center justify-center lg:order-none">
-          <BeerPongTable teamACups={teamACups} teamBCups={teamBCups} selectable={false} />
+          <BeerPongTable
+            teamACups={teamACups}
+            teamBCups={teamBCups}
+            teamACupSlots={teamACupSlots}
+            teamBCupSlots={teamBCupSlots}
+            selectable={false}
+          />
         </div>
 
         {/* RECHTS: TEAM B */}
@@ -1288,6 +1327,8 @@ export default function MatchPage() {
           playerTeam={selectedPlayer.team}
           teamACups={teamACups}
           teamBCups={teamBCups}
+          teamACupSlots={teamACupSlots}
+          teamBCupSlots={teamBCupSlots}
           onClose={() => {
             setShowHitOverlay(false);
 

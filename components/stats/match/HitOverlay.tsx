@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import BeerPongTable, { Cup } from "@/components/stats/match/BeerPongTable";
+import BeerPongTable, { Cup, CupSlotAssignment } from "@/components/stats/match/BeerPongTable";
 
 export type ShotType = "single" | "bounce" | "trickshot";
 
@@ -14,6 +14,16 @@ interface HitOverlayProps {
   teamACups: Cup[];
 
   teamBCups: Cup[];
+
+  /**
+   * Von useCupSlotAssignment() im übergeordneten page.tsx berechnet -
+   * siehe Kommentar dort. Muss dieselbe Zuordnung sein wie auf dem
+   * Spielbildschirm, sonst zeigt das Overlay die Becher an anderen
+   * Stellen als der Rest der Seite.
+   */
+  teamACupSlots: CupSlotAssignment;
+
+  teamBCupSlots: CupSlotAssignment;
 
   onClose: () => void;
 
@@ -57,6 +67,8 @@ export default function HitOverlay({
   playerTeam,
   teamACups,
   teamBCups,
+  teamACupSlots,
+  teamBCupSlots,
   onClose,
   onSave,
 }: HitOverlayProps) {
@@ -269,6 +281,8 @@ export default function HitOverlay({
               <BeerPongTable
                 teamACups={teamACups}
                 teamBCups={teamBCups}
+                teamACupSlots={teamACupSlots}
+                teamBCupSlots={teamBCupSlots}
                 selectable={true}
                 selectableTeam={opponentTeam}
                 displayTeam={opponentTeam}
@@ -470,6 +484,8 @@ export default function HitOverlay({
               <BeerPongTable
                 teamACups={teamACups}
                 teamBCups={teamBCups}
+                teamACupSlots={teamACupSlots}
+                teamBCupSlots={teamBCupSlots}
                 selectable={true}
                 selectableTeam={opponentTeam}
                 displayTeam={opponentTeam}

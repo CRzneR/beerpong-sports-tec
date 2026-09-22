@@ -7,9 +7,26 @@ export type Cup = {
   hit: boolean;
 };
 
+/**
+ * Zuordnung Becher-ID → Formations-Slot (0-basiert). Wird zentral in
+ * page.tsx einmal pro Team berechnet (siehe useCupSlotAssignment
+ * unten) und an ALLE BeerPongTable-Instanzen (Mobile, Desktop,
+ * Treffer-Overlay) weitergereicht, damit sie exakt dieselbe
+ * Anordnung zeigen.
+ */
+export type CupSlotAssignment = Record<number, number>;
+
 interface BeerPongTableProps {
   teamACups: Cup[];
   teamBCups: Cup[];
+
+  /**
+   * Stabile Slot-Zuordnung pro Team, siehe CupSlotAssignment oben.
+   * Von useCupSlotAssignment(teamACups) / useCupSlotAssignment(teamBCups)
+   * im Aufrufer berechnet - NICHT hier in der Komponente.
+   */
+  teamACupSlots: CupSlotAssignment;
+  teamBCupSlots: CupSlotAssignment;
 
   selectable?: boolean;
 
@@ -153,9 +170,20 @@ const FORMATION_1_BOTTOM = {
 | keinen Sinn. Diese Formationen zentrieren dieselbe Dreiecksform
 | stattdessen über die volle Höhe der (kompakten) Box.
 |
+| FIX: Es gibt davon zwei Varianten (_TOP / _BOTTOM), nicht nur eine.
+| Grund: Die Reihen-Reihenfolge (welche Zeile hat wie viele Becher) muss
+| zur jeweiligen Seite passen, damit dieselbe Slot-Zuordnung (siehe
+| useCupSlotAssignment) im Overlay dasselbe Bild ergibt wie auf dem
+| Hauptbildschirm. FORMATION_..._TOP geht groß→klein von oben nach
+| unten (deckt sich mit FORMATION_..._TOP oben), FORMATION_..._BOTTOM
+| geht klein→groß (deckt sich mit FORMATION_..._BOTTOM oben). Vorher
+| gab es nur EINE Variante (groß→klein), die zufällig zu TOP passte,
+| aber strukturell nicht zu BOTTOM - Team B zeigte im Overlay dieselben
+| Slot-Indizes dadurch in einer anderen Reihe als auf dem Hauptbildschirm.
+|
 */
 
-const FORMATION_10_SINGLE = [
+const FORMATION_10_SINGLE_TOP = [
   { x: 35, y: 15 },
   { x: 45, y: 15 },
   { x: 55, y: 15 },
@@ -171,7 +199,23 @@ const FORMATION_10_SINGLE = [
   { x: 50, y: 85 },
 ];
 
-const FORMATION_6_SINGLE = [
+const FORMATION_10_SINGLE_BOTTOM = [
+  { x: 50, y: 15 },
+
+  { x: 45, y: 39 },
+  { x: 55, y: 39 },
+
+  { x: 40, y: 63 },
+  { x: 50, y: 63 },
+  { x: 60, y: 63 },
+
+  { x: 35, y: 85 },
+  { x: 45, y: 85 },
+  { x: 55, y: 85 },
+  { x: 65, y: 85 },
+];
+
+const FORMATION_6_SINGLE_TOP = [
   { x: 40, y: 15 },
   { x: 50, y: 15 },
   { x: 60, y: 15 },
@@ -182,11 +226,29 @@ const FORMATION_6_SINGLE = [
   { x: 50, y: 85 },
 ];
 
-const FORMATION_3_SINGLE = [
+const FORMATION_6_SINGLE_BOTTOM = [
+  { x: 50, y: 15 },
+
+  { x: 45, y: 50 },
+  { x: 55, y: 50 },
+
+  { x: 40, y: 85 },
+  { x: 50, y: 85 },
+  { x: 60, y: 85 },
+];
+
+const FORMATION_3_SINGLE_TOP = [
   { x: 45, y: 15 },
   { x: 55, y: 15 },
 
   { x: 50, y: 85 },
+];
+
+const FORMATION_3_SINGLE_BOTTOM = [
+  { x: 50, y: 15 },
+
+  { x: 45, y: 85 },
+  { x: 55, y: 85 },
 ];
 
 const FORMATION_1_SINGLE = {
@@ -291,14 +353,12 @@ const FORMATION_1_BOTTOM_NARROW = {
 | FORMATIONS-STUFE ERMITTELN
 |--------------------------------------------------------------------------
 |
-| FIX: Vorher wurde ein Re-Rack nur bei EXAKTEM Übergang ausgelöst
-| (previousCount === 7 && remainingCount === 6, bzw. 4 → 3). Werden
-| mehrere Becher in einer einzigen Aktion getroffen (z. B. ein Bounce,
-| der 2 Becher auf einmal trifft), kann die Becherzahl eine Stufe
-| komplett überspringen - der exakte Vergleich hat dann nie gegriffen.
-| Statt exakter Werte wird jetzt verglichen, ob sich die FORMATIONS-
-| STUFE geändert hat.
-|
+| Statt exakter Werte (previousCount === 7 && remainingCount === 6)
+| wird verglichen, ob sich die FORMATIONS-STUFE geändert hat - so wird
+| ein Re-Rack auch dann korrekt ausgelöst, wenn eine einzelne Aktion
+| (z. B. ein Bounce, der 2 Becher auf einmal trifft) eine Stufe komplett
+| überspringt.
+|--------------------------------------------------------------------------
 */
 
 type FormationTier = "ten" | "six" | "three" | "single" | "none";
@@ -318,9 +378,11 @@ function getFormationForTier(
   narrow: boolean,
 ): { x: number; y: number }[] {
   if (compact) {
-    if (tier === "ten") return FORMATION_10_SINGLE;
-    if (tier === "six") return FORMATION_6_SINGLE;
-    if (tier === "three") return FORMATION_3_SINGLE;
+    if (tier === "ten")
+      return side === "top" ? FORMATION_10_SINGLE_TOP : FORMATION_10_SINGLE_BOTTOM;
+    if (tier === "six") return side === "top" ? FORMATION_6_SINGLE_TOP : FORMATION_6_SINGLE_BOTTOM;
+    if (tier === "three")
+      return side === "top" ? FORMATION_3_SINGLE_TOP : FORMATION_3_SINGLE_BOTTOM;
     return [];
   }
 
@@ -352,40 +414,103 @@ function getSingleCupPosition(
 
 /*
 |--------------------------------------------------------------------------
-| STABILE POSITIONEN
+| STABILE BECHER-SLOT-ZUORDNUNG (zentral, EIN Hook-Aufruf pro Team)
 |--------------------------------------------------------------------------
 |
-| Ein Treffer verändert NICHT automatisch die Position der anderen
-| Becher. Die Positionen werden nur beim tatsächlichen Re-Rack neu
-| vergeben.
+| Weist jedem verbleibenden Becher einen Formations-SLOT-INDEX zu
+| (0-basiert, NICHT die fertige Pixel-Position - die hängt zusätzlich
+| von narrow/compact ab, siehe CupFormation weiter unten).
 |
+| WICHTIG: Dieser Hook darf nur EINMAL pro Team aufgerufen werden - in
+| page.tsx, nicht in BeerPongTable/CupFormation selbst. Vorher hatte
+| JEDE gemountete BeerPongTable-Instanz (Mobile-Layout, Desktop-Layout,
+| und bei jedem Öffnen erneut das Treffer-Overlay) ihre eigene, davon
+| unabhängige State-Berechnung. Da die Zuordnung beim jeweils ersten
+| Mount einer Instanz per Array-Index aus den zu DIESEM Zeitpunkt
+| verbleibenden Bechern berechnet wurde, bekam eine frisch mountende
+| Instanz (z. B. das Overlay beim Öffnen) eine ANDERE Zuordnung als die
+| längst laufende Instanz auf dem Hauptbildschirm, sobald zwischenzeitlich
+| Becher aus der Mitte der Reihe gefallen waren - das Overlay zeigte
+| dieselben Becher an anderen Stellen als der Spielbildschirm.
+|
+| Fix: Die Zuordnung wird jetzt EINMAL zentral berechnet und per Props
+| an alle Render-Stellen weitergereicht, statt dass jede sie selbst neu
+| erfindet.
+|
+| Die Logik selbst (nur bei Tier-Wechsel neu anordnen, sonst stabil)
+| ist unverändert - nur der Ort, an dem sie lebt, hat sich geändert.
+|--------------------------------------------------------------------------
 */
 
-function createInitialPositions(
-  cups: Cup[],
-  formation: { x: number; y: number }[],
-): Record<number, { x: number; y: number }> {
-  const result: Record<number, { x: number; y: number }> = {};
+export function useCupSlotAssignment(cups: Cup[]): CupSlotAssignment {
+  const previousRemaining = useRef<number | null>(null);
 
-  cups.forEach((cup, index) => {
-    const position = formation[index];
+  const [slots, setSlots] = useState<CupSlotAssignment>({});
 
-    if (position) {
-      result[cup.id] = position;
+  const remainingCups = cups.filter((cup) => !cup.hit);
+
+  const remainingCount = remainingCups.length;
+
+  useEffect(() => {
+    const currentTier = getFormationTier(remainingCount);
+
+    const assignForTier = (tier: FormationTier): CupSlotAssignment => {
+      if (tier === "none") {
+        return {};
+      }
+
+      if (tier === "single") {
+        const lastCup = remainingCups[0];
+
+        return lastCup ? { [lastCup.id]: 0 } : {};
+      }
+
+      const result: CupSlotAssignment = {};
+
+      remainingCups.forEach((cup, index) => {
+        result[cup.id] = index;
+      });
+
+      return result;
+    };
+
+    if (previousRemaining.current === null) {
+      setSlots(assignForTier(currentTier));
+
+      previousRemaining.current = remainingCount;
+
+      return;
     }
-  });
 
-  return result;
+    const previousTier = getFormationTier(previousRemaining.current);
+
+    if (currentTier !== previousTier) {
+      setSlots(assignForTier(currentTier));
+    }
+
+    previousRemaining.current = remainingCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingCount]);
+
+  return slots;
 }
 
 /*
 |--------------------------------------------------------------------------
 | CUP FORMATION
 |--------------------------------------------------------------------------
+|
+| Reine Darstellungskomponente ohne eigenen Positions-State: die
+| Slot-Zuordnung kommt fertig als Prop von oben (siehe
+| useCupSlotAssignment), hier wird pro Slot-Index nur noch die zur
+| jeweiligen Variante (side/compact/narrow) passende Pixel-Position
+| nachgeschlagen.
+|--------------------------------------------------------------------------
 */
 
 function CupFormation({
   cups,
+  cupSlots,
   side,
   compact = false,
   narrow = false,
@@ -395,6 +520,8 @@ function CupFormation({
   onCupClick,
 }: {
   cups: Cup[];
+
+  cupSlots: CupSlotAssignment;
 
   side: "top" | "bottom";
 
@@ -418,58 +545,36 @@ function CupFormation({
 
   onCupClick?: (cupId: number) => void;
 }) {
-  const previousRemaining = useRef<number | null>(null);
-
-  const [positions, setPositions] = useState<Record<number, { x: number; y: number }>>({});
-
   const remainingCups = cups.filter((cup) => !cup.hit);
 
-  const remainingCount = remainingCups.length;
+  const tier = getFormationTier(remainingCups.length);
 
-  useEffect(() => {
-    const currentTier = getFormationTier(remainingCount);
+  const getPixelPosition = (cupId: number): { x: number; y: number } | undefined => {
+    const slotIndex = cupSlots[cupId];
 
-    if (previousRemaining.current === null) {
-      if (currentTier === "single") {
-        const lastCup = remainingCups[0];
-
-        if (lastCup) {
-          setPositions({ [lastCup.id]: getSingleCupPosition(side, compact, narrow) });
-        }
-      } else {
-        const initialFormation = getFormationForTier(currentTier, side, compact, narrow);
-
-        setPositions(createInitialPositions(remainingCups, initialFormation));
-      }
-
-      previousRemaining.current = remainingCount;
-
-      return;
+    if (slotIndex === undefined) {
+      return undefined;
     }
 
-    const previousTier = getFormationTier(previousRemaining.current);
-
-    if (currentTier !== previousTier) {
-      if (currentTier === "single") {
-        const lastCup = remainingCups[0];
-
-        if (lastCup) {
-          setPositions({ [lastCup.id]: getSingleCupPosition(side, compact, narrow) });
-        }
-      } else if (currentTier !== "none") {
-        const formation = getFormationForTier(currentTier, side, compact, narrow);
-
-        setPositions(createInitialPositions(remainingCups, formation));
-      }
+    if (tier === "single") {
+      return getSingleCupPosition(side, compact, narrow);
     }
 
-    previousRemaining.current = remainingCount;
-  }, [remainingCount, side, compact, narrow]);
+    const formation = getFormationForTier(tier, side, compact, narrow);
+
+    return formation[slotIndex];
+  };
 
   return (
     <>
       {remainingCups.map((cup) => {
-        const position = positions[cup.id];
+        const position = getPixelPosition(cup.id);
+
+        /*
+         * Kein Slot (noch) zugewiesen - kommt kurzzeitig vor, wenn
+         * sich die zentrale Zuordnung (siehe useCupSlotAssignment)
+         * gerade erst nach einem Tier-Wechsel aktualisiert.
+         */
 
         if (!position) {
           return null;
@@ -584,6 +689,8 @@ function CupFormation({
 export default function BeerPongTable({
   teamACups,
   teamBCups,
+  teamACupSlots,
+  teamBCupSlots,
   selectable = false,
   selectableTeam,
   selectedCupIds = [],
@@ -701,6 +808,7 @@ export default function BeerPongTable({
         {showTeamA && (
           <CupFormation
             cups={teamACups}
+            cupSlots={teamACupSlots}
             side="top"
             compact={isSingleTeamView}
             narrow={narrow}
@@ -716,6 +824,7 @@ export default function BeerPongTable({
         {showTeamB && (
           <CupFormation
             cups={teamBCups}
+            cupSlots={teamBCupSlots}
             side="bottom"
             compact={isSingleTeamView}
             narrow={narrow}
