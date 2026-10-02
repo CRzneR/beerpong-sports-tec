@@ -76,14 +76,13 @@ export function PlayerHero() {
   }
 
   const matches = stats?.matches ?? 0;
-  const hitRate = stats?.hitRate ?? 0;
 
   return (
     <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-400/[0.08] via-white/[0.025] to-transparent p-6 sm:p-8 lg:p-10">
       {/* Glow */}
       <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-cyan-400/[0.08] blur-[100px]" />
 
-      <div className="relative z-10 flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative z-10 flex items-center">
         {/* Player */}
         <div className="flex items-center gap-5">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/20 bg-cyan-400/10 text-2xl font-black text-cyan-400">
@@ -100,17 +99,6 @@ export function PlayerHero() {
             <h1 className="text-3xl font-black uppercase tracking-[-0.05em] text-white sm:text-4xl">
               {profile.name}
             </h1>
-          </div>
-        </div>
-
-        {/* Trefferquote */}
-        <div className="sm:text-right">
-          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/25">
-            Trefferquote
-          </div>
-
-          <div className="mt-1 text-4xl font-black tracking-[-0.05em] text-cyan-400">
-            {hitRate}%
           </div>
         </div>
       </div>

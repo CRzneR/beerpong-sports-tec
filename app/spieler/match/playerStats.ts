@@ -1,6 +1,6 @@
 import type { MatchState, Team, HitType } from "./matchLogic";
 import { getSavedMatches } from "./matchStorage";
-import { getStatsResetTimestamps } from "./playerProfiles";
+import { getRegisteredPlayerIds, getStatsResetTimestamps } from "./playerProfiles";
 
 export type PlayerMatchStats = {
   playerId: string;
@@ -198,15 +198,24 @@ export async function getPlayerOverallStats(playerId: string): Promise<PlayerOve
 }
 
 export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> {
-  const [matches, resetTimestamps] = await Promise.all([
+  const [matches, resetTimestamps, registeredIds] = await Promise.all([
     getSavedMatches(),
     getStatsResetTimestamps(),
+    getRegisteredPlayerIds(),
   ]);
 
   const byPlayer = new Map<string, PlayerOverallStats>();
 
   for (const savedMatch of matches) {
     for (const player of savedMatch.state.players) {
+      /*
+       * Gäste (kein verknüpfter Account) tauchen in der öffentlichen
+       * Rangliste nicht auf - nur registrierte Spieler.
+       */
+      if (!registeredIds.has(player.id)) {
+        continue;
+      }
+
       const resetAt = resetTimestamps.get(player.id) ?? null;
 
       if (!isAfterReset(savedMatch.savedAt, resetAt)) {

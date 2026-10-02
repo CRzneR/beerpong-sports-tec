@@ -10,6 +10,8 @@ type Summary = {
   winrate: number;
   cupsRemoved: number;
   wins: number;
+  losses: number;
+  hitRate: number;
 };
 
 export function PerformanceStats() {
@@ -44,6 +46,8 @@ export function PerformanceStats() {
             winrate: matches > 0 ? Math.round((wins / matches) * 1000) / 10 : 0,
             cupsRemoved: overall?.cupsRemoved ?? 0,
             wins,
+            losses: overall?.losses ?? 0,
+            hitRate: overall?.hitRate ?? 0,
           });
         }
       } catch (err) {
@@ -81,12 +85,14 @@ export function PerformanceStats() {
   const stats = [
     { value: String(summary?.matches ?? 0), label: "Matches" },
     { value: `${summary?.winrate ?? 0}%`, label: "Winrate" },
+    { value: `${summary?.hitRate ?? 0}%`, label: "Trefferquote" },
     { value: String(summary?.cupsRemoved ?? 0), label: "Becher" },
     { value: String(summary?.wins ?? 0), label: "Siege" },
+    { value: String(summary?.losses ?? 0), label: "Niederlagen" },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
       {stats.map((stat) => (
         <div
           key={stat.label}

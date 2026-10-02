@@ -149,7 +149,11 @@ function SpielerPageInner() {
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
           <Link href="/" className="group flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10">
-              <span className="text-sm">🍺</span>
+              <img
+                src="/images/landing/pong-stats-logo.png"
+                alt="Pong Stats Logo"
+                className="h-6 w-6 object-contain"
+              />
             </div>
 
             <div className="leading-none">
