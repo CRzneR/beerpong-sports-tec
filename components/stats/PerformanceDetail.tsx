@@ -121,7 +121,20 @@ export function PerformanceDetail() {
     { label: "Ø Becher pro Spiel", value: stats.avgCupsPerMatch.toFixed(1).replace(".", ",") },
     { label: "Höchste Trefferquote", value: `${stats.bestHitRate}%` },
     { label: "Längste Siegesserie", value: String(stats.longestWinStreak) },
+    { label: "Längste Trefferserie", value: String(stats.longestHitStreak) },
   ];
+
+  const hitTypeRows = [
+    { label: "Einzeltreffer", value: stats.hitTypeDistribution.single },
+    { label: "Aufhüpfen", value: stats.hitTypeDistribution.bounce },
+    { label: "Trickshot", value: stats.hitTypeDistribution.trickshot },
+  ];
+
+  const hasHitTypeData =
+    stats.hitTypeDistribution.single +
+      stats.hitTypeDistribution.bounce +
+      stats.hitTypeDistribution.trickshot >
+    0;
 
   return (
     <div className="rounded-3xl border border-white/[0.08] bg-white/[0.025] p-6 sm:p-8">
@@ -177,6 +190,56 @@ export function PerformanceDetail() {
           ))}
         </div>
       </div>
+
+      {/* FORM DER LETZTEN 5 SPIELE */}
+      {stats.recentForm.length > 0 && (
+        <div className="mt-6 border-t border-white/[0.06] pt-5">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+            Form (letzte {stats.recentForm.length} Spiele)
+          </div>
+
+          <div className="mt-3 flex gap-1.5">
+            {stats.recentForm.map((result, index) => (
+              <span
+                key={index}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg text-[11px] font-black ${
+                  result === "S" ? "bg-green-400/15 text-green-400" : "bg-red-400/15 text-red-400"
+                }`}
+              >
+                {result}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* VERTEILUNG DER TREFFERARTEN */}
+      {hasHitTypeData && (
+        <div className="mt-6 border-t border-white/[0.06] pt-5">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+            Trefferarten
+          </div>
+
+          <div className="mt-3 space-y-2.5">
+            {hitTypeRows.map((item) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <span className="w-24 shrink-0 text-xs font-bold text-white/50">{item.label}</span>
+
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                  <div
+                    className="h-full rounded-full bg-cyan-400"
+                    style={{ width: `${item.value}%` }}
+                  />
+                </div>
+
+                <span className="w-10 shrink-0 text-right text-xs font-black text-white">
+                  {item.value}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ZURÜCKSETZEN */}
       <div className="mt-6 flex justify-end border-t border-white/[0.06] pt-4">

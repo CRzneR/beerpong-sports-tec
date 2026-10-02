@@ -112,6 +112,15 @@ export type PlayerMatchHistoryEntry = {
   matchId: string;
   savedAt: string;
   stats: PlayerMatchStats;
+  /*
+   * NEU: die rohen Einzel-Aktionen dieses Matches (ungefiltert, alle
+   * Spieler) - wird für Berechnungen gebraucht, die mehr als die
+   * aggregierten Zahlen in `stats` brauchen, z. B. die längste
+   * Trefferserie INNERHALB eines Matches (siehe getPlayerDetailStats).
+   * Bestehende Nutzer dieser Funktion (z. B. PerformanceChart) können
+   * das Feld einfach ignorieren, nichts Bestehendes bricht dadurch.
+   */
+  actions: MatchState["actions"];
 };
 
 /*
@@ -147,7 +156,12 @@ export async function getPlayerMatchHistory(playerId: string): Promise<PlayerMat
       continue;
     }
 
-    result.push({ matchId: savedMatch.id, savedAt: savedMatch.savedAt, stats });
+    result.push({
+      matchId: savedMatch.id,
+      savedAt: savedMatch.savedAt,
+      stats,
+      actions: savedMatch.state.actions,
+    });
   }
 
   return result;
@@ -237,12 +251,45 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
 
 /*
  * --------------------------------------------------------------------------
+ * | LÄNGSTE TREFFERSERIE INNERHALB EINES MATCHES
+ * --------------------------------------------------------------------------
+ *
+ * Setzt bewusst an jedem Matchbeginn neu an (Serie INNERHALB eines
+ * Spiels), statt über mehrere, zeitlich weit auseinanderliegende
+ * Matches hinweg zusammenzuzählen - das wäre sonst willkürlich davon
+ * abhängig, wann zufällig als Nächstes wieder gespielt wurde.
+ * --------------------------------------------------------------------------
+ */
+
+function longestHitStreakInMatch(actions: MatchState["actions"], playerId: string): number {
+  let current = 0;
+  let longest = 0;
+
+  for (const action of actions) {
+    if (action.playerId !== playerId) {
+      continue;
+    }
+
+    if (action.type === "hit") {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  }
+
+  return longest;
+}
+
+/*
+ * --------------------------------------------------------------------------
  * | DETAIL-STATISTIKEN (Win Rate, Ø Becher/Spiel, beste Trefferquote,
- * | längste Siegesserie)
+ * | längste Siegesserie, längste Trefferserie, Form der letzten 5
+ * | Spiele, Verteilung der Trefferarten)
  * --------------------------------------------------------------------------
  *
  * Braucht die Matches in CHRONOLOGISCHER Reihenfolge (älteste zuerst),
- * weil eine Siegesserie nur über die zeitliche Abfolge Sinn ergibt.
+ * weil Serien und "Form" nur über die zeitliche Abfolge Sinn ergeben.
  * getPlayerMatchHistory() liefert (wie getSavedMatches()) neueste
  * zuerst, deshalb wird hier gedreht.
  *
@@ -250,6 +297,12 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
  * matches.started_at/finished_at werden beim Speichern gesetzt, noch
  * werden die Zeitstempel der einzelnen Würfe in die actions-Tabelle
  * übernommen - die Info ist aktuell nirgends gespeichert.
+ *
+ * hitTypeDistribution ist bewusst eine VERTEILUNG (Anteil an den
+ * eigenen Treffern), keine echte Quote pro Wurfart: "Daneben"-Aktionen
+ * speichern keinen beabsichtigten Wurftyp, es lässt sich also nicht
+ * ermitteln, wie viele Trickshot-VERSUCHE danebengingen - nur, wie
+ * viele Treffer welcher Art waren.
  * --------------------------------------------------------------------------
  */
 
@@ -258,6 +311,17 @@ export type PlayerDetailStats = {
   avgCupsPerMatch: number;
   bestHitRate: number;
   longestWinStreak: number;
+  longestHitStreak: number;
+  /*
+   * Älteste zuerst, neueste zuletzt - gleiche Konvention wie die
+   * Formguide-Spalte bei Pong League.
+   */
+  recentForm: ("S" | "N")[];
+  hitTypeDistribution: {
+    single: number;
+    bounce: number;
+    trickshot: number;
+  };
 };
 
 export async function getPlayerDetailStats(playerId: string): Promise<PlayerDetailStats | null> {
@@ -269,8 +333,15 @@ export async function getPlayerDetailStats(playerId: string): Promise<PlayerDeta
   let totalWins = 0;
   let totalCups = 0;
   let bestHitRate = 0;
-  let currentStreak = 0;
-  let longestStreak = 0;
+  let currentWinStreak = 0;
+  let longestWinStreak = 0;
+  let longestHitStreak = 0;
+
+  let totalSingle = 0;
+  let totalBounce = 0;
+  let totalTrickshot = 0;
+
+  const formResults: ("S" | "N")[] = [];
 
   for (const entry of chronological) {
     totalMatches += 1;
@@ -278,11 +349,19 @@ export async function getPlayerDetailStats(playerId: string): Promise<PlayerDeta
     totalCups += entry.stats.cupsRemoved;
     bestHitRate = Math.max(bestHitRate, entry.stats.hitRate);
 
+    totalSingle += entry.stats.singleHits;
+    totalBounce += entry.stats.bounceHits;
+    totalTrickshot += entry.stats.trickshotHits;
+
+    longestHitStreak = Math.max(longestHitStreak, longestHitStreakInMatch(entry.actions, playerId));
+
     if (entry.stats.wins > 0) {
-      currentStreak += 1;
-      longestStreak = Math.max(longestStreak, currentStreak);
+      currentWinStreak += 1;
+      longestWinStreak = Math.max(longestWinStreak, currentWinStreak);
+      formResults.push("S");
     } else {
-      currentStreak = 0;
+      currentWinStreak = 0;
+      formResults.push("N");
     }
   }
 
@@ -290,10 +369,22 @@ export async function getPlayerDetailStats(playerId: string): Promise<PlayerDeta
     return null;
   }
 
+  const totalTypedHits = totalSingle + totalBounce + totalTrickshot;
+
   return {
     winRate: Math.round((totalWins / totalMatches) * 1000) / 10,
     avgCupsPerMatch: Math.round((totalCups / totalMatches) * 10) / 10,
     bestHitRate,
-    longestWinStreak: longestStreak,
+    longestWinStreak,
+    longestHitStreak,
+    recentForm: formResults.slice(-5),
+    hitTypeDistribution:
+      totalTypedHits > 0
+        ? {
+            single: Math.round((totalSingle / totalTypedHits) * 100),
+            bounce: Math.round((totalBounce / totalTypedHits) * 100),
+            trickshot: Math.round((totalTrickshot / totalTypedHits) * 100),
+          }
+        : { single: 0, bounce: 0, trickshot: 0 },
   };
 }
