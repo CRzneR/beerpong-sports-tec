@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { PlayerHero } from "@/components/stats/PlayerHero";
 import { PerformanceStats } from "@/components/stats/PerformanceStats";
@@ -13,11 +14,22 @@ import PlayerRanking from "@/components/stats/match/PlayerRanking";
 import PlayerDetail from "@/components/stats/match/PlayerDetail";
 
 import { createClient } from "@/lib/supabase/client";
+import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
 
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
 import type { PlayerOverallStats } from "@/app/spieler/match/playerStats";
 
-export default function SpielerPage() {
+/*
+ * useSearchParams() braucht in Next.js einen Suspense-Wrapper auf der
+ * Seite selbst (siehe auch LoginPage) - deshalb liegt die eigentliche
+ * Seite in einer inneren Komponente, SpielerPage darunter ist nur der
+ * Wrapper dafür.
+ */
+
+function SpielerPageInner() {
+  const searchParams = useSearchParams();
+  const proRedirectStatus = searchParams.get("pro");
+
   const [selectedMatch, setSelectedMatch] = useState<SavedMatch | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerOverallStats | null>(null);
 
@@ -89,6 +101,67 @@ export default function SpielerPage() {
     setSigningOut(false);
   };
 
+  /*
+   * PRO-STATUS (PAYWALL)
+   *
+   * Läuft neu, sobald sich userEmail ändert (Login/Logout) - damit der
+   * Status nach dem Einloggen korrekt nachgeladen wird, statt auf dem
+   * "nicht eingeloggt"-Stand von vorhin hängen zu bleiben.
+   */
+
+  const [isPro, setIsPro] = useState(false);
+  const [proLoading, setProLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getOwnProStatus()
+      .then((pro) => {
+        if (!cancelled) {
+          setIsPro(pro);
+        }
+      })
+      .catch((err) => {
+        console.error("Fehler beim Laden des Pro-Status:", err);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setProLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userEmail]);
+
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+
+  const handleUpgrade = async () => {
+    if (upgrading) {
+      return;
+    }
+
+    setUpgrading(true);
+    setUpgradeError(null);
+
+    try {
+      const response = await fetch("/api/stripe/checkout", { method: "POST" });
+      const data = await response.json();
+
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "Checkout fehlgeschlagen.");
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Fehler beim Starten des Checkouts:", err);
+      setUpgradeError("Checkout konnte nicht gestartet werden.");
+      setUpgrading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#050708] text-white">
       <header className="border-b border-white/[0.08]">
@@ -117,6 +190,12 @@ export default function SpielerPage() {
             <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">
               Pong Stats
             </span>
+
+            {isPro && (
+              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400">
+                Pro
+              </span>
+            )}
 
             <div className="ml-2 h-4 w-px bg-white/[0.08]" />
 
@@ -156,6 +235,19 @@ export default function SpielerPage() {
           Zurück zur Startseite
         </Link>
 
+        {proRedirectStatus === "success" && (
+          <div className="mb-8 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.05] px-5 py-4 text-sm font-bold text-cyan-300">
+            Danke für deinen Kauf! Pro wird in der Regel innerhalb weniger Sekunden freigeschaltet -
+            falls es noch nicht angezeigt wird, lade die Seite kurz neu.
+          </div>
+        )}
+
+        {proRedirectStatus === "cancelled" && (
+          <div className="mb-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-4 text-sm font-bold text-white/40">
+            Kauf abgebrochen - kein Problem, du kannst es jederzeit erneut versuchen.
+          </div>
+        )}
+
         {selectedMatch ? (
           <section>
             <MatchHistoryDetail match={selectedMatch} onBack={() => setSelectedMatch(null)} />
@@ -171,32 +263,45 @@ export default function SpielerPage() {
           <>
             <PlayerHero />
 
-            <section className="mt-10">
-              <SectionTitle eyebrow="01" title="Performance" />
-              <PerformanceStats />
-            </section>
+            {proLoading ? (
+              <section className="mt-10 text-sm font-bold text-white/30">Lade …</section>
+            ) : isPro ? (
+              <>
+                <section className="mt-10">
+                  <SectionTitle eyebrow="01" title="Performance" />
+                  <PerformanceStats />
+                </section>
 
-            <section className="mt-14">
-              <SectionTitle eyebrow="02" title="Performance Verlauf" />
-              <PerformanceChart />
-            </section>
+                <section className="mt-14">
+                  <SectionTitle eyebrow="02" title="Performance Verlauf" />
+                  <PerformanceChart />
+                </section>
 
-            <section className="mt-14">
-              <SectionTitle eyebrow="03" title="Statistiken im Detail" />
-              <PerformanceDetail />
-            </section>
+                <section className="mt-14">
+                  <SectionTitle eyebrow="03" title="Statistiken im Detail" />
+                  <PerformanceDetail />
+                </section>
 
-            <section className="mt-14">
-              <SectionTitle eyebrow="04" title="Letzte Matches" />
+                <section className="mt-14">
+                  <SectionTitle eyebrow="04" title="Letzte Matches" />
 
-              <MatchHistory onSelectMatch={setSelectedMatch} />
-            </section>
+                  <MatchHistory onSelectMatch={setSelectedMatch} />
+                </section>
 
-            <section className="mt-14">
-              <SectionTitle eyebrow="05" title="Spieler Rangliste" />
+                <section className="mt-14">
+                  <SectionTitle eyebrow="05" title="Spieler Rangliste" />
 
-              <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
-            </section>
+                  <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
+                </section>
+              </>
+            ) : (
+              <ProPaywall
+                loggedIn={Boolean(userEmail)}
+                onUpgrade={handleUpgrade}
+                upgrading={upgrading}
+                error={upgradeError}
+              />
+            )}
 
             <section className="mt-14 pb-16">
               <Link
@@ -229,6 +334,14 @@ export default function SpielerPage() {
   );
 }
 
+export default function SpielerPage() {
+  return (
+    <Suspense fallback={null}>
+      <SpielerPageInner />
+    </Suspense>
+  );
+}
+
 function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <div className="mb-5 flex items-end gap-4">
@@ -238,5 +351,66 @@ function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
         {title}
       </h2>
     </div>
+  );
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | PRO-PAYWALL
+ * --------------------------------------------------------------------------
+ *
+ * Ersetzt die Sektionen 01-05 komplett durch eine einzige Kauf-
+ * Aufforderung, statt fünfmal denselben Hinweis zu wiederholen.
+ * "Neues Match starten" bleibt davon unberührt und immer sichtbar -
+ * spielen soll man auch ohne Pro können, nur die Auswertung ist bezahlt.
+ * --------------------------------------------------------------------------
+ */
+
+function ProPaywall({
+  loggedIn,
+  onUpgrade,
+  upgrading,
+  error,
+}: {
+  loggedIn: boolean;
+  onUpgrade: () => void;
+  upgrading: boolean;
+  error: string | null;
+}) {
+  return (
+    <section className="mt-10 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-8 text-center sm:p-12">
+      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
+        Pong Stats Pro
+      </div>
+
+      <h2 className="mt-2 text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
+        Statistiken, Match-Historie &amp; Rangliste
+      </h2>
+
+      <p className="mx-auto mt-3 max-w-md text-sm text-white/40">
+        Schalte mit einer einmaligen Zahlung dauerhaft deine persönliche Performance, die komplette
+        Match-Historie und die Spieler-Rangliste frei.
+      </p>
+
+      {error && <div className="mt-4 text-xs font-bold text-red-400/80">{error}</div>}
+
+      {loggedIn ? (
+        <button
+          type="button"
+          onClick={onUpgrade}
+          disabled={upgrading}
+          className="mt-6 rounded-full bg-cyan-400 px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {upgrading ? "Lädt …" : "Pro freischalten"}
+        </button>
+      ) : (
+        <Link
+          href="/login?next=/spieler"
+          className="mt-6 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-cyan-400 transition hover:bg-cyan-400/[0.18]"
+        >
+          Zum Freischalten anmelden
+        </Link>
+      )}
+    </section>
   );
 }

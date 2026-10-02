@@ -4,12 +4,6 @@ import { createClient } from "@/lib/supabase/client";
  * --------------------------------------------------------------------------
  * | MATCH-LOBBY
  * --------------------------------------------------------------------------
- *
- * Geteilter Zustand für die Phase VOR dem eigentlichen Match: Ein Spieler
- * eröffnet ein Match (createMatchLobby), andere treten über den Link
- * /spieler/match/<id> mit ihrem Profil bei (joinMatchLobby). Änderungen
- * werden per Supabase Realtime an alle verbundenen Geräte verteilt.
- * --------------------------------------------------------------------------
  */
 
 export type LobbyStatus = "lobby" | "live" | "finished";

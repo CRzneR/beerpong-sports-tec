@@ -221,3 +221,41 @@ export async function getRegisteredPlayerIds(): Promise<Set<string>> {
 
   return new Set((data ?? []).map((row) => row.id as string));
 }
+
+/*
+ * --------------------------------------------------------------------------
+ * | EIGENEN PRO-STATUS LADEN
+ * --------------------------------------------------------------------------
+ *
+ * is_pro wird NICHT in PlayerProfile aufgenommen - der Typ wird an
+ * vielen Stellen (Lobby, Teams) verwendet, wo Pro-Status irrelevant
+ * ist. Eigene, schlanke Funktion stattdessen, nur für die Paywall auf
+ * der Profilseite. false, wenn niemand eingeloggt ist.
+ * --------------------------------------------------------------------------
+ */
+
+export async function getOwnProStatus(): Promise<boolean> {
+  const supabase = createClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!userData.user) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .select("is_pro")
+    .eq("user_id", userData.user.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.is_pro ?? false;
+}
