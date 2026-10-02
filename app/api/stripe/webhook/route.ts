@@ -22,19 +22,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
-  /*
-   * TEMPORÄRE DIAGNOSE - nach dem Debugging wieder entfernen.
-   * Loggt NIE den vollständigen Secret, nur Länge + die ersten 8
-   * Zeichen (reicht zum Abgleich mit dem Dashboard, ohne den Wert
-   * selbst preiszugeben).
-   */
-  console.log(
-    "DEBUG webhook secret:",
-    process.env.STRIPE_WEBHOOK_SECRET.slice(0, 8),
-    "... Länge:",
-    process.env.STRIPE_WEBHOOK_SECRET.length,
-  );
-
   let event: Stripe.Event;
 
   try {
