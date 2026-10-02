@@ -16,6 +16,7 @@ import {
 import {
   getMatchLobby,
   joinMatchLobby,
+  leaveMatchLobby,
   startMatchLobby,
   subscribeMatchLobby,
   type MatchLobby,
@@ -291,6 +292,21 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     } catch (err) {
       console.error("Fehler beim Beitreten:", err);
       setError("Beitreten fehlgeschlagen.");
+    } finally {
+      setBusyPlayerId(null);
+    }
+  };
+
+  const handleLeave = async (playerId: string) => {
+    setBusyPlayerId(playerId);
+    setError(null);
+
+    try {
+      const updated = await leaveMatchLobby(lobbyId, playerId);
+      setLobby(updated);
+    } catch (err) {
+      console.error("Fehler beim Entfernen:", err);
+      setError("Spieler konnte nicht entfernt werden.");
     } finally {
       setBusyPlayerId(null);
     }
@@ -632,12 +648,16 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
             accent="text-blue-400"
             players={teamA}
             ownProfileId={ownProfile?.id ?? null}
+            busyPlayerId={busyPlayerId}
+            onRemove={handleLeave}
           />
           <TeamColumn
             title="Team B"
             accent="text-red-400"
             players={teamB}
             ownProfileId={ownProfile?.id ?? null}
+            busyPlayerId={busyPlayerId}
+            onRemove={handleLeave}
           />
         </div>
 
@@ -662,11 +682,15 @@ function TeamColumn({
   accent,
   players,
   ownProfileId,
+  busyPlayerId,
+  onRemove,
 }: {
   title: string;
   accent: string;
   players: PlayerProfile[];
   ownProfileId: string | null;
+  busyPlayerId: string | null;
+  onRemove: (playerId: string) => void;
 }) {
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
@@ -677,7 +701,10 @@ function TeamColumn({
       ) : (
         <div className="mt-3 space-y-2">
           {players.map((profile) => (
-            <div key={profile.id} className="rounded-xl bg-white/[0.03] px-3 py-2">
+            <div
+              key={profile.id}
+              className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.03] px-3 py-2"
+            >
               <span className="text-xs font-bold text-white">
                 {profile.name}
                 {profile.id === ownProfileId && (
@@ -686,6 +713,16 @@ function TeamColumn({
                   </span>
                 )}
               </span>
+
+              <button
+                type="button"
+                disabled={busyPlayerId === profile.id}
+                onClick={() => onRemove(profile.id)}
+                aria-label={`${profile.name} entfernen`}
+                className="shrink-0 text-sm font-black text-white/25 transition hover:text-white disabled:opacity-30"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
