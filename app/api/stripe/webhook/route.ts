@@ -4,11 +4,6 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-/*
- * Webhooks brauchen den UNVERÄNDERTEN Rohtext des Requests für die
- * Signaturprüfung - deshalb request.text() statt request.json().
- */
-
 export async function POST(request: Request) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");

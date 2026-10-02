@@ -3,11 +3,7 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 
-/*
- * PREIS HIER ANPASSEN (in Cent). 499 = 4,99 €.
- */
-
-const PRO_PRICE_CENTS = 499;
+const PRO_PRICE_CENTS = 399;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -19,10 +15,6 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
   }
-
-  /*
-   * Wer schon Pro hat, muss nicht nochmal bezahlen können.
-   */
 
   const { data: profile } = await supabase
     .from("players")

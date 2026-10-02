@@ -1,12 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 
-/*
- * NUR SERVERSEITIG VERWENDEN (API-Routen, Webhooks) - der Service-Role-
- * Key umgeht sämtliche Row-Level-Security-Policies. Landet dieser Key
- * jemals im Client-Bundle, kann jeder Besucher der Seite damit auf die
- * komplette Datenbank zugreifen, ohne jede Einschränkung.
- */
-
 export function createAdminClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
