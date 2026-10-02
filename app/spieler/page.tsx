@@ -19,13 +19,6 @@ import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
 import type { PlayerOverallStats } from "@/app/spieler/match/playerStats";
 
-/*
- * useSearchParams() braucht in Next.js einen Suspense-Wrapper auf der
- * Seite selbst (siehe auch LoginPage) - deshalb liegt die eigentliche
- * Seite in einer inneren Komponente, SpielerPage darunter ist nur der
- * Wrapper dafür.
- */
-
 function SpielerPageInner() {
   const searchParams = useSearchParams();
   const proRedirectStatus = searchParams.get("pro");
@@ -65,10 +58,6 @@ function SpielerPageInner() {
         }
       });
 
-    /*
-     * Auf Login/Logout in anderen Tabs bzw. nach Rückkehr vom
-     * E-Mail-Link reagieren, ohne die Seite neu laden zu müssen.
-     */
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -100,14 +89,6 @@ function SpielerPageInner() {
     setUserEmail(null);
     setSigningOut(false);
   };
-
-  /*
-   * PRO-STATUS (PAYWALL)
-   *
-   * Läuft neu, sobald sich userEmail ändert (Login/Logout) - damit der
-   * Status nach dem Einloggen korrekt nachgeladen wird, statt auf dem
-   * "nicht eingeloggt"-Stand von vorhin hängen zu bleiben.
-   */
 
   const [isPro, setIsPro] = useState(false);
   const [proLoading, setProLoading] = useState(true);
@@ -386,24 +367,6 @@ function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
-/*
- * --------------------------------------------------------------------------
- * | PRO-LOCK
- * --------------------------------------------------------------------------
- *
- * Umhüllt eine einzelne Sektion: Überschrift bleibt immer sichtbar
- * (siehe SectionTitle direkt davor), der eigentliche Inhalt wird bei
- * fehlendem Pro-Status unscharf gestellt und mit einem Schloss-Hinweis
- * überlagert - zeigt also an, DASS es dort echte Daten gibt, ohne sie
- * preiszugeben, statt die Sektion komplett zu verstecken.
- *
- * Mit Pro wird einfach nur children durchgereicht, ohne jede Hülle.
- * "Neues Match starten" ist davon unberührt (liegt außerhalb von
- * ProLock) - spielen soll man auch ohne Pro können, nur die
- * Auswertung ist bezahlt.
- * --------------------------------------------------------------------------
- */
-
 function ProLock({
   isPro,
   loggedIn,
@@ -421,6 +384,25 @@ function ProLock({
     return <>{children}</>;
   }
 
+  if (!loggedIn) {
+    return (
+      <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 text-center">
+        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
+          🔒 Pro-Funktion
+        </div>
+
+        <p className="mt-2 text-sm text-white/40">Melde dich an, um diesen Bereich zu sehen.</p>
+
+        <Link
+          href="/login?next=/spieler"
+          className="mt-4 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
+        >
+          Anmelden
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <div aria-hidden="true" className="pointer-events-none select-none blur-sm opacity-50">
@@ -433,23 +415,14 @@ function ProLock({
             🔒 Pro-Funktion
           </div>
 
-          {loggedIn ? (
-            <button
-              type="button"
-              onClick={onUpgrade}
-              disabled={upgrading}
-              className="mt-3 rounded-full bg-cyan-400 px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {upgrading ? "Lädt …" : "Freischalten"}
-            </button>
-          ) : (
-            <Link
-              href="/login?next=/spieler"
-              className="mt-3 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
-            >
-              Anmelden
-            </Link>
-          )}
+          <button
+            type="button"
+            onClick={onUpgrade}
+            disabled={upgrading}
+            className="mt-3 rounded-full bg-cyan-400 px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {upgrading ? "Lädt …" : "Freischalten"}
+          </button>
         </div>
       </div>
     </div>

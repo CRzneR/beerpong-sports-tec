@@ -76,11 +76,19 @@ export async function getAllPlayerProfiles(): Promise<PlayerProfile[]> {
 export async function getOwnProfile(): Promise<PlayerProfile | null> {
   const supabase = createClient();
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  /*
+   * FIX: Ohne jede Session liefert supabase.auth.getUser() oft
+   * GLEICHZEITIG user: null UND einen AuthSessionMissingError zurück.
+   * Der Error wurde hier vorher zuerst geprüft und geworfen, bevor
+   * überhaupt klar war, dass "niemand eingeloggt" der eigentliche,
+   * ganz normale Grund dafür ist - das ließ z. B. PlayerHero bei
+   * nicht eingeloggten Besuchern mit einer Fehlermeldung abstürzen,
+   * statt einfach den Gast-/Login-Zustand zu zeigen. Jetzt wird zuerst
+   * geprüft, ob überhaupt ein Nutzer da ist, der eigentliche Fehler
+   * interessiert nur noch, wenn trotzdem kein Nutzer zurückkommt.
+   */
 
-  if (userError) {
-    throw userError;
-  }
+  const { data: userData } = await supabase.auth.getUser();
 
   if (!userData.user) {
     return null;
@@ -237,11 +245,8 @@ export async function getRegisteredPlayerIds(): Promise<Set<string>> {
 export async function getOwnProStatus(): Promise<boolean> {
   const supabase = createClient();
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw userError;
-  }
+  // Gleicher Fix wie bei getOwnProfile() oben - Details siehe dort.
+  const { data: userData } = await supabase.auth.getUser();
 
   if (!userData.user) {
     return false;
