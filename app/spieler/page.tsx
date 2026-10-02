@@ -265,42 +265,74 @@ function SpielerPageInner() {
 
             {proLoading ? (
               <section className="mt-10 text-sm font-bold text-white/30">Lade …</section>
-            ) : isPro ? (
+            ) : (
               <>
+                {upgradeError && (
+                  <div className="mt-10 rounded-xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3 text-xs font-bold text-red-400/80">
+                    {upgradeError}
+                  </div>
+                )}
+
                 <section className="mt-10">
                   <SectionTitle eyebrow="01" title="Performance" />
-                  <PerformanceStats />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={handleUpgrade}
+                    upgrading={upgrading}
+                  >
+                    <PerformanceStats />
+                  </ProLock>
                 </section>
 
                 <section className="mt-14">
                   <SectionTitle eyebrow="02" title="Performance Verlauf" />
-                  <PerformanceChart />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={handleUpgrade}
+                    upgrading={upgrading}
+                  >
+                    <PerformanceChart />
+                  </ProLock>
                 </section>
 
                 <section className="mt-14">
                   <SectionTitle eyebrow="03" title="Statistiken im Detail" />
-                  <PerformanceDetail />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={handleUpgrade}
+                    upgrading={upgrading}
+                  >
+                    <PerformanceDetail />
+                  </ProLock>
                 </section>
 
                 <section className="mt-14">
                   <SectionTitle eyebrow="04" title="Letzte Matches" />
-
-                  <MatchHistory onSelectMatch={setSelectedMatch} />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={handleUpgrade}
+                    upgrading={upgrading}
+                  >
+                    <MatchHistory onSelectMatch={setSelectedMatch} />
+                  </ProLock>
                 </section>
 
                 <section className="mt-14">
                   <SectionTitle eyebrow="05" title="Spieler Rangliste" />
-
-                  <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={handleUpgrade}
+                    upgrading={upgrading}
+                  >
+                    <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
+                  </ProLock>
                 </section>
               </>
-            ) : (
-              <ProPaywall
-                loggedIn={Boolean(userEmail)}
-                onUpgrade={handleUpgrade}
-                upgrading={upgrading}
-                error={upgradeError}
-              />
             )}
 
             <section className="mt-14 pb-16">
@@ -356,61 +388,70 @@ function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
 
 /*
  * --------------------------------------------------------------------------
- * | PRO-PAYWALL
+ * | PRO-LOCK
  * --------------------------------------------------------------------------
  *
- * Ersetzt die Sektionen 01-05 komplett durch eine einzige Kauf-
- * Aufforderung, statt fünfmal denselben Hinweis zu wiederholen.
- * "Neues Match starten" bleibt davon unberührt und immer sichtbar -
- * spielen soll man auch ohne Pro können, nur die Auswertung ist bezahlt.
+ * Umhüllt eine einzelne Sektion: Überschrift bleibt immer sichtbar
+ * (siehe SectionTitle direkt davor), der eigentliche Inhalt wird bei
+ * fehlendem Pro-Status unscharf gestellt und mit einem Schloss-Hinweis
+ * überlagert - zeigt also an, DASS es dort echte Daten gibt, ohne sie
+ * preiszugeben, statt die Sektion komplett zu verstecken.
+ *
+ * Mit Pro wird einfach nur children durchgereicht, ohne jede Hülle.
+ * "Neues Match starten" ist davon unberührt (liegt außerhalb von
+ * ProLock) - spielen soll man auch ohne Pro können, nur die
+ * Auswertung ist bezahlt.
  * --------------------------------------------------------------------------
  */
 
-function ProPaywall({
+function ProLock({
+  isPro,
   loggedIn,
   onUpgrade,
   upgrading,
-  error,
+  children,
 }: {
+  isPro: boolean;
   loggedIn: boolean;
   onUpgrade: () => void;
   upgrading: boolean;
-  error: string | null;
+  children: React.ReactNode;
 }) {
+  if (isPro) {
+    return <>{children}</>;
+  }
+
   return (
-    <section className="mt-10 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-8 text-center sm:p-12">
-      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
-        Pong Stats Pro
+    <div className="relative">
+      <div aria-hidden="true" className="pointer-events-none select-none blur-sm opacity-50">
+        {children}
       </div>
 
-      <h2 className="mt-2 text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
-        Statistiken, Match-Historie &amp; Rangliste
-      </h2>
+      <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-[#050708]/50 px-4">
+        <div className="rounded-2xl border border-cyan-400/20 bg-[#0c0f16]/95 px-6 py-5 text-center shadow-xl">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
+            🔒 Pro-Funktion
+          </div>
 
-      <p className="mx-auto mt-3 max-w-md text-sm text-white/40">
-        Schalte mit einer einmaligen Zahlung dauerhaft deine persönliche Performance, die komplette
-        Match-Historie und die Spieler-Rangliste frei.
-      </p>
-
-      {error && <div className="mt-4 text-xs font-bold text-red-400/80">{error}</div>}
-
-      {loggedIn ? (
-        <button
-          type="button"
-          onClick={onUpgrade}
-          disabled={upgrading}
-          className="mt-6 rounded-full bg-cyan-400 px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {upgrading ? "Lädt …" : "Pro freischalten"}
-        </button>
-      ) : (
-        <Link
-          href="/login?next=/spieler"
-          className="mt-6 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-cyan-400 transition hover:bg-cyan-400/[0.18]"
-        >
-          Zum Freischalten anmelden
-        </Link>
-      )}
-    </section>
+          {loggedIn ? (
+            <button
+              type="button"
+              onClick={onUpgrade}
+              disabled={upgrading}
+              className="mt-3 rounded-full bg-cyan-400 px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {upgrading ? "Lädt …" : "Freischalten"}
+            </button>
+          ) : (
+            <Link
+              href="/login?next=/spieler"
+              className="mt-3 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
+            >
+              Anmelden
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
