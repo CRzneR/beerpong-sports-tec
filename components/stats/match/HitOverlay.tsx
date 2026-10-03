@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import BeerPongTable, { Cup, CupSlotAssignment } from "@/components/stats/match/BeerPongTable";
 
-export type ShotType = "single" | "bounce" | "trickshot";
+export type ShotType = "single" | "bounce" | "trickshot" | "extra";
 
 interface HitOverlayProps {
   playerName: string;
@@ -24,6 +24,13 @@ interface HitOverlayProps {
   teamACupSlots: CupSlotAssignment;
 
   teamBCupSlots: CupSlotAssignment;
+
+  /**
+   * Mit welcher Trefferart soll das Overlay starten? Für den
+   * normalen Ablauf "single" (Default), für automatische
+   * Extra-Treffer-Ansprüche nach Rundenende "extra".
+   */
+  defaultShotType?: ShotType;
 
   onClose: () => void;
 
@@ -60,6 +67,14 @@ const shotTypes: {
 
     description: "Besonderer Wurf",
   },
+
+  {
+    id: "extra",
+
+    title: "Extra Treffer",
+
+    description: "Bonus-Becher dieser Runde",
+  },
 ];
 
 export default function HitOverlay({
@@ -69,10 +84,11 @@ export default function HitOverlay({
   teamBCups,
   teamACupSlots,
   teamBCupSlots,
+  defaultShotType = "single",
   onClose,
   onSave,
 }: HitOverlayProps) {
-  const [shotType, setShotType] = useState<ShotType>("single");
+  const [shotType, setShotType] = useState<ShotType>(defaultShotType);
 
   const [selectedCups, setSelectedCups] = useState<number[]>([]);
 
@@ -86,16 +102,25 @@ export default function HitOverlay({
 
   /*
    * Becher auswählen
+   *
+   * Immer nur EIN Becher gleichzeitig - egal bei welcher Trefferart,
+   * auch beim Aufhüpfer. Der Tisch steht während der laufenden Runde
+   * noch unverändert so da, wie ihn auch die nächste Spielerin sieht
+   * (keine Live-Vorschau einer eventuellen Neuaufstellung mitten in
+   * der Runde - die passiert bewusst erst nach Rundenende, siehe
+   * page.tsx/resolveRound). Ein Aufhüpfer bringt seinen "zweiten
+   * Becher" deshalb NICHT hier direkt, sondern als automatischer
+   * Extra-Treffer-Anspruch nach Rundenauflösung (siehe
+   * detectExtraEntitlements in page.tsx).
    */
 
   const toggleCup = (cupId: number) => {
-    setSelectedCups((current) => {
-      if (current.includes(cupId)) {
-        return current.filter((id) => id !== cupId);
-      }
+    setSelectedCups((current) => (current.includes(cupId) ? [] : [cupId]));
+  };
 
-      return [...current, cupId];
-    });
+  const handleShotTypeChange = (next: ShotType) => {
+    setShotType(next);
+    setSelectedCups([]);
   };
 
   /*
@@ -127,16 +152,6 @@ export default function HitOverlay({
         backdrop-blur-md
       "
     >
-      {/*
-        OVERLAY
-
-        max-h an dvh gebunden, flex-col: HEADER bleibt fix (shrink-0).
-        Unterhalb von lg folgt ein eigener, kompakter Aufbau, der ohne
-        internes Scrollen auskommt (Trefferart als schmale Reihe statt
-        großer Karten mit Beschreibung, kleinere Abstände/Buttons) -
-        ab lg exakt der bisherige Aufbau, unverändert.
-      */}
-
       <div
         className="
           relative
@@ -180,7 +195,7 @@ export default function HitOverlay({
                 lg:text-[10px]
               "
             >
-              Treffer erfassen
+              {defaultShotType === "extra" ? "Bonus-Becher auswählen" : "Treffer erfassen"}
             </div>
 
             <h2
@@ -226,17 +241,15 @@ export default function HitOverlay({
           </button>
         </div>
 
-        {/* CONTENT - MOBILE (< lg): eigener kompakter Aufbau, passt ohne Scroll */}
+        {/* CONTENT - MOBILE (< lg) */}
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 lg:hidden">
-          {/* TREFFERART - schmale Reihe statt gestapelter Karten mit Beschreibung */}
-
           <div className="shrink-0">
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
               01 · Trefferart
             </div>
 
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
               {shotTypes.map((type) => {
                 const active = shotType === type.id;
 
@@ -244,15 +257,15 @@ export default function HitOverlay({
                   <button
                     key={type.id}
                     type="button"
-                    onClick={() => setShotType(type.id)}
-                    className={`rounded-xl border p-2 text-center transition ${
+                    onClick={() => handleShotTypeChange(type.id)}
+                    className={`rounded-xl border p-1.5 text-center transition ${
                       active
                         ? "border-cyan-400 bg-cyan-400/[0.08]"
                         : "border-white/[0.08] bg-white/[0.015]"
                     }`}
                   >
                     <div
-                      className={`text-[10px] font-black uppercase ${
+                      className={`text-[9px] font-black uppercase leading-tight ${
                         active ? "text-cyan-400" : "text-white"
                       }`}
                     >
@@ -269,11 +282,11 @@ export default function HitOverlay({
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex shrink-0 items-center justify-between">
               <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
-                02 · Getroffene Becher
+                02 · Getroffener Becher
               </div>
 
               <div className="text-xs font-black text-cyan-400">
-                {selectedCups.length} ausgewählt
+                {selectedCups.length}/1 ausgewählt
               </div>
             </div>
 
@@ -317,30 +330,32 @@ export default function HitOverlay({
                 disabled:text-white/20
               "
             >
-              Treffer speichern
+              {defaultShotType === "extra" ? "Bonus-Becher speichern" : "Treffer speichern"}
             </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="
-                w-full
-                py-1.5
-                text-[9px]
-                font-black
-                uppercase
-                tracking-[0.15em]
-                text-white/25
-                transition
-                hover:text-white
-              "
-            >
-              Abbrechen
-            </button>
+            {defaultShotType !== "extra" && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="
+                  w-full
+                  py-1.5
+                  text-[9px]
+                  font-black
+                  uppercase
+                  tracking-[0.15em]
+                  text-white/25
+                  transition
+                  hover:text-white
+                "
+              >
+                Abbrechen
+              </button>
+            )}
           </div>
         </div>
 
-        {/* CONTENT - DESKTOP (ab lg): unverändert */}
+        {/* CONTENT - DESKTOP (ab lg) */}
 
         <div
           className="
@@ -357,8 +372,6 @@ export default function HitOverlay({
           {/* LINKE SEITE */}
 
           <div>
-            {/* TREFFERART */}
-
             <div
               className="
                 text-[10px]
@@ -384,7 +397,7 @@ export default function HitOverlay({
                   <button
                     key={type.id}
                     type="button"
-                    onClick={() => setShotType(type.id)}
+                    onClick={() => handleShotTypeChange(type.id)}
                     className={`
                         w-full
                         rounded-2xl
@@ -434,6 +447,14 @@ export default function HitOverlay({
                 );
               })}
             </div>
+
+            {shotType === "bounce" && (
+              <div className="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] p-3 text-[11px] leading-relaxed text-yellow-200/80">
+                Hier nur den direkt getroffenen Becher wählen. Der zusätzliche Bonus-Becher für den
+                Aufhüpfer kommt automatisch nach Ende dieser Runde als "Extra Treffer" dran - aus
+                der dann aktuellen Formation.
+              </div>
+            )}
           </div>
 
           {/* RECHTE SEITE */}
@@ -455,7 +476,7 @@ export default function HitOverlay({
                   text-white/30
                 "
               >
-                02 · Getroffene Becher
+                02 · Getroffener Becher
               </div>
 
               <div
@@ -465,11 +486,9 @@ export default function HitOverlay({
                   text-cyan-400
                 "
               >
-                {selectedCups.length} ausgewählt
+                {selectedCups.length}/1 ausgewählt
               </div>
             </div>
-
-            {/* NUR DAS GEGNERISCHE FELD - kompakt, nicht das ganze Spielfeld */}
 
             <div
               className="
@@ -519,29 +538,31 @@ export default function HitOverlay({
                 disabled:text-white/20
               "
             >
-              Treffer speichern
+              {defaultShotType === "extra" ? "Bonus-Becher speichern" : "Treffer speichern"}
             </button>
 
             {/* ABBRECHEN */}
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="
-                mt-3
-                w-full
-                py-3
-                text-[10px]
-                font-black
-                uppercase
-                tracking-[0.15em]
-                text-white/25
-                transition
-                hover:text-white
-              "
-            >
-              Abbrechen
-            </button>
+            {defaultShotType !== "extra" && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="
+                  mt-3
+                  w-full
+                  py-3
+                  text-[10px]
+                  font-black
+                  uppercase
+                  tracking-[0.15em]
+                  text-white/25
+                  transition
+                  hover:text-white
+                "
+              >
+                Abbrechen
+              </button>
+            )}
           </div>
         </div>
       </div>

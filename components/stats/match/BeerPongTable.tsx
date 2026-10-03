@@ -54,6 +54,16 @@ interface BeerPongTableProps {
    */
   narrow?: boolean;
 
+  /**
+   * NEU: Becher-IDs, die in DIESER Runde schon getroffen wurden, aber
+   * erst am Rundenende tatsächlich vom Tisch entfernt werden (siehe
+   * page.tsx, roundHits). Bleiben hier noch im Array (hit: false),
+   * werden aber optisch als "vorgemerkt" markiert statt normal weiß -
+   * so bleiben sie sichtbar/stehen, bis die Runde komplett ist, genau
+   * wie bei einer echten Partie.
+   */
+  pendingCupIds?: number[];
+
   onCupClick?: (cupId: number) => void;
 }
 
@@ -164,23 +174,6 @@ const FORMATION_1_BOTTOM = {
 |--------------------------------------------------------------------------
 | EINZEL-TEAM FORMATIONEN (KOMPAKT, TREFFER-OVERLAY)
 |--------------------------------------------------------------------------
-|
-| Wird nur EIN Team angezeigt (Treffer-Overlay, wo nur die gegnerischen
-| Becher relevant sind), macht eine halbe, halbleere Spielfeldhälfte
-| keinen Sinn. Diese Formationen zentrieren dieselbe Dreiecksform
-| stattdessen über die volle Höhe der (kompakten) Box.
-|
-| FIX: Es gibt davon zwei Varianten (_TOP / _BOTTOM), nicht nur eine.
-| Grund: Die Reihen-Reihenfolge (welche Zeile hat wie viele Becher) muss
-| zur jeweiligen Seite passen, damit dieselbe Slot-Zuordnung (siehe
-| useCupSlotAssignment) im Overlay dasselbe Bild ergibt wie auf dem
-| Hauptbildschirm. FORMATION_..._TOP geht groß→klein von oben nach
-| unten (deckt sich mit FORMATION_..._TOP oben), FORMATION_..._BOTTOM
-| geht klein→groß (deckt sich mit FORMATION_..._BOTTOM oben). Vorher
-| gab es nur EINE Variante (groß→klein), die zufällig zu TOP passte,
-| aber strukturell nicht zu BOTTOM - Team B zeigte im Overlay dieselben
-| Slot-Indizes dadurch in einer anderen Reihe als auf dem Hauptbildschirm.
-|
 */
 
 const FORMATION_10_SINGLE_TOP = [
@@ -260,14 +253,6 @@ const FORMATION_1_SINGLE = {
 |--------------------------------------------------------------------------
 | SCHMALE FORMATIONEN (z. B. Feld neben Score/Letzte Aktionen, Mobile)
 |--------------------------------------------------------------------------
-|
-| Weiterhin Team A oben / Team B unten gestapelt (wie normal), aber mit
-| deutlich BREITEREM Prozent-Abstand zwischen den Bechern einer Reihe -
-| die normale Formation geht von einer relativ breiten Spalte aus
-| (Desktop, ~460-540px); in einer schmalen ~150-180px-Spalte würden
-| sich damit vor allem die 4er-Reihen (Team A oben, Team B unten)
-| überlappen. Hier wird bis zu ~80% der Breite genutzt statt ~30%.
-|
 */
 
 const FORMATION_10_TOP_NARROW = [
@@ -352,18 +337,11 @@ const FORMATION_1_BOTTOM_NARROW = {
 |--------------------------------------------------------------------------
 | FORMATIONS-STUFE ERMITTELN
 |--------------------------------------------------------------------------
-|
-| Statt exakter Werte (previousCount === 7 && remainingCount === 6)
-| wird verglichen, ob sich die FORMATIONS-STUFE geändert hat - so wird
-| ein Re-Rack auch dann korrekt ausgelöst, wenn eine einzelne Aktion
-| (z. B. ein Bounce, der 2 Becher auf einmal trifft) eine Stufe komplett
-| überspringt.
-|--------------------------------------------------------------------------
 */
 
 type FormationTier = "ten" | "six" | "three" | "single" | "none";
 
-function getFormationTier(remainingCount: number): FormationTier {
+export function getFormationTier(remainingCount: number): FormationTier {
   if (remainingCount >= 7) return "ten";
   if (remainingCount >= 4) return "six";
   if (remainingCount >= 2) return "three";
@@ -415,30 +393,6 @@ function getSingleCupPosition(
 /*
 |--------------------------------------------------------------------------
 | STABILE BECHER-SLOT-ZUORDNUNG (zentral, EIN Hook-Aufruf pro Team)
-|--------------------------------------------------------------------------
-|
-| Weist jedem verbleibenden Becher einen Formations-SLOT-INDEX zu
-| (0-basiert, NICHT die fertige Pixel-Position - die hängt zusätzlich
-| von narrow/compact ab, siehe CupFormation weiter unten).
-|
-| WICHTIG: Dieser Hook darf nur EINMAL pro Team aufgerufen werden - in
-| page.tsx, nicht in BeerPongTable/CupFormation selbst. Vorher hatte
-| JEDE gemountete BeerPongTable-Instanz (Mobile-Layout, Desktop-Layout,
-| und bei jedem Öffnen erneut das Treffer-Overlay) ihre eigene, davon
-| unabhängige State-Berechnung. Da die Zuordnung beim jeweils ersten
-| Mount einer Instanz per Array-Index aus den zu DIESEM Zeitpunkt
-| verbleibenden Bechern berechnet wurde, bekam eine frisch mountende
-| Instanz (z. B. das Overlay beim Öffnen) eine ANDERE Zuordnung als die
-| längst laufende Instanz auf dem Hauptbildschirm, sobald zwischenzeitlich
-| Becher aus der Mitte der Reihe gefallen waren - das Overlay zeigte
-| dieselben Becher an anderen Stellen als der Spielbildschirm.
-|
-| Fix: Die Zuordnung wird jetzt EINMAL zentral berechnet und per Props
-| an alle Render-Stellen weitergereicht, statt dass jede sie selbst neu
-| erfindet.
-|
-| Die Logik selbst (nur bei Tier-Wechsel neu anordnen, sonst stabil)
-| ist unverändert - nur der Ort, an dem sie lebt, hat sich geändert.
 |--------------------------------------------------------------------------
 */
 
@@ -499,13 +453,6 @@ export function useCupSlotAssignment(cups: Cup[]): CupSlotAssignment {
 |--------------------------------------------------------------------------
 | CUP FORMATION
 |--------------------------------------------------------------------------
-|
-| Reine Darstellungskomponente ohne eigenen Positions-State: die
-| Slot-Zuordnung kommt fertig als Prop von oben (siehe
-| useCupSlotAssignment), hier wird pro Slot-Index nur noch die zur
-| jeweiligen Variante (side/compact/narrow) passende Pixel-Position
-| nachgeschlagen.
-|--------------------------------------------------------------------------
 */
 
 function CupFormation({
@@ -517,6 +464,7 @@ function CupFormation({
   selectable,
   selectableTeam,
   selectedCupIds,
+  pendingCupIds,
   onCupClick,
 }: {
   cups: Cup[];
@@ -525,16 +473,8 @@ function CupFormation({
 
   side: "top" | "bottom";
 
-  /**
-   * true = nur dieses eine Team wird angezeigt (Treffer-Overlay).
-   */
   compact?: boolean;
 
-  /**
-   * true = das Feld ist schmal (z. B. neben Score/Letzte Aktionen auf
-   * Mobile) - nutzt breiteren Prozent-Abstand zwischen den Bechern.
-   * Wird bei compact=true ignoriert.
-   */
   narrow?: boolean;
 
   selectable?: boolean;
@@ -542,6 +482,8 @@ function CupFormation({
   selectableTeam?: "A" | "B";
 
   selectedCupIds: number[];
+
+  pendingCupIds?: number[];
 
   onCupClick?: (cupId: number) => void;
 }) {
@@ -570,12 +512,6 @@ function CupFormation({
       {remainingCups.map((cup) => {
         const position = getPixelPosition(cup.id);
 
-        /*
-         * Kein Slot (noch) zugewiesen - kommt kurzzeitig vor, wenn
-         * sich die zentrale Zuordnung (siehe useCupSlotAssignment)
-         * gerade erst nach einem Tier-Wechsel aktualisiert.
-         */
-
         if (!position) {
           return null;
         }
@@ -586,6 +522,13 @@ function CupFormation({
             (side === "bottom" && selectableTeam === "B"));
 
         const isSelected = selectedCupIds.includes(cup.id);
+
+        /*
+         * NEU: in dieser Runde schon getroffen, aber noch nicht
+         * tatsächlich vom Tisch entfernt - steht noch, zählt aber
+         * schon als "vorgemerkt".
+         */
+        const isPending = Boolean(pendingCupIds?.includes(cup.id));
 
         return (
           <button
@@ -617,17 +560,23 @@ function CupFormation({
                     bg-cyan-400
                     shadow-[0_0_25px_rgba(34,211,238,0.45)]
                   `
-                  : side === "top"
+                  : isPending
                     ? `
-                      border-blue-500
-                      bg-white
-                      shadow-[0_0_18px_rgba(59,130,246,0.20)]
+                      border-yellow-400
+                      bg-yellow-400/40
+                      shadow-[0_0_18px_rgba(250,204,21,0.35)]
                     `
-                    : `
-                      border-red-500
-                      bg-white
-                      shadow-[0_0_18px_rgba(239,68,68,0.20)]
-                    `
+                    : side === "top"
+                      ? `
+                        border-blue-500
+                        bg-white
+                        shadow-[0_0_18px_rgba(59,130,246,0.20)]
+                      `
+                      : `
+                        border-red-500
+                        bg-white
+                        shadow-[0_0_18px_rgba(239,68,68,0.20)]
+                      `
               }
 
               ${
@@ -661,15 +610,20 @@ function CupFormation({
                       border-cyan-300
                       bg-cyan-400
                     `
-                    : side === "top"
+                    : isPending
                       ? `
-                        border-blue-500
-                        bg-blue-500/15
+                        border-yellow-300
+                        bg-yellow-400/50
                       `
-                      : `
-                        border-red-500
-                        bg-red-500/15
-                      `
+                      : side === "top"
+                        ? `
+                          border-blue-500
+                          bg-blue-500/15
+                        `
+                        : `
+                          border-red-500
+                          bg-red-500/15
+                        `
                 }
               `}
             />
@@ -696,6 +650,7 @@ export default function BeerPongTable({
   selectedCupIds = [],
   displayTeam = "both",
   narrow = false,
+  pendingCupIds,
   onCupClick,
 }: BeerPongTableProps) {
   const showTeamA = displayTeam === "both" || displayTeam === "A";
@@ -746,8 +701,6 @@ export default function BeerPongTable({
           "
         />
 
-        {/* Mittellinie - nur sinnvoll, wenn wirklich beide Hälften zu sehen sind */}
-
         {!isSingleTeamView && (
           <div
             className="
@@ -762,8 +715,6 @@ export default function BeerPongTable({
             "
           />
         )}
-
-        {/* TEAM A */}
 
         {showTeamA && (
           <div
@@ -783,8 +734,6 @@ export default function BeerPongTable({
           </div>
         )}
 
-        {/* TEAM B */}
-
         {showTeamB && (
           <div
             className="
@@ -803,8 +752,6 @@ export default function BeerPongTable({
           </div>
         )}
 
-        {/* TEAM A */}
-
         {showTeamA && (
           <CupFormation
             cups={teamACups}
@@ -815,11 +762,10 @@ export default function BeerPongTable({
             selectable={selectable}
             selectableTeam={selectableTeam}
             selectedCupIds={selectedCupIds}
+            pendingCupIds={pendingCupIds}
             onCupClick={onCupClick}
           />
         )}
-
-        {/* TEAM B */}
 
         {showTeamB && (
           <CupFormation
@@ -831,6 +777,7 @@ export default function BeerPongTable({
             selectable={selectable}
             selectableTeam={selectableTeam}
             selectedCupIds={selectedCupIds}
+            pendingCupIds={pendingCupIds}
             onCupClick={onCupClick}
           />
         )}
