@@ -23,7 +23,15 @@
 
 export type Team = "A" | "B";
 
-export type HitType = "single" | "bounce" | "trickshot";
+/*
+ * FIX: "extra" ergänzt - Bonus-/Extra-Treffer-Becher (Aufhüpfer-Bonus,
+ * "beide trafen denselben Becher") werden in page.tsx mit shotType
+ * "extra" gespeichert (siehe HitOverlay.tsx, ShotType). Ohne "extra"
+ * hier war MatchAction.hitType dafür nicht breit genug typisiert -
+ * das hat den Produktions-Build mit einem Typecheck-Fehler
+ * abgebrochen, sobald ein solcher Becher ins Spiel kam.
+ */
+export type HitType = "single" | "bounce" | "trickshot" | "extra";
 
 export type ActionType = "miss" | "hit";
 
@@ -606,16 +614,6 @@ export function undoLastAction(state: MatchState): MatchState {
    * actions-Verlauf UND ein previousState von `null`
    * (siehe stateBeforeAction in finishAction). Es reicht
    * also, direkt dorthin zurückzukehren.
-   *
-   * Der alte Code hat previousState hier fälschlich
-   * wieder auf `state.previousState` gesetzt – und das
-   * ist exakt `previous` selbst. Dadurch zeigte der
-   * wiederhergestellte Zustand nach dem Undo wieder auf
-   * sich selbst, statt auf null. Ein zweiter Undo-Klick
-   * (ohne neue Aktion dazwischen) hat dann eine weitere
-   * Aktion aus dem Verlauf entfernt, ohne dass sich der
-   * Becherstatus entsprechend zurückgedreht hat –
-   * Aktionsverlauf und Becherstatus liefen auseinander.
    */
 
   return {

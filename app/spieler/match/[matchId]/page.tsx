@@ -39,6 +39,16 @@ type MatchEvent =
 
       type: "hit";
 
+      /*
+       * FIX: Team des Werfers direkt am Event, statt es später über
+       * players.find(playerId) nachzuschlagen. Extra-Treffer-Events
+       * (siehe handleSaveExtraTreffer) haben playerId: "extra", die
+       * zu keinem echten Spieler passt - ein Lookup würde dort immer
+       * leer ausgehen und der Bonus-Becher in der Live-Punkteanzeige
+       * (teamAScore/teamBScore) unsichtbar bleiben.
+       */
+      shooterTeam: "A" | "B";
+
       shotType: ShotType;
 
       cupIds: number[];
@@ -249,20 +259,14 @@ export default function MatchPage() {
   const teamAScore = useMemo(
     () =>
       events.reduce((total, event) => {
-        if (event.type !== "hit") {
-          return total;
-        }
-
-        const player = players.find((item) => item.id === event.playerId);
-
-        if (player?.team !== "A") {
+        if (event.type !== "hit" || event.shooterTeam !== "A") {
           return total;
         }
 
         return total + event.cupIds.length;
       }, 0),
 
-    [events, players],
+    [events],
   );
 
   /*
@@ -272,20 +276,14 @@ export default function MatchPage() {
   const teamBScore = useMemo(
     () =>
       events.reduce((total, event) => {
-        if (event.type !== "hit") {
-          return total;
-        }
-
-        const player = players.find((item) => item.id === event.playerId);
-
-        if (player?.team !== "B") {
+        if (event.type !== "hit" || event.shooterTeam !== "B") {
           return total;
         }
 
         return total + event.cupIds.length;
       }, 0),
 
-    [events, players],
+    [events],
   );
 
   /*
@@ -380,6 +378,18 @@ export default function MatchPage() {
 
   const state = useMemo<MatchState>(() => {
     const actions: MatchAction[] = events.map((event) => {
+      if (event.type === "hit") {
+        return {
+          id: event.id,
+          playerId: event.playerId,
+          team: event.shooterTeam,
+          type: event.type,
+          hitType: event.shotType,
+          cupIds: event.cupIds,
+          timestamp: event.timestampMs,
+        };
+      }
+
       const player = players.find((item) => item.id === event.playerId);
 
       return {
@@ -387,8 +397,8 @@ export default function MatchPage() {
         playerId: event.playerId,
         team: player?.team ?? "A",
         type: event.type,
-        hitType: event.type === "hit" ? event.shotType : undefined,
-        cupIds: event.type === "hit" ? event.cupIds : [],
+        hitType: undefined,
+        cupIds: [],
         timestamp: event.timestampMs,
       };
     });
@@ -600,6 +610,8 @@ export default function MatchPage() {
 
       type: "hit",
 
+      shooterTeam: selectedPlayer.team,
+
       shotType,
 
       cupIds,
@@ -692,6 +704,8 @@ export default function MatchPage() {
       playerName: extraPlayerName || "Extra Treffer",
 
       type: "hit",
+
+      shooterTeam: extraTeam,
 
       shotType: "extra",
 
