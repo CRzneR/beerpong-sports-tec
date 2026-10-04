@@ -3,7 +3,11 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 
-import BeerPongTable, { Cup, useCupSlotAssignment } from "@/components/stats/match/BeerPongTable";
+import BeerPongTable, {
+  Cup,
+  getFormationTier,
+  useCupSlotAssignment,
+} from "@/components/stats/match/BeerPongTable";
 
 import PlayerCard, { MatchPlayer } from "@/components/stats/match/PlayerCard";
 
@@ -69,7 +73,7 @@ type MatchEvent =
  * wo getroffene Becher erst nach der kompletten Runde weggeräumt
  * werden. Das macht es überhaupt erst möglich, dass zwei
  * Teamkolleg:innen in derselben Runde denselben, noch stehenden
- * Becher treffen (siehe detectExtraEntitlements unten).
+ * Becher treffen (siehe calculateTotalCups oben).
  * --------------------------------------------------------------------------
  */
 
@@ -83,39 +87,28 @@ type RoundHit = {
 
 /*
  * --------------------------------------------------------------------------
- * | EXTRA-TREFFER-ANSPRÜCHE ERMITTELN
+ * | WIE VIELE BECHER ZÄHLT EINE RUNDE? (Regeln)
  * --------------------------------------------------------------------------
  *
- * Zwei Quellen für einen Bonus-Becher:
- * 1. Jeder Aufhüpfer-Treffer bringt automatisch +1 Extra-Anspruch
- *    (ein Aufhüpfer zählt also effektiv 2 Becher: den direkt
- *    ausgewählten + einen frei wählbaren extra).
- * 2. Treffen zwei verschiedene Spieler in derselben Runde denselben,
- *    noch stehenden Becher, gibt es ebenfalls +1 Extra-Anspruch.
+ * - Einzeltreffer (und Trickshot) zählt 1 Becher
+ * - Aufhüpfer zählt 2 Becher
+ * - Treffen zwei Spieler derselben Runde denselben, noch stehenden
+ *   Becher, kommt +1 Becher obendrauf
  *
- * BEKANNTE VEREINFACHUNG: Für die Team-Punktzahl (teamAScore/
- * teamBScore weiter unten) wird weiterhin cupIds.length je Aktion
- * aufsummiert - trifft Fall 2 ein, zählt der doppelt getroffene
- * Becher dadurch kurzzeitig doppelt in der Punkteanzeige, obwohl nur
- * EIN physischer Becher davon betroffen ist. Für die tatsächliche
- * Becher-Entfernung vom Tisch (removeRoundCups weiter unten) wird
- * dagegen korrekt dedupliziert - der Fehler betrifft also nur die
- * Live-Punkteanzeige, nicht das Spielergebnis selbst.
+ * Beispiele (Summe der Trefferwerte + 1 bei gleichem Becher):
+ *   Einzel + Einzel, verschiedene Becher      = 1 + 1     = 2
+ *   Einzel + Einzel, derselbe Becher          = 1 + 1 + 1 = 3
+ *   Aufhüpfer + Einzel, derselbe Becher       = 2 + 1 + 1 = 4
+ *   Aufhüpfer + Aufhüpfer, derselbe Becher    = 2 + 2 + 1 = 5
  * --------------------------------------------------------------------------
  */
 
-function detectExtraEntitlements(hits: RoundHit[]): number {
-  let entitlements = 0;
+function getHitValue(shotType: ShotType): number {
+  return shotType === "bounce" ? 2 : 1;
+}
 
-  /*
-   * Jeder Aufhüpfer-Treffer bringt automatisch +1 Extra-Anspruch -
-   * der Tisch steht während der laufenden Runde noch unverändert,
-   * der zweite Becher wird deshalb bewusst NICHT direkt im Overlay,
-   * sondern erst hier, nach Rundenauflösung, frei gewählt (siehe
-   * auch den Hinweis dazu in HitOverlay.tsx).
-   */
-
-  entitlements += hits.filter((hit) => hit.shotType === "bounce").length;
+function calculateTotalCups(hits: RoundHit[]): number {
+  const totalValue = hits.reduce((sum, hit) => sum + getHitValue(hit.shotType), 0);
 
   const cupHitCount = new Map<number, number>();
 
@@ -125,13 +118,94 @@ function detectExtraEntitlements(hits: RoundHit[]): number {
     }
   }
 
+  let sharedCupBonus = 0;
+
   for (const count of cupHitCount.values()) {
     if (count > 1) {
-      entitlements += 1;
+      sharedCupBonus += 1;
     }
   }
 
-  return entitlements;
+  return totalValue + sharedCupBonus;
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | RUNDE ABRECHNEN: BIS ZUM RE-RACK, UMSTELLEN, REST FREI WÄHLEN
+ * --------------------------------------------------------------------------
+ *
+ * Die Treffer einer Runde werden gezählt und vermerkt (Gesamtzahl siehe
+ * calculateTotalCups). Beim Abrechnen werden die Becher dann EINZELN
+ * der Reihe nach weggenommen - und sobald die Becherzahl eine
+ * Umstell-Schwelle erreicht (7 auf 6, 4 auf 3, 2 auf 1), wird neu
+ * aufgestellt. Alles, was danach noch zu entfernen ist, wird erst
+ * jetzt aus der NEUEN Formation frei gewählt.
+ *
+ * Konkret:
+ * - Bis zur letzten erreichten Schwelle werden zuerst die markierten
+ *   Becher (in der Reihenfolge, wie sie markiert wurden) entfernt,
+ *   fehlende bis dahin automatisch: die Formation wird an dieser
+ *   Schwelle ohnehin komplett neu aufgestellt, welcher konkrete Becher
+ *   der alten Anordnung dafür wegkommt, ist also egal.
+ * - Der Rest (freePicks) wird nach dem Umstellen frei gewählt.
+ * - Wird keine Schwelle erreicht, kommen alle markierten Becher weg,
+ *   der Rest wird aus der aktuellen Anordnung gewählt.
+ *
+ * Die Schwellen kommen direkt aus getFormationTier (BeerPongTable):
+ * Eine Schwelle ist jede Becherzahl, bei der sich die Formations-Stufe
+ * ändert - so bleibt die Regel an genau einer Stelle definiert.
+ * --------------------------------------------------------------------------
+ */
+
+function findLastRackCount(startCount: number, endCount: number): number | null {
+  let lastRack: number | null = null;
+
+  for (let count = startCount - 1; count >= Math.max(endCount, 1); count -= 1) {
+    if (getFormationTier(count) !== getFormationTier(count + 1)) {
+      lastRack = count;
+    }
+  }
+
+  return lastRack;
+}
+
+function planRoundResolution(
+  remainingIds: number[],
+  markedIds: number[],
+  totalOwed: number,
+): { removeNow: number[]; freePicks: number } {
+  const remainingCount = remainingIds.length;
+  const owed = Math.min(totalOwed, remainingCount);
+
+  /*
+   * Es müssen ohnehin alle verbleibenden Becher weg - das Match ist
+   * danach vorbei, nichts mehr zu wählen.
+   */
+  if (owed >= remainingCount) {
+    return { removeNow: [...remainingIds], freePicks: 0 };
+  }
+
+  const lastRack = findLastRackCount(remainingCount, remainingCount - owed);
+  const markedStillStanding = markedIds.filter((id) => remainingIds.includes(id));
+
+  if (lastRack === null) {
+    return {
+      removeNow: markedStillStanding,
+      freePicks: owed - markedStillStanding.length,
+    };
+  }
+
+  const removedBeforeRack = remainingCount - lastRack;
+  const fromMarked = markedStillStanding.slice(0, removedBeforeRack);
+  const missing = removedBeforeRack - fromMarked.length;
+
+  const filler =
+    missing > 0 ? remainingIds.filter((id) => !fromMarked.includes(id)).slice(-missing) : [];
+
+  return {
+    removeNow: [...fromMarked, ...filler],
+    freePicks: owed - removedBeforeRack,
+  };
 }
 
 /*
@@ -253,40 +327,6 @@ export default function MatchPage() {
   const lastEvent = events[events.length - 1] ?? null;
 
   /*
-   * TEAM A SCORE
-   */
-
-  const teamAScore = useMemo(
-    () =>
-      events.reduce((total, event) => {
-        if (event.type !== "hit" || event.shooterTeam !== "A") {
-          return total;
-        }
-
-        return total + event.cupIds.length;
-      }, 0),
-
-    [events],
-  );
-
-  /*
-   * TEAM B SCORE
-   */
-
-  const teamBScore = useMemo(
-    () =>
-      events.reduce((total, event) => {
-        if (event.type !== "hit" || event.shooterTeam !== "B") {
-          return total;
-        }
-
-        return total + event.cupIds.length;
-      }, 0),
-
-    [events],
-  );
-
-  /*
    * WESSEN TEAM IST AM ZUG?
    */
 
@@ -376,10 +416,48 @@ export default function MatchPage() {
     [roundHits],
   );
 
+  /*
+   * PUNKTESTAND
+   *
+   * Zählt die Becher, die das Team dem Gegner tatsächlich weggenommen
+   * hat (vom Tisch entfernt) plus die in dieser Runde schon
+   * vorgemerkten. Bewusst aus dem Becherstand statt aus der Summe der
+   * Aktionen berechnet: bei "beide treffen denselben Becher" würde
+   * eine Summe über cupIds den geteilten Becher doppelt zählen,
+   * obwohl er physisch nur einmal vom Tisch geht.
+   */
+
+  const teamAScore = useMemo(
+    () => teamBCups.filter((cup) => cup.hit).length + new Set(pendingCupIdsForTeamB).size,
+    [teamBCups, pendingCupIdsForTeamB],
+  );
+
+  const teamBScore = useMemo(
+    () => teamACups.filter((cup) => cup.hit).length + new Set(pendingCupIdsForTeamA).size,
+    [teamACups, pendingCupIdsForTeamA],
+  );
+
   const state = useMemo<MatchState>(() => {
-    const actions: MatchAction[] = events.map((event) => {
+    /*
+     * Zu speichernde Aktionen aus den Live-Ereignissen aufbauen.
+     *
+     * Extra-Treffer-Events (playerId "extra", kein echter Spieler)
+     * werden hier NICHT als eigene Aktion übernommen: in der
+     * Datenbank wird eine echte UUID als Spieler-ID erwartet (sonst
+     * Fehler 22P02), und es hat ja auch niemand extra geworfen. Ihre
+     * Becher werden stattdessen unten beim Abgleich dem letzten
+     * echten Treffer des Teams zugeschlagen.
+     */
+
+    const actions: MatchAction[] = [];
+
+    for (const event of events) {
+      if (event.type === "hit" && event.shotType === "extra") {
+        continue;
+      }
+
       if (event.type === "hit") {
-        return {
+        actions.push({
           id: event.id,
           playerId: event.playerId,
           team: event.shooterTeam,
@@ -387,12 +465,14 @@ export default function MatchPage() {
           hitType: event.shotType,
           cupIds: event.cupIds,
           timestamp: event.timestampMs,
-        };
+        });
+
+        continue;
       }
 
       const player = players.find((item) => item.id === event.playerId);
 
-      return {
+      actions.push({
         id: event.id,
         playerId: event.playerId,
         team: player?.team ?? "A",
@@ -400,7 +480,63 @@ export default function MatchPage() {
         hitType: undefined,
         cupIds: [],
         timestamp: event.timestampMs,
-      };
+      });
+    }
+
+    /*
+     * ABGLEICH MIT DEM TATSÄCHLICHEN BECHERSTAND
+     *
+     * Welche Becher am Ende wirklich vom Tisch sind, entscheidet die
+     * schwellenbasierte Abrechnung (siehe planRoundResolution) - das
+     * deckt sich nicht immer mit dem, was die Spieler markiert haben:
+     * - ein markierter Becher kann hinter der Umstell-Schwelle liegen
+     *   und bleibt dann stehen (stattdessen wird frei gewählt)
+     * - bis zur Schwelle werden ggf. Becher automatisch entfernt, und
+     *   Extra-Treffer entfernen Becher, die in keiner Aktion stehen
+     *
+     * Damit die gespeicherten Aktionen beim späteren Laden exakt
+     * denselben Endstand ergeben (Match-Historie, Statistik):
+     * 1. Becher-IDs, die nie tatsächlich entfernt wurden (und auch
+     *    nicht nur vorgemerkt sind), fliegen aus den Aktionen raus.
+     * 2. Entfernte Becher, die in keiner Aktion des Teams stehen,
+     *    werden dem letzten Treffer dieses Teams zugeschlagen.
+     */
+
+    (["A", "B"] as const).forEach((team) => {
+      const opponentCups = team === "A" ? teamBCups : teamACups;
+      const pendingIds = team === "A" ? pendingCupIdsForTeamB : pendingCupIdsForTeamA;
+
+      const removedIds = opponentCups.filter((cup) => cup.hit).map((cup) => cup.id);
+      const validIds = new Set([...removedIds, ...pendingIds]);
+      const coveredIds = new Set<number>();
+
+      actions.forEach((action, index) => {
+        if (action.type !== "hit" || action.team !== team) {
+          return;
+        }
+
+        const keptIds = action.cupIds.filter((id) => validIds.has(id));
+
+        keptIds.forEach((id) => coveredIds.add(id));
+
+        actions[index] = { ...action, cupIds: keptIds };
+      });
+
+      const missingIds = removedIds.filter((id) => !coveredIds.has(id));
+
+      if (missingIds.length === 0) {
+        return;
+      }
+
+      for (let index = actions.length - 1; index >= 0; index -= 1) {
+        const candidate = actions[index];
+
+        if (candidate.type === "hit" && candidate.team === team) {
+          actions[index] = { ...candidate, cupIds: [...candidate.cupIds, ...missingIds] };
+
+          break;
+        }
+      }
     });
 
     const teamAFinished = teamACups.every((cup) => cup.hit);
@@ -417,7 +553,15 @@ export default function MatchPage() {
       winner: teamAFinished ? "B" : teamBFinished ? "A" : null,
       isFinished: teamAFinished || teamBFinished,
     };
-  }, [events, players, selectedPlayer, teamACups, teamBCups]);
+  }, [
+    events,
+    players,
+    selectedPlayer,
+    teamACups,
+    teamBCups,
+    pendingCupIdsForTeamA,
+    pendingCupIdsForTeamB,
+  ]);
 
   /*
    * GETROFFEN
@@ -462,19 +606,16 @@ export default function MatchPage() {
    * RUNDE AUFLÖSEN
    *
    * Wird aufgerufen, sobald alle Spieler des aktiven Teams geworfen
-   * haben (siehe willCompleteRound in handleMiss/handleSaveHit). Erst
-   * JETZT werden die in dieser Runde getroffenen Becher tatsächlich
-   * vom Tisch entfernt (dedupliziert - ein zweimal "getroffener"
-   * Becher verschwindet trotzdem nur einmal) - ein eventueller
-   * Re-Rack passiert dadurch automatisch über den schon bestehenden
-   * useCupSlotAssignment-Mechanismus, sobald sich die Becherzahl
-   * tier-übergreifend ändert.
+   * haben (siehe willCompleteRound in handleMiss/handleSaveHit). Bis
+   * dahin standen die getroffenen Becher nur markiert da.
    *
-   * Werden dabei Extra-Treffer-Ansprüche fällig (Aufhüpfer und/oder
-   * zwei Spieler trafen denselben Becher), öffnet sich danach
-   * automatisch das Treffer-Overlay im "Extra Treffer"-Modus, damit
-   * die passende Anzahl Bonus-Becher ausgewählt werden kann - aus der
-   * dann schon aktuellen (ggf. neu aufgestellten) Formation.
+   * Jetzt wird abgerechnet (Details siehe planRoundResolution): Die
+   * Treffer der Runde ergeben eine Gesamtzahl Becher. Bis zur letzten
+   * erreichten Umstell-Schwelle (7 auf 6, 4 auf 3, 2 auf 1) werden
+   * markierte Becher entfernt - die Neuaufstellung ergibt sich
+   * danach automatisch über useCupSlotAssignment. Was dann noch zu
+   * entfernen ist, wird anschließend über das Extra-Treffer-Overlay
+   * frei aus der NEUEN Formation gewählt.
    */
 
   const resolveRound = (hitsThisRound: RoundHit[], activeTeamThisRound: "A" | "B") => {
@@ -482,32 +623,25 @@ export default function MatchPage() {
       return;
     }
 
-    const cupIdsForTeamA = Array.from(
-      new Set(hitsThisRound.filter((hit) => hit.shooterTeam === "B").flatMap((hit) => hit.cupIds)),
-    );
+    const opponentCups = activeTeamThisRound === "A" ? teamBCups : teamACups;
+    const setOpponentCups = activeTeamThisRound === "A" ? setTeamBCups : setTeamACups;
 
-    const cupIdsForTeamB = Array.from(
-      new Set(hitsThisRound.filter((hit) => hit.shooterTeam === "A").flatMap((hit) => hit.cupIds)),
-    );
+    const remainingIds = opponentCups.filter((cup) => !cup.hit).map((cup) => cup.id);
 
-    if (cupIdsForTeamA.length > 0) {
-      setTeamACups((current) =>
-        current.map((cup) => (cupIdsForTeamA.includes(cup.id) ? { ...cup, hit: true } : cup)),
-      );
-    }
+    const markedIds = Array.from(new Set(hitsThisRound.flatMap((hit) => hit.cupIds)));
 
-    if (cupIdsForTeamB.length > 0) {
-      setTeamBCups((current) =>
-        current.map((cup) => (cupIdsForTeamB.includes(cup.id) ? { ...cup, hit: true } : cup)),
+    const plan = planRoundResolution(remainingIds, markedIds, calculateTotalCups(hitsThisRound));
+
+    if (plan.removeNow.length > 0) {
+      setOpponentCups((current) =>
+        current.map((cup) => (plan.removeNow.includes(cup.id) ? { ...cup, hit: true } : cup)),
       );
     }
 
     setRoundHits([]);
 
-    const entitlements = detectExtraEntitlements(hitsThisRound);
-
-    if (entitlements > 0) {
-      setExtraOwed(entitlements);
+    if (plan.freePicks > 0) {
+      setExtraOwed(plan.freePicks);
       setExtraTeam(activeTeamThisRound);
 
       const lastShooter = hitsThisRound[hitsThisRound.length - 1];
@@ -646,15 +780,6 @@ export default function MatchPage() {
       (item) => item.id === selectedPlayer.id || turnState.actedPlayerIds.has(item.id),
     );
 
-    console.log("DEBUG handleSaveHit:", {
-      selectedPlayerId: selectedPlayer.id,
-      selectedPlayerName: selectedPlayer.name,
-      activeTeam: turnState.activeTeam,
-      activeTeamPlayerIds: activeTeamPlayers.map((item) => item.id),
-      actedPlayerIds: Array.from(turnState.actedPlayerIds),
-      willCompleteRound,
-    });
-
     const newRoundHit: RoundHit = {
       playerId: selectedPlayer.id,
       playerName: selectedPlayer.name,
@@ -728,7 +853,7 @@ export default function MatchPage() {
       );
     }
 
-    setExtraOwed((current) => Math.max(0, current - 1));
+    setExtraOwed(0);
   };
 
   /*
@@ -803,36 +928,30 @@ export default function MatchPage() {
 
     if (lastEvent.type === "hit") {
       /*
-       * Bereits aufgelöst - Becher wie bisher direkt zurückholen.
+       * Bereits aufgelöst - Becher direkt zurückholen. Das Team kommt
+       * jetzt vom Event selbst (shooterTeam) statt über einen
+       * Spieler-Lookup - bei Extra-Treffern (playerId "extra") hätte
+       * der Lookup nie einen Spieler gefunden, die Becher wären
+       * beim Rückgängigmachen weg geblieben.
        */
-      const player = players.find((item) => item.id === lastEvent.playerId);
+      const restoreCups = (cups: Cup[]) =>
+        cups.map((cup) => (lastEvent.cupIds.includes(cup.id) ? { ...cup, hit: false } : cup));
 
-      if (player?.team === "A") {
-        setTeamBCups((current) =>
-          current.map((cup) =>
-            lastEvent.cupIds.includes(cup.id)
-              ? {
-                  ...cup,
-
-                  hit: false,
-                }
-              : cup,
-          ),
-        );
+      if (lastEvent.shooterTeam === "A") {
+        setTeamBCups(restoreCups);
+      } else {
+        setTeamACups(restoreCups);
       }
 
-      if (player?.team === "B") {
-        setTeamACups((current) =>
-          current.map((cup) =>
-            lastEvent.cupIds.includes(cup.id)
-              ? {
-                  ...cup,
-
-                  hit: false,
-                }
-              : cup,
-          ),
-        );
+      /*
+       * Wurde ein Extra-Treffer zurückgenommen, ist der Anspruch auf
+       * diesen Bonus-Becher wieder offen - das Auswahl-Overlay öffnet
+       * sich erneut, damit er (neu) gewählt werden kann.
+       */
+      if (lastEvent.shotType === "extra") {
+        setExtraTeam(lastEvent.shooterTeam);
+        setExtraPlayerName(lastEvent.playerName);
+        setExtraOwed(lastEvent.cupIds.length);
       }
     }
   };
@@ -1465,6 +1584,7 @@ export default function MatchPage() {
           teamACupSlots={teamACupSlots}
           teamBCupSlots={teamBCupSlots}
           defaultShotType="extra"
+          requiredCupCount={extraOwed}
           onClose={() => {
             /*
              * Bewusst kein "Abbrechen" im Overlay selbst (siehe

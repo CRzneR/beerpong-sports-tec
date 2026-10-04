@@ -32,6 +32,14 @@ interface HitOverlayProps {
    */
   defaultShotType?: ShotType;
 
+  /**
+   * Nur im "extra"-Modus relevant: wie viele Bonus-Becher auf einmal
+   * zu wählen sind (siehe calculateExtraCups in page.tsx). Im
+   * normalen Modus wird weiterhin genau EIN Becher pro Treffer
+   * markiert.
+   */
+  requiredCupCount?: number;
+
   onClose: () => void;
 
   onSave: (data: { shotType: ShotType; cupIds: number[] }) => void;
@@ -85,6 +93,7 @@ export default function HitOverlay({
   teamACupSlots,
   teamBCupSlots,
   defaultShotType = "single",
+  requiredCupCount = 1,
   onClose,
   onSave,
 }: HitOverlayProps) {
@@ -103,19 +112,39 @@ export default function HitOverlay({
   /*
    * Becher auswählen
    *
-   * Immer nur EIN Becher gleichzeitig - egal bei welcher Trefferart,
-   * auch beim Aufhüpfer. Der Tisch steht während der laufenden Runde
-   * noch unverändert so da, wie ihn auch die nächste Spielerin sieht
-   * (keine Live-Vorschau einer eventuellen Neuaufstellung mitten in
-   * der Runde - die passiert bewusst erst nach Rundenende, siehe
-   * page.tsx/resolveRound). Ein Aufhüpfer bringt seinen "zweiten
-   * Becher" deshalb NICHT hier direkt, sondern als automatischer
-   * Extra-Treffer-Anspruch nach Rundenauflösung (siehe
-   * detectExtraEntitlements in page.tsx).
+   * Normaler Treffer: immer nur EIN Becher (egal ob Einzeltreffer,
+   * Aufhüpfer oder Trickshot). Der Tisch steht während der laufenden
+   * Runde noch unverändert so da, wie ihn auch die nächste Spielerin
+   * sieht (keine Live-Vorschau einer Neuaufstellung mitten in der
+   * Runde). Alles, was ein Treffer über diesen einen Becher hinaus
+   * zählt (Aufhüpfer = 2, gleicher Becher = +1), kommt erst nach
+   * Rundenende als "Extra Treffer" dran.
+   *
+   * Extra-Modus: genau requiredCupCount Becher auf einmal, aus der
+   * dann schon aktuellen (ggf. neu aufgestellten) Formation - alle
+   * gemeinsam, damit sich die Formation nicht mitten in der Auswahl
+   * nochmal verschiebt.
    */
 
+  const isExtraMode = defaultShotType === "extra";
+  const selectionLimit = isExtraMode ? Math.max(1, requiredCupCount) : 1;
+
   const toggleCup = (cupId: number) => {
-    setSelectedCups((current) => (current.includes(cupId) ? [] : [cupId]));
+    setSelectedCups((current) => {
+      if (current.includes(cupId)) {
+        return current.filter((id) => id !== cupId);
+      }
+
+      if (selectionLimit === 1) {
+        return [cupId];
+      }
+
+      if (current.length >= selectionLimit) {
+        return current;
+      }
+
+      return [...current, cupId];
+    });
   };
 
   const handleShotTypeChange = (next: ShotType) => {
@@ -127,8 +156,10 @@ export default function HitOverlay({
    * Treffer speichern
    */
 
+  const canSave = selectedCups.length === selectionLimit;
+
   const handleSave = () => {
-    if (selectedCups.length === 0) {
+    if (!canSave) {
       return;
     }
 
@@ -195,7 +226,7 @@ export default function HitOverlay({
                 lg:text-[10px]
               "
             >
-              {defaultShotType === "extra" ? "Bonus-Becher auswählen" : "Treffer erfassen"}
+              {isExtraMode ? `Bonus-Becher auswählen · ${selectionLimit}` : "Treffer erfassen"}
             </div>
 
             <h2
@@ -286,7 +317,7 @@ export default function HitOverlay({
               </div>
 
               <div className="text-xs font-black text-cyan-400">
-                {selectedCups.length}/1 ausgewählt
+                {selectedCups.length}/{selectionLimit} ausgewählt
               </div>
             </div>
 
@@ -310,7 +341,7 @@ export default function HitOverlay({
           <div className="shrink-0 space-y-1.5">
             <button
               type="button"
-              disabled={selectedCups.length === 0}
+              disabled={!canSave}
               onClick={handleSave}
               className="
                 w-full
@@ -450,9 +481,9 @@ export default function HitOverlay({
 
             {shotType === "bounce" && (
               <div className="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] p-3 text-[11px] leading-relaxed text-yellow-200/80">
-                Hier nur den direkt getroffenen Becher wählen. Der zusätzliche Bonus-Becher für den
-                Aufhüpfer kommt automatisch nach Ende dieser Runde als "Extra Treffer" dran - aus
-                der dann aktuellen Formation.
+                Ein Aufhüpfer zählt 2 Becher: hier den direkt getroffenen wählen, der zweite folgt
+                automatisch nach Ende dieser Runde als "Extra Treffer" - aus der dann aktuellen
+                Formation.
               </div>
             )}
           </div>
@@ -486,7 +517,7 @@ export default function HitOverlay({
                   text-cyan-400
                 "
               >
-                {selectedCups.length}/1 ausgewählt
+                {selectedCups.length}/{selectionLimit} ausgewählt
               </div>
             </div>
 
@@ -517,7 +548,7 @@ export default function HitOverlay({
 
             <button
               type="button"
-              disabled={selectedCups.length === 0}
+              disabled={!canSave}
               onClick={handleSave}
               className="
                 mt-5
