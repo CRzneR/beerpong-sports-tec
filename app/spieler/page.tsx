@@ -12,6 +12,7 @@ import MatchHistory from "@/components/stats/MatchHistory";
 import MatchHistoryDetail from "@/components/stats/match/MatchHistoryDetail";
 import PlayerRanking from "@/components/stats/match/PlayerRanking";
 import PlayerDetail from "@/components/stats/match/PlayerDetail";
+import { RulesLink } from "@/components/RulesLink";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
@@ -181,6 +182,8 @@ function SpielerPageInner() {
                 Pro
               </span>
             )}
+
+            <RulesLink />
 
             <div className="ml-2 h-4 w-px bg-white/[0.08]" />
 

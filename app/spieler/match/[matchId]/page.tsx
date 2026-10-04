@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import BeerPongTable, {
   Cup,
@@ -234,6 +234,39 @@ export default function MatchPage() {
 
   const params = useParams();
   const lobbyId = params.matchId as string;
+  const router = useRouter();
+
+  /*
+   * MATCH ABBRECHEN
+   *
+   * Beendet das Match ohne irgendetwas zu speichern: gespeichert wird
+   * ausschließlich beim regulären Spielende (siehe useEffect mit
+   * saveMatch weiter unten) - hier wird deshalb nichts in die
+   * Statistik geschrieben, es geht einfach zurück ins Hauptmenü.
+   *
+   * Die Lobby wird trotzdem als beendet markiert: andere Geräte, die
+   * über den QR-Code beigetreten sind, zeigen sonst dauerhaft "Match
+   * läuft" an und kämen nie mehr raus.
+   */
+
+  const [showAbortConfirm, setShowAbortConfirm] = useState(false);
+  const [aborting, setAborting] = useState(false);
+
+  const handleAbort = async () => {
+    if (aborting) {
+      return;
+    }
+
+    setAborting(true);
+
+    try {
+      await finishMatchLobby(lobbyId);
+    } catch (err) {
+      console.error("Lobby konnte beim Abbrechen nicht beendet werden:", err);
+    }
+
+    router.push("/spieler");
+  };
 
   const savedFinishedMatchRef = useRef(false);
 
@@ -1041,28 +1074,38 @@ export default function MatchPage() {
             </h1>
           </div>
 
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-              text-[10px]
-              font-bold
-              uppercase
-              tracking-wider
-              text-white/40
-            "
-          >
-            <span
+          <div className="flex items-center gap-4">
+            <div
               className="
-                h-2
-                w-2
-                rounded-full
-                bg-cyan-400
-                shadow-[0_0_10px_rgba(34,211,238,0.8)]
+                flex
+                items-center
+                gap-2
+                text-[10px]
+                font-bold
+                uppercase
+                tracking-wider
+                text-white/40
               "
-            />
-            Match Live
+            >
+              <span
+                className="
+                  h-2
+                  w-2
+                  rounded-full
+                  bg-cyan-400
+                  shadow-[0_0_10px_rgba(34,211,238,0.8)]
+                "
+              />
+              Match Live
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAbortConfirm(true)}
+              className="rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-red-300 transition hover:bg-red-400/20"
+            >
+              Abbruch
+            </button>
           </div>
         </div>
       </header>
@@ -1231,12 +1274,12 @@ export default function MatchPage() {
 
         {/* UNDO */}
 
-        <div className="flex shrink-0 justify-center pt-0.5">
+        <div className="flex shrink-0 justify-center">
           <button
             type="button"
             disabled={!lastEvent}
             onClick={handleUndo}
-            className="rounded-full border border-white/[0.08] bg-white/[0.025] px-5 py-2 text-[9px] font-black uppercase tracking-[0.15em] text-white/40 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+            className="w-full rounded-xl border border-yellow-400/40 bg-yellow-400/10 px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-yellow-300 transition hover:bg-yellow-400/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.02] disabled:text-white/20"
           >
             ↶ Rückgängig
           </button>
@@ -1530,22 +1573,25 @@ export default function MatchPage() {
               disabled={!lastEvent}
               onClick={handleUndo}
               className="
-                rounded-full
+                w-full
+                rounded-xl
                 border
-                border-white/[0.08]
-                bg-white/[0.025]
-                px-5
-                py-2.5
-                text-[10px]
+                border-yellow-400/40
+                bg-yellow-400/10
+                px-6
+                py-3.5
+                text-xs
                 font-black
                 uppercase
                 tracking-[0.15em]
-                text-white/40
+                text-yellow-300
                 transition
-                hover:bg-white/[0.06]
-                hover:text-white
+                hover:bg-yellow-400/20
+                active:scale-[0.98]
                 disabled:cursor-not-allowed
-                disabled:opacity-20
+                disabled:border-white/[0.06]
+                disabled:bg-white/[0.02]
+                disabled:text-white/20
               "
             >
               ↶ Rückgängig
@@ -1633,6 +1679,53 @@ export default function MatchPage() {
                 className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-white/40 transition hover:bg-white/[0.06] hover:text-white"
               >
                 Zufällig entscheiden
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAbortConfirm(true)}
+              className="mt-4 text-[10px] font-black uppercase tracking-[0.15em] text-white/25 transition hover:text-red-300"
+            >
+              Match abbrechen
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ABBRUCH BESTÄTIGEN - liegt über allem anderen, auch über dem Start-Overlay */}
+
+      {showAbortConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0c0f16] p-6 text-center">
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-red-400/70">
+              Achtung
+            </div>
+
+            <h2 className="mt-1 text-lg font-black uppercase text-white">Match abbrechen?</h2>
+
+            <p className="mt-2 text-xs text-white/40">
+              Das Match wird beendet und es werden keine Statistiken gespeichert. Du kommst zurück
+              ins Hauptmenü.
+            </p>
+
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                disabled={aborting}
+                onClick={handleAbort}
+                className="w-full rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {aborting ? "Wird abgebrochen …" : "Ja, abbrechen"}
+              </button>
+
+              <button
+                type="button"
+                disabled={aborting}
+                onClick={() => setShowAbortConfirm(false)}
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-white/40 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Weiterspielen
               </button>
             </div>
           </div>

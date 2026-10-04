@@ -435,7 +435,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
           <h1 className="mt-2 text-lg font-black uppercase">Match beendet</h1>
 
           <p className="mt-3 text-sm text-white/40">
-            Das Ergebnis findest du in deiner Match-Historie.
+            Abgeschlossene Matches findest du in deiner Match-Historie.
           </p>
 
           <Link
