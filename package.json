@@ -9,8 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@emailjs/browser": "^5.0.2",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
+    "gsap": "^3.15.0",
+    "lucide": "^1.53.0",
+    "lucide-react": "^1.55.0",
     "next": "16.3.4",
     "qrcode.react": "^4.2.0",
     "react": "19.2.8",
