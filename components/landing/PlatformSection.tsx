@@ -15,14 +15,14 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  *   auf, die Feature-Zeilen laufen nacheinander ein
  * - In den Vorschauen: Zahlen zählen hoch, Balken wachsen, die
  *   Liga-Spiele laufen ein, "LIVE" pulsiert
- * - Maus (nur mit Zeigergerät): Karten kippen leicht, ein Licht-Spot
- *   folgt dem Zeiger über die Karte
+ * - Maus (nur mit Zeigergerät): Ein Licht-Spot folgt dem Zeiger über die
+ *   Karte
  * - "Reduzierte Bewegung": keine Animation, alles bleibt wie im Quelltext
  *
  * Die Karte besteht aus drei Schichten, weil GSAP "transform" inline
  * schreibt und Tailwinds Hover-Transform sonst blockieren würde:
  *   area  (ruhend, liefert stabile Maße für die Mausposition)
- *   card  (GSAP: Einlauf + Kippen)
+ *   card  (GSAP: Einlauf)
  *   inner (das sichtbare Design samt hover:-translate-y-1)
  * --------------------------------------------------------------------------
  */
@@ -215,55 +215,39 @@ export function PlatformSection() {
             });
           });
 
-          /* ---------- Maus: Kippen + Licht-Spot ---------- */
+          /* ---------- Maus: Licht-Spot ---------- */
 
           if (conditions.fine) {
             const spot = area.querySelector<HTMLElement>('[data-platform="spotlight"]');
 
-            gsap.set(card, { transformPerspective: 1200 });
-
-            const rotateX = gsap.quickTo(card, "rotationX", { duration: 0.6, ease: "power3.out" });
-            const rotateY = gsap.quickTo(card, "rotationY", { duration: 0.6, ease: "power3.out" });
-
-            const handleEnter = () => {
-              if (spot) {
+            if (spot) {
+              const handleEnter = () => {
                 gsap.to(spot, { opacity: 1, duration: 0.4 });
-              }
-            };
+              };
 
-            const handleMove = (event: PointerEvent) => {
-              /* Maße kommen vom ruhenden "area"-Element, nicht von der gekippten Karte */
-              const rect = area.getBoundingClientRect();
-              const x = event.clientX - rect.left;
-              const y = event.clientY - rect.top;
+              const handleMove = (event: PointerEvent) => {
+                const rect = area.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
 
-              rotateY((x / rect.width - 0.5) * 8);
-              rotateX((0.5 - y / rect.height) * 8);
-
-              if (spot) {
                 spot.style.setProperty("--mx", `${x}px`);
                 spot.style.setProperty("--my", `${y}px`);
-              }
-            };
+              };
 
-            const handleLeave = () => {
-              rotateX(0);
-              rotateY(0);
-
-              if (spot) {
+              const handleLeave = () => {
                 gsap.to(spot, { opacity: 0, duration: 0.5 });
-              }
-            };
+              };
 
-            area.addEventListener("pointerenter", handleEnter);
-            area.addEventListener("pointermove", handleMove);
-            area.addEventListener("pointerleave", handleLeave);
+              area.addEventListener("pointerenter", handleEnter);
+              area.addEventListener("pointermove", handleMove);
+              area.addEventListener("pointerleave", handleLeave);
 
-            cleanups.push(() => {
-              area.removeEventListener("pointerenter", handleEnter);
-              area.removeEventListener("pointermove", handleMove);
-              area.removeEventListener("pointerleave", handleLeave);
-            });
+              cleanups.push(() => {
+                area.removeEventListener("pointerenter", handleEnter);
+                area.removeEventListener("pointermove", handleMove);
+                area.removeEventListener("pointerleave", handleLeave);
+              });
+            }
           }
         });
 
