@@ -152,6 +152,184 @@ export async function createPlayerProfile(name: string): Promise<PlayerProfile> 
 
 /*
  * --------------------------------------------------------------------------
+ * | BENUTZERNAME
+ * --------------------------------------------------------------------------
+ *
+ * Jeder registrierte Account braucht einen Benutzernamen. Er steht an
+ * zwei Stellen: in players.name (so erscheint man in Ranking & Matches)
+ * und in den Auth-Metadaten (user_metadata.username), damit er auch
+ * schon vor dem ersten Profil-Eintrag bekannt ist.
+ *
+ * Eindeutigkeit gilt nur unter REGISTRIERTEN Spielern (user_id nicht
+ * null) - Gast-Namen aus der Lobby bleiben davon unberührt.
+ * --------------------------------------------------------------------------
+ */
+
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 20;
+
+/** Gibt eine Fehlermeldung zurück - oder null, wenn der Name formal passt. */
+export function validateUsername(raw: string): string | null {
+  const name = raw.trim();
+
+  if (name.length < USERNAME_MIN_LENGTH) {
+    return `Der Benutzername braucht mindestens ${USERNAME_MIN_LENGTH} Zeichen.`;
+  }
+
+  if (name.length > USERNAME_MAX_LENGTH) {
+    return `Der Benutzername darf höchstens ${USERNAME_MAX_LENGTH} Zeichen haben.`;
+  }
+
+  if (!/^[\p{L}\p{N}_.\- ]+$/u.test(name)) {
+    return "Erlaubt sind nur Buchstaben, Zahlen, Leerzeichen sowie _ . -";
+  }
+
+  return null;
+}
+
+/** true, wenn ein anderer registrierter Spieler den Namen schon hat. */
+export async function isUsernameTaken(raw: string, ownPlayerId?: string): Promise<boolean> {
+  const supabase = createClient();
+
+  /* ilike ohne Platzhalter = Vergleich ohne Groß-/Kleinschreibung. */
+  const escaped = raw.trim().replace(/[\\%_]/g, (char) => `\\${char}`);
+
+  let query = supabase
+    .from("players")
+    .select("id")
+    .ilike("name", escaped)
+    .not("user_id", "is", null)
+    .limit(1);
+
+  if (ownPlayerId) {
+    query = query.neq("id", ownPlayerId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).length > 0;
+}
+
+/**
+ * Setzt den Benutzernamen des eingeloggten Accounts: aktualisiert die
+ * verknüpfte players-Zeile (oder legt sie an, falls es noch keine gibt)
+ * und schreibt den Namen in die Auth-Metadaten.
+ */
+export async function saveOwnUsername(raw: string): Promise<PlayerProfile> {
+  const name = raw.trim();
+  const formatError = validateUsername(name);
+
+  if (formatError) {
+    throw new Error(formatError);
+  }
+
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+
+  if (!userData.user) {
+    throw new Error("Nicht eingeloggt.");
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("players")
+    .select("id")
+    .eq("user_id", userData.user.id)
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (await isUsernameTaken(name, existing?.id)) {
+    throw new Error("Dieser Benutzername ist schon vergeben.");
+  }
+
+  const initials = computeInitials(name);
+
+  const query = existing
+    ? supabase.from("players").update({ name, initials }).eq("id", existing.id)
+    : supabase.from("players").insert({
+        id: crypto.randomUUID(),
+        name,
+        initials,
+        user_id: userData.user.id,
+      });
+
+  const { data, error } = await query.select("id, name, initials").single();
+
+  if (error) {
+    /* 23505 = unique violation (falls der Index aus username.sql aktiv ist) */
+    if (error.code === "23505") {
+      throw new Error("Dieser Benutzername ist schon vergeben.");
+    }
+
+    throw error;
+  }
+
+  const { error: metaError } = await supabase.auth.updateUser({ data: { username: name } });
+
+  if (metaError) {
+    console.error("Benutzername konnte nicht in den Auth-Daten gespeichert werden:", metaError);
+  }
+
+  return { id: data.id, name: data.name, initials: data.initials ?? initials };
+}
+
+/**
+ * Für den UsernameGate: Wie steht es um den Account?
+ *  - "anonymous": niemand eingeloggt, nichts zu tun
+ *  - "ok": Benutzername vorhanden
+ *  - "missing": eingeloggt, aber ohne Benutzernamen -> Abfrage nötig
+ *    (suggestion = Name aus der Registrierung, falls schon bekannt)
+ */
+export async function getUsernameStatus(): Promise<
+  { state: "anonymous" } | { state: "ok" } | { state: "missing"; suggestion: string }
+> {
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+
+  if (!user) {
+    return { state: "anonymous" };
+  }
+
+  const metaName =
+    typeof user.user_metadata?.username === "string" ? user.user_metadata.username.trim() : "";
+
+  const { data: row } = await supabase
+    .from("players")
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const rowName = row?.name?.trim() ?? "";
+
+  /*
+   * Registrierung mit Namen, aber das Profil trägt noch einen anderen
+   * (z. B. aus der E-Mail abgeleiteten) Namen: den gewählten übernehmen.
+   */
+  if (metaName && rowName.toLowerCase() !== metaName.toLowerCase()) {
+    try {
+      await saveOwnUsername(metaName);
+      return { state: "ok" };
+    } catch {
+      return { state: "missing", suggestion: metaName };
+    }
+  }
+
+  if (metaName) {
+    return { state: "ok" };
+  }
+
+  return { state: "missing", suggestion: "" };
+}
+
+/*
+ * --------------------------------------------------------------------------
  * | STATISTIKEN ZURÜCKSETZEN
  * --------------------------------------------------------------------------
  *

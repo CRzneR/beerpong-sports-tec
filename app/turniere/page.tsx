@@ -7,6 +7,7 @@ import Link from "next/link";
 import { deleteTournament, getTournaments } from "./tournamentStorage";
 import type { Tournament } from "./tournamentLogic";
 import { createClient } from "@/lib/supabase/client";
+import { UsernameGate } from "@/components/stats/UsernameGate";
 
 export default function TurnierePage() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function TurnierePage() {
 
   return (
     <main className="min-h-screen bg-[#07090d] px-5 py-10 text-white sm:px-6 lg:px-8">
+      <UsernameGate variant="league" />
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
           <Link

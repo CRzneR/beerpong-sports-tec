@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import {
+  USERNAME_MAX_LENGTH,
+  isUsernameTaken,
+  validateUsername,
+} from "@/app/spieler/match/playerProfiles";
 
 /*
  * useSearchParams() verlangt in Next.js einen Suspense-Wrapper auf der
@@ -26,7 +31,16 @@ function LoginForm() {
   const nextPath = searchParams.get("next") || "/spieler";
   const isLeague = nextPath.startsWith("/turniere");
 
+  /*
+   * Zwei Modi: "Anmelden" (nur E-Mail, für bestehende Konten) und
+   * "Registrieren" (E-Mail + Pflicht-Benutzername). Der Name wandert als
+   * Metadaten mit in die Account-Erstellung und wird danach (spätestens
+   * vom UsernameGate) in das Spielerprofil übernommen.
+   */
+
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,14 +54,39 @@ function LoginForm() {
       return;
     }
 
+    const trimmedName = username.trim();
+
+    if (mode === "register") {
+      const formatError = validateUsername(trimmedName);
+
+      if (formatError) {
+        setError(formatError);
+        return;
+      }
+    }
+
     setSending(true);
     setError(null);
+
+    if (mode === "register") {
+      try {
+        if (await isUsernameTaken(trimmedName)) {
+          setError("Dieser Benutzername ist schon vergeben.");
+          setSending(false);
+          return;
+        }
+      } catch (checkError) {
+        /* Prüfung nicht möglich -> nicht blockieren, das Gate prüft erneut. */
+        console.error("Namensprüfung fehlgeschlagen:", checkError);
+      }
+    }
 
     const supabase = createClient();
 
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: {
+        ...(mode === "register" ? { data: { username: trimmedName } } : {}),
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
       },
     });
@@ -80,8 +119,32 @@ function LoginForm() {
             {isLeague ? "Pong League" : "Pong Stats"}
           </div>
 
-          <h1 className="mt-2 text-2xl font-black uppercase tracking-tight">Anmelden</h1>
+          <h1 className="mt-2 text-2xl font-black uppercase tracking-tight">
+            {mode === "register" ? "Registrieren" : "Anmelden"}
+          </h1>
         </div>
+
+        {!sent && (
+          <div className="mt-6 grid grid-cols-2 gap-1 rounded-xl border border-white/[0.08] bg-white/[0.02] p-1">
+            {(["login", "register"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setMode(value);
+                  setError(null);
+                }}
+                className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+                  mode === value
+                    ? `${accentBg.split(" ")[0]} ${accentText}`
+                    : "text-white/35 hover:text-white"
+                }`}
+              >
+                {value === "login" ? "Anmelden" : "Registrieren"}
+              </button>
+            ))}
+          </div>
+        )}
 
         {error && (
           <div className="mt-6 rounded-xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3 text-xs font-bold text-red-400/80">
@@ -95,6 +158,19 @@ function LoginForm() {
           </div>
         ) : (
           <form onSubmit={handleEmailLogin} className="mt-6 flex flex-col gap-2">
+            {mode === "register" && (
+              <input
+                type="text"
+                required
+                maxLength={USERNAME_MAX_LENGTH}
+                autoComplete="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Benutzername"
+                className={`rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:outline-none ${accentFocus}`}
+              />
+            )}
+
             <input
               type="email"
               required
@@ -109,7 +185,11 @@ function LoginForm() {
               disabled={sending}
               className={`rounded-xl border px-4 py-3 text-xs font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-30 ${accentBorder} ${accentBg} ${accentText}`}
             >
-              {sending ? "Sende Link …" : "Login-Link senden"}
+              {sending
+                ? "Sende Link …"
+                : mode === "register"
+                  ? "Registrieren & Link senden"
+                  : "Login-Link senden"}
             </button>
           </form>
         )}

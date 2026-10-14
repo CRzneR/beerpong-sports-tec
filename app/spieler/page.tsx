@@ -13,6 +13,8 @@ import MatchHistoryDetail from "@/components/stats/match/MatchHistoryDetail";
 import PlayerRanking from "@/components/stats/match/PlayerRanking";
 import PlayerDetail from "@/components/stats/match/PlayerDetail";
 import { RulesLink } from "@/components/RulesLink";
+import ProPreviewModal from "@/components/stats/ProPreviewModal";
+import { UsernameGate } from "@/components/stats/UsernameGate";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
@@ -120,6 +122,31 @@ function SpielerPageInner() {
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
+  /*
+   * PRO-VORSCHAU
+   *
+   * "Freischalten" startet nicht mehr direkt den Checkout, sondern öffnet
+   * zuerst die Vorschau (ProPreviewModal). Erst deren Button
+   * "Jetzt Pro freischalten" ruft handleUpgrade auf und leitet zu Stripe
+   * weiter.
+   */
+
+  const [showProPreview, setShowProPreview] = useState(false);
+
+  const openProPreview = () => {
+    setUpgradeError(null);
+    setShowProPreview(true);
+  };
+
+  const closeProPreview = () => {
+    if (upgrading) {
+      return;
+    }
+
+    setShowProPreview(false);
+    setUpgradeError(null);
+  };
+
   const handleUpgrade = async () => {
     if (upgrading) {
       return;
@@ -146,6 +173,7 @@ function SpielerPageInner() {
 
   return (
     <main className="min-h-screen bg-[#050708] text-white">
+      <UsernameGate />
       <header className="border-b border-white/[0.08]">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
           <Link href="/" className="group flex items-center gap-3">
@@ -266,7 +294,7 @@ function SpielerPageInner() {
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
-                    onUpgrade={handleUpgrade}
+                    onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
                     <PerformanceStats />
@@ -278,7 +306,7 @@ function SpielerPageInner() {
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
-                    onUpgrade={handleUpgrade}
+                    onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
                     <PerformanceChart />
@@ -290,7 +318,7 @@ function SpielerPageInner() {
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
-                    onUpgrade={handleUpgrade}
+                    onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
                     <PerformanceDetail />
@@ -302,7 +330,7 @@ function SpielerPageInner() {
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
-                    onUpgrade={handleUpgrade}
+                    onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
                     <MatchHistory onSelectMatch={setSelectedMatch} />
@@ -314,7 +342,7 @@ function SpielerPageInner() {
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
-                    onUpgrade={handleUpgrade}
+                    onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
                     <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
@@ -350,6 +378,14 @@ function SpielerPageInner() {
           </>
         )}
       </div>
+
+      <ProPreviewModal
+        open={showProPreview}
+        onClose={closeProPreview}
+        onUpgrade={handleUpgrade}
+        upgrading={upgrading}
+        error={upgradeError}
+      />
     </main>
   );
 }
