@@ -15,6 +15,7 @@ import PlayerDetail from "@/components/stats/match/PlayerDetail";
 import { RulesLink } from "@/components/RulesLink";
 import ProPreviewModal from "@/components/stats/ProPreviewModal";
 import { UsernameGate } from "@/components/stats/UsernameGate";
+import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
@@ -375,6 +376,8 @@ function SpielerPageInner() {
                 </div>
               </Link>
             </section>
+
+            <DeleteAccountSection />
           </>
         )}
       </div>

@@ -1,5 +1,31 @@
 import Link from "next/link";
 
+/*
+ * --------------------------------------------------------------------------
+ * | DATENSCHUTZERKLÄRUNG
+ * --------------------------------------------------------------------------
+ *
+ * WICHTIG - vor dem Livegang prüfen/ausfüllen:
+ *
+ * - [ECKIGE KLAMMERN] durch echte Angaben ersetzen (Kontaktdaten wie
+ *   im Impressum).
+ * - "[EU-Region / Nicht-EU-Region]": prüfen, in welcher Supabase-
+ *   Region das Projekt liegt (Supabase Dashboard -> Project Settings
+ *   -> General). Bei einer Region außerhalb der EU/des EWR ist ein
+ *   zusätzlicher Absatz zu Drittlandtransfers (Standardvertrags-
+ *   klauseln) nötig.
+ * - Prüfen, ob mit Supabase ein Auftragsverarbeitungsvertrag (AVV)
+ *   nach Art. 28 DSGVO abgeschlossen ist (im Supabase Dashboard unter
+ *   Organization -> Legal Documents verfügbar).
+ * - Diese Erklärung beschreibt bewusst nur das, was die App aktuell
+ *   tatsächlich tut - kein Tracking, keine Analytics, keine Werbung,
+ *   kein Profilbild-Feature (noch nicht gebaut). Bei neuen Features
+ *   entsprechend ergänzen.
+ * - Dies ist keine Rechtsberatung - im Zweifel anwaltlich prüfen
+ *   lassen.
+ * --------------------------------------------------------------------------
+ */
+
 export default function DatenschutzPage() {
   return (
     <main className="min-h-screen bg-[#050708] px-5 py-10 text-white sm:px-6 lg:px-8 lg:py-14">
@@ -31,13 +57,13 @@ export default function DatenschutzPage() {
             <p className="mt-2">
               Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:
               <br />
-              Christoph Renz
+              [Vollständiger Name]
               <br />
-              Herzogstandstraße
+              [Straße und Hausnummer]
               <br />
-              81539 München
+              [PLZ und Ort]
               <br />
-              E-Mail: [kontakt@beerpongsportstec.de]
+              E-Mail: [deine-email@beispiel.de]
             </p>
             <p className="mt-2">
               Kontaktdaten wie im{" "}
@@ -102,7 +128,12 @@ export default function DatenschutzPage() {
               Für Datenbank, Authentifizierung und Backend-Infrastruktur nutzen wir den Dienst
               Supabase (Supabase, Inc.). Supabase verarbeitet die in dieser Erklärung genannten
               Daten in unserem Auftrag als Auftragsverarbeiter gemäß Art. 28 DSGVO. Die Daten werden
-              in der Supabase-Region EU-Region gespeichert.
+              in der Supabase-Region [EU-Region / Nicht-EU-Region] gespeichert.
+            </p>
+            <p className="mt-2">
+              [Falls Nicht-EU-Region: Da diese Region außerhalb der EU/des EWR liegt, erfolgt die
+              Übermittlung auf Grundlage von EU-Standardvertragsklauseln nach Art. 46 DSGVO. Weitere
+              Informationen stellt Supabase auf Anfrage bereit.]
             </p>
           </section>
 
@@ -162,8 +193,16 @@ export default function DatenschutzPage() {
               blendet vergangene Matches lediglich aus deiner persönlichen Statistik-Ansicht aus -
               die zugrunde liegenden Match-Datensätze bleiben bestehen, da sie auch Mitspieler
               betreffen, deren Statistiken davon nicht berührt werden sollen. Diese Funktion stellt
-              daher KEINE Löschung im Sinne von Art. 17 DSGVO dar. Für eine tatsächliche Löschung
-              deiner Daten wende dich bitte gemäß Abschnitt 9 an uns.
+              daher KEINE Löschung im Sinne von Art. 17 DSGVO dar.
+            </p>
+            <p className="mt-2">
+              Dein Konto kannst du jederzeit selbst löschen: im Spielerprofil unter "Konto" ganz
+              unten. Dabei werden dein Login und die Verknüpfung deines Profils mit deiner
+              E-Mail-Adresse dauerhaft entfernt. Dein Profilname wird durch "Gelöschter Spieler"
+              ersetzt; Matches und Statistiken deiner Mitspieler bleiben dadurch vollständig
+              erhalten. Eigene Turniere bleiben ohne Veranstalter-Zuordnung bestehen. Kaufbelege
+              werden ohne Kontobezug aufbewahrt, soweit eine gesetzliche Aufbewahrungspflicht
+              besteht. Für eine weitergehende Löschung wende dich bitte gemäß Abschnitt 9 an uns.
             </p>
           </section>
 
@@ -184,7 +223,7 @@ export default function DatenschutzPage() {
             <p className="mt-2">
               Wende dich dazu formlos an die in Abschnitt 1 genannte Kontaktadresse. Außerdem steht
               dir ein Beschwerderecht bei einer Datenschutzaufsichtsbehörde zu, z. B. bei der für
-              Bayern zuständigen Aufsichtsbehörde.
+              [Bundesland] zuständigen Aufsichtsbehörde.
             </p>
           </section>
 
