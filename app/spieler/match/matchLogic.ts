@@ -33,6 +33,47 @@ export type Team = "A" | "B";
  */
 export type HitType = "single" | "bounce" | "trickshot" | "extra";
 
+/*
+ * --------------------------------------------------------------------------
+ * | BECHERPOSITION BEIM TREFFER (Formation + Platz)
+ * --------------------------------------------------------------------------
+ *
+ * Beim Speichern eines Treffers wird festgehalten, in WELCHER Formation
+ * der getroffene Becher stand und auf welchem Platz. Das lässt sich
+ * später nicht mehr zuverlässig aus den Becher-IDs rekonstruieren: nach
+ * einem Re-Rack ordnet die App die verbleibenden Becher neu an.
+ *
+ * Der Platz wird aus Sicht des WERFERS gespeichert (Blickrichtung zum
+ * gegnerischen Dreieck), damit Treffer auf Team A und Team B in
+ * derselben Statistik zusammenpassen. Die Plätze folgen der Reihenfolge
+ * der Formation "oben" (Team A): Reihe für Reihe, von der hintersten
+ * (breitesten) Reihe bis zur Spitze, jeweils von links nach rechts.
+ * Team B steht gespiegelt, deshalb wird dessen Platz hier umgerechnet.
+ * --------------------------------------------------------------------------
+ */
+
+export type RecordedFormation = "ten" | "six" | "three";
+
+export const FORMATION_CUP_COUNT: Record<RecordedFormation, number> = {
+  ten: 10,
+  six: 6,
+  three: 3,
+};
+
+/**
+ * slotIndex = Platz in der Anzeige des getroffenen Teams (siehe
+ * useCupSlotAssignment). shooterTeam = Team, das geworfen hat. Team B
+ * wirft auf Team A (oben, Platz bleibt), Team A wirft auf Team B
+ * (unten, gespiegelt: Platz n-1-k).
+ */
+export function getShooterViewSlot(
+  slotIndex: number,
+  formation: RecordedFormation,
+  shooterTeam: Team,
+): number {
+  return shooterTeam === "B" ? slotIndex : FORMATION_CUP_COUNT[formation] - 1 - slotIndex;
+}
+
 export type ActionType = "miss" | "hit";
 
 export type Player = {
@@ -85,6 +126,14 @@ export type MatchAction = {
    * Getroffene gegnerische Becher.
    */
   cupIds: number[];
+
+  /**
+   * Nur bei "hit", seit der Positions-Statistik: Formation, in der der
+   * Treffer fiel, und Platz des direkt getroffenen Bechers (aus Sicht
+   * des Werfers, siehe getShooterViewSlot). Fehlt bei älteren Matches.
+   */
+  formation?: RecordedFormation;
+  hitSlots?: number[];
 
   /**
    * Zeitpunkt der Aktion.

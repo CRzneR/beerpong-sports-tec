@@ -1,4 +1,5 @@
-import type { MatchState, Team, HitType } from "./matchLogic";
+import { FORMATION_CUP_COUNT, getShooterViewSlot } from "./matchLogic";
+import type { MatchState, Team, HitType, RecordedFormation } from "./matchLogic";
 import { getSavedMatches } from "./matchStorage";
 import { getRegisteredPlayerIds, getStatsResetTimestamps } from "./playerProfiles";
 
@@ -256,6 +257,121 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
     if (b.hitRate !== a.hitRate) return b.hitRate - a.hitRate;
     return b.hits - a.hits;
   });
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | TREFFER NACH BECHERPOSITION (pro Formation)
+ * --------------------------------------------------------------------------
+ *
+ * Wie oft wurde welcher Becherplatz getroffen - getrennt nach der
+ * Formation, in der er stand (10er: 7-10 Becher stehen, 6er: 4-6,
+ * 3er: 2-3). counts[i] = Treffer auf Platz i (aus Sicht des Werfers,
+ * siehe getShooterViewSlot in matchLogic.ts: Reihe für Reihe von der
+ * hintersten Reihe zur Spitze, jeweils links nach rechts).
+ *
+ * Zwei Datenquellen:
+ * 1. Neue Matches speichern Formation und Platz direkt beim Wurf
+ *    (action.formation / action.hitSlots) - exakt.
+ * 2. Ältere Matches haben das nicht. Für die 10er-Formation lässt es
+ *    sich trotzdem herleiten: Dort entspricht der Platz der Becher-ID
+ *    (Platz = ID - 1), und die Formation ist sicher die 10er, solange
+ *    höchstens 3 Becher vorher entfernt wurden. Nur der erste Becher
+ *    einer Aktion zählt (der direkt getroffene, der Rest sind
+ *    Bonus-Becher). 6er und 3er lassen sich bei alten Matches nicht
+ *    zuverlässig herleiten, sie fließen nur aus neuen Matches ein.
+ *    legacyHits zählt, wie viele Treffer aus dieser Herleitung stammen.
+ * --------------------------------------------------------------------------
+ */
+
+export type CupPositionFormationStats = {
+  total: number;
+  counts: number[];
+  legacyHits: number;
+};
+
+export type CupPositionStats = Record<RecordedFormation, CupPositionFormationStats>;
+
+export async function getPlayerCupPositionStats(playerId: string): Promise<CupPositionStats> {
+  const history = await getPlayerMatchHistory(playerId);
+
+  const result: CupPositionStats = {
+    ten: { total: 0, counts: Array(FORMATION_CUP_COUNT.ten).fill(0), legacyHits: 0 },
+    six: { total: 0, counts: Array(FORMATION_CUP_COUNT.six).fill(0), legacyHits: 0 },
+    three: { total: 0, counts: Array(FORMATION_CUP_COUNT.three).fill(0), legacyHits: 0 },
+  };
+
+  for (const entry of history) {
+    /* Pro Team: Becher, die in früheren Aktionen schon vorkamen (nur für Altdaten). */
+    const removedBefore: Record<Team, Set<number>> = { A: new Set(), B: new Set() };
+
+    for (const action of entry.actions) {
+      if (action.type !== "hit") {
+        continue;
+      }
+
+      const removedCount = removedBefore[action.team].size;
+
+      action.cupIds.forEach((cupId) => removedBefore[action.team].add(cupId));
+
+      if (action.playerId !== playerId) {
+        continue;
+      }
+
+      if (action.formation && action.hitSlots && action.hitSlots.length > 0) {
+        const target = result[action.formation];
+
+        for (const slot of action.hitSlots) {
+          if (slot >= 0 && slot < target.counts.length) {
+            target.counts[slot] += 1;
+            target.total += 1;
+          }
+        }
+
+        continue;
+      }
+
+      /* Altdaten: nur die 10er-Formation, nur der direkt getroffene Becher. */
+      const directCupId = action.cupIds[0];
+
+      if (directCupId === undefined || directCupId < 1 || directCupId > 10 || removedCount > 3) {
+        continue;
+      }
+
+      const slot = getShooterViewSlot(directCupId - 1, "ten", action.team);
+
+      result.ten.counts[slot] += 1;
+      result.ten.total += 1;
+      result.ten.legacyHits += 1;
+    }
+  }
+
+  return result;
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | RANGLISTENPLATZ EINES SPIELERS
+ * --------------------------------------------------------------------------
+ *
+ * Platz in derselben Reihenfolge wie die Spieler-Rangliste (siehe
+ * getAllPlayerOverallStats), also identisch zur Nummer dort. null, wenn
+ * der Spieler (noch) nicht in der Rangliste steht, z. B. ohne Match
+ * oder nach einem Zurücksetzen der Statistiken.
+ * --------------------------------------------------------------------------
+ */
+
+export async function getPlayerRank(
+  playerId: string,
+): Promise<{ rank: number; total: number } | null> {
+  const all = await getAllPlayerOverallStats();
+  const index = all.findIndex((player) => player.playerId === playerId);
+
+  if (index === -1) {
+    return null;
+  }
+
+  return { rank: index + 1, total: all.length };
 }
 
 /*

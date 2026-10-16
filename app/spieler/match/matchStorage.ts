@@ -1,4 +1,4 @@
-import type { MatchState, Cup } from "./matchLogic";
+import type { MatchState, Cup, RecordedFormation } from "./matchLogic";
 import { createClient } from "@/lib/supabase/client";
 
 /*
@@ -48,6 +48,9 @@ type ActionRow = {
   hit_type: "single" | "bounce" | "trickshot" | null;
   cup_ids: unknown;
   action_index: number;
+  /* NEU: Becherposition beim Treffer (siehe matchLogic.ts, RecordedFormation) */
+  formation: string | null;
+  hit_slots: unknown;
 };
 
 /*
@@ -79,6 +82,16 @@ function normalizeCupIds(value: unknown): number[] {
   }
 
   return value.filter((item): item is number => typeof item === "number");
+}
+
+function parseFormation(value: unknown): RecordedFormation | undefined {
+  return value === "ten" || value === "six" || value === "three" ? value : undefined;
+}
+
+function parseHitSlots(value: unknown): number[] | undefined {
+  const slots = normalizeCupIds(value);
+
+  return slots.length > 0 ? slots : undefined;
 }
 
 /*
@@ -154,6 +167,8 @@ function reconstructState(
       team: action.team,
       hitType: action.hit_type ?? undefined,
       cupIds: normalizeCupIds(action.cup_ids),
+      formation: parseFormation(action.formation),
+      hitSlots: parseHitSlots(action.hit_slots),
     }));
 
   const { teamACups, teamBCups } = reconstructCups(actions);
@@ -203,7 +218,9 @@ export async function getSavedMatches(): Promise<SavedMatch[]> {
 
       supabase
         .from("actions")
-        .select("id, match_id, player_id, team, action_type, hit_type, cup_ids, action_index")
+        .select(
+          "id, match_id, player_id, team, action_type, hit_type, cup_ids, action_index, formation, hit_slots",
+        )
         .in("match_id", matchIds)
         .order("action_index", { ascending: true }),
     ]);
@@ -318,6 +335,8 @@ export async function saveMatch(state: MatchState): Promise<SavedMatch> {
     action_type: action.type,
     hit_type: action.type === "hit" ? (action.hitType ?? null) : null,
     cup_ids: action.cupIds,
+    formation: action.type === "hit" ? (action.formation ?? null) : null,
+    hit_slots: action.type === "hit" ? (action.hitSlots ?? null) : null,
     action_index: index,
   }));
 

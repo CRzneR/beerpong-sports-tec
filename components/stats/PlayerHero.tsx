@@ -4,11 +4,16 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 
 import { getOwnProfile, type PlayerProfile } from "@/app/spieler/match/playerProfiles";
-import { getPlayerOverallStats, type PlayerOverallStats } from "@/app/spieler/match/playerStats";
+import {
+  getPlayerOverallStats,
+  getPlayerRank,
+  type PlayerOverallStats,
+} from "@/app/spieler/match/playerStats";
 
 export function PlayerHero() {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [stats, setStats] = useState<PlayerOverallStats | null>(null);
+  const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +36,19 @@ export function PlayerHero() {
           if (!cancelled) {
             setStats(overallStats);
           }
+
+          /*
+           * Rang separat und ohne await davor: Er braucht die gesamte
+           * Rangliste und soll das Profil nicht ausbremsen. Schlägt er
+           * fehl, fehlt nur das Rang-Badge.
+           */
+          getPlayerRank(ownProfile.id)
+            .then((result) => {
+              if (!cancelled) {
+                setRank(result);
+              }
+            })
+            .catch((err) => console.error("Fehler beim Laden des Rangs:", err));
         }
       } catch (err) {
         console.error("Fehler beim Laden des Profils:", err);
@@ -100,9 +118,13 @@ export function PlayerHero() {
               </span>
             </div>
 
-            <h1 className="break-words text-3xl font-black uppercase tracking-[-0.05em] text-white sm:text-4xl">
-              {profile.name}
-            </h1>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h1 className="break-words text-3xl font-black uppercase tracking-[-0.05em] text-white sm:text-4xl">
+                {profile.name}
+              </h1>
+
+              {rank && <RankBadge rank={rank.rank} total={rank.total} />}
+            </div>
           </div>
         </div>
       </section>
@@ -115,6 +137,37 @@ export function PlayerHero() {
 
       <StartMatchCard />
     </div>
+  );
+}
+
+/*
+ * RANG-BADGE ("# 23 Weltweit")
+ *
+ * Platz in der Spieler-Rangliste unter allen registrierten Spielern.
+ * Die Top 3 bekommen einen goldenen Ton, alle anderen bleiben dezent.
+ */
+
+function RankBadge({ rank, total }: { rank: number; total: number }) {
+  const top = rank <= 3;
+
+  return (
+    <span
+      title={`Platz ${rank} von ${total} registrierten Spielern`}
+      className={`inline-flex items-baseline gap-1.5 rounded-full border px-3 py-1 ${
+        top
+          ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-400"
+          : "border-white/10 bg-white/[0.04] text-white/70"
+      }`}
+    >
+      <span className="text-sm font-black tracking-tight">#{rank}</span>
+      <span
+        className={`text-[9px] font-bold uppercase tracking-[0.2em] ${
+          top ? "text-yellow-400/70" : "text-white/35"
+        }`}
+      >
+        Weltweit
+      </span>
+    </span>
   );
 }
 

@@ -15,6 +15,7 @@ import PlayerDetail from "@/components/stats/match/PlayerDetail";
 import { RulesLink } from "@/components/RulesLink";
 import ProPreviewModal from "@/components/stats/ProPreviewModal";
 import { UsernameGate } from "@/components/stats/UsernameGate";
+import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 
 import { createClient } from "@/lib/supabase/client";
@@ -327,7 +328,19 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="04" title="Letzte Matches" />
+                  <SectionTitle eyebrow="04" title="Treffer nach Becherposition" />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={openProPreview}
+                    upgrading={upgrading}
+                  >
+                    <CupPositionStats />
+                  </ProLock>
+                </section>
+
+                <section className="mt-14">
+                  <SectionTitle eyebrow="05" title="Letzte Matches" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
@@ -339,7 +352,7 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="05" title="Spieler Rangliste" />
+                  <SectionTitle eyebrow="06" title="Spieler Rangliste" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}

@@ -15,7 +15,8 @@ import PlayerSetup from "@/components/stats/match/PlayerSetup";
 
 import HitOverlay, { ShotType } from "@/components/stats/match/HitOverlay";
 
-import type { MatchAction, MatchState } from "../matchLogic";
+import { getShooterViewSlot } from "../matchLogic";
+import type { MatchAction, MatchState, RecordedFormation } from "../matchLogic";
 import { getMatchStats } from "../matchStats";
 import MatchResult from "@/components/stats/match/MatchResult";
 import { saveMatch } from "../matchStorage";
@@ -56,6 +57,16 @@ type MatchEvent =
       shotType: ShotType;
 
       cupIds: number[];
+
+      /*
+       * Formation und Platz des getroffenen Bechers im Moment des
+       * Wurfs (aus Sicht des Werfers) - für die Positions-Statistik,
+       * siehe matchLogic.ts (RecordedFormation). Extra-Treffer haben
+       * das nicht (kein echter Wurf).
+       */
+      formation?: RecordedFormation;
+
+      hitSlots?: number[];
 
       timestamp: string;
 
@@ -209,6 +220,40 @@ function planRoundResolution(
 }
 
 /*
+ * --------------------------------------------------------------------------
+ * | ENDPHASE ("LETZTE CHANCE") UND VERLÄNGERUNG
+ * --------------------------------------------------------------------------
+ *
+ * Fällt der letzte Becher eines Teams, endet das Match NICHT sofort:
+ * - Das Team ohne Becher wirft noch auf die restlichen Becher des
+ *   anderen Teams (Endphase / "redemption").
+ * - Hat das Gewinnerteam noch REDEMPTION_FULL_ROUND_MIN_CUPS oder mehr
+ *   Becher, werfen alle Spieler, sonst nur ein Spieler (frei wählbar).
+ * - Treffen alle Werfer der Runde, wird noch einmal geworfen (Anzahl
+ *   Werfer dann neu nach den dann noch stehenden Bechern). Sonst ist
+ *   das Match vorbei, das Gewinnerteam gewinnt - die Treffer der
+ *   Endphase haben dessen Becher aber schon reduziert.
+ * - Trifft das Verliererteam ALLE restlichen Becher: Verlängerung
+ *   mit je OVERTIME_CUP_COUNT neuen Bechern pro Team.
+ * --------------------------------------------------------------------------
+ */
+
+const OVERTIME_CUP_COUNT = 3;
+const REDEMPTION_FULL_ROUND_MIN_CUPS = 3;
+
+type MatchPhase = { kind: "regular" } | { kind: "redemption"; winnerTeam: "A" | "B" };
+
+type RedemptionThrow = { playerId: string; type: "hit" | "miss" };
+
+type RoundCompletion = {
+  activeTeam: "A" | "B";
+  complete: boolean;
+  /** Nur in der Endphase gesetzt: alle Würfe dieser Runde inkl. des aktuellen. */
+  redemptionThrown: RedemptionThrow[] | null;
+  allHit: boolean;
+};
+
+/*
  * 10 BECHER ERSTELLEN
  */
 
@@ -348,6 +393,32 @@ export default function MatchPage() {
   const [startingTeam, setStartingTeam] = useState<"A" | "B" | null>(null);
 
   /*
+   * SPIELPHASE (siehe Kommentar zu ENDPHASE oben)
+   *
+   * - phase: normales Spiel oder Endphase
+   * - finalWinner: erst gesetzt, wenn das Match WIRKLICH vorbei ist
+   *   (nicht schon, wenn ein Team keine Becher mehr hat)
+   * - redemptionRound / pendingRedemptionOutcome: wer in der laufenden
+   *   Endphasen-Runde schon geworfen hat bzw. wie sie ausging, solange
+   *   die Becher dazu noch abgerechnet werden
+   * - turnEpochStart: ab welchem Ereignis die Rundenlogik zählt (nach
+   *   einer Verlängerung beginnt sie bei null)
+   * - undoFloor: davor gibt es kein "Rückgängig" mehr
+   * - overtimeCount: wie viele Verlängerungen es schon gab (für
+   *   eindeutige Becher-IDs)
+   */
+
+  const [phase, setPhase] = useState<MatchPhase>({ kind: "regular" });
+  const [finalWinner, setFinalWinner] = useState<"A" | "B" | null>(null);
+  const [redemptionRound, setRedemptionRound] = useState<RedemptionThrow[]>([]);
+  const [pendingRedemptionOutcome, setPendingRedemptionOutcome] = useState<{
+    allHit: boolean;
+  } | null>(null);
+  const [turnEpochStart, setTurnEpochStart] = useState(0);
+  const [undoFloor, setUndoFloor] = useState(0);
+  const [overtimeCount, setOvertimeCount] = useState(0);
+
+  /*
    * SPEICHERFEHLER
    */
 
@@ -371,7 +442,7 @@ export default function MatchPage() {
 
     let roundActions = new Map<string, "hit" | "miss">();
 
-    for (const event of events) {
+    for (const event of events.slice(turnEpochStart)) {
       roundActions.set(event.playerId, event.type);
 
       const activeTeamPlayers = activeTeam === "A" ? teamAPlayers : teamBPlayers;
@@ -397,13 +468,67 @@ export default function MatchPage() {
     const actedPlayerIds = new Set(roundActions.keys());
 
     return { activeTeam, actedPlayerIds };
-  }, [events, players, startingTeam]);
+  }, [events, players, startingTeam, turnEpochStart]);
 
-  const canPlayerAct = (player: MatchPlayer) =>
-    startingTeam !== null &&
+  /*
+   * ENDPHASE: wer wirft auf wen, und wie viele Spieler dürfen werfen?
+   */
+
+  const redemptionWinnerTeam = phase.kind === "redemption" ? phase.winnerTeam : null;
+  const redemptionTeam: "A" | "B" | null =
+    redemptionWinnerTeam === null ? null : redemptionWinnerTeam === "A" ? "B" : "A";
+
+  const redemptionTargetRemaining = (redemptionWinnerTeam === "A" ? teamACups : teamBCups).filter(
+    (cup) => !cup.hit,
+  ).length;
+
+  const redemptionPlayers = redemptionTeam
+    ? players.filter((player) => player.team === redemptionTeam)
+    : [];
+
+  const redemptionThrowersNeeded =
+    redemptionTargetRemaining >= REDEMPTION_FULL_ROUND_MIN_CUPS
+      ? redemptionPlayers.length
+      : Math.min(1, redemptionPlayers.length);
+
+  /*
+   * Welches Team gerade "am Zug" ist (für die Anzeige): in der
+   * Endphase das Team ohne Becher, sonst wie gehabt aus turnState.
+   */
+  const activeTeamForDisplay = redemptionTeam ?? turnState.activeTeam;
+
+  const canPlayerAct = (player: MatchPlayer) => {
+    if (startingTeam === null || extraOwed !== 0 || finalWinner !== null) {
+      return false;
+    }
+
+    if (phase.kind === "redemption") {
+      return (
+        pendingRedemptionOutcome === null &&
+        player.team === redemptionTeam &&
+        redemptionRound.length < redemptionThrowersNeeded &&
+        !redemptionRound.some((thrown) => thrown.playerId === player.id)
+      );
+    }
+
+    return player.team === turnState.activeTeam && !turnState.actedPlayerIds.has(player.id);
+  };
+
+  /*
+   * RÜCKGÄNGIG: nur innerhalb der aktuellen Phase und nur, solange
+   * nichts mehr abgerechnet wird. Eine bereits abgeschlossene
+   * Endphasen-Runde bzw. ein Phasenwechsel lässt sich nicht mehr
+   * zurückdrehen (die Abrechnung entfernt ggf. mehrere Becher, siehe
+   * planRoundResolution - das wieder aufzudröseln ist nicht möglich).
+   */
+
+  const canUndo =
+    lastEvent !== null &&
+    finalWinner === null &&
+    events.length > undoFloor &&
     extraOwed === 0 &&
-    player.team === turnState.activeTeam &&
-    !turnState.actedPlayerIds.has(player.id);
+    pendingRedemptionOutcome === null &&
+    (phase.kind === "regular" || redemptionRound.length > 0);
 
   /*
    * MATCH STATISTIK PRO TEAM
@@ -497,6 +622,8 @@ export default function MatchPage() {
           type: event.type,
           hitType: event.shotType,
           cupIds: event.cupIds,
+          formation: event.formation,
+          hitSlots: event.hitSlots,
           timestamp: event.timestampMs,
         });
 
@@ -572,9 +699,6 @@ export default function MatchPage() {
       }
     });
 
-    const teamAFinished = teamACups.every((cup) => cup.hit);
-    const teamBFinished = teamBCups.every((cup) => cup.hit);
-
     return {
       players,
       teamACups,
@@ -583,8 +707,8 @@ export default function MatchPage() {
       pendingAction: null,
       actions,
       previousState: null,
-      winner: teamAFinished ? "B" : teamBFinished ? "A" : null,
-      isFinished: teamAFinished || teamBFinished,
+      winner: finalWinner,
+      isFinished: finalWinner !== null,
     };
   }, [
     events,
@@ -594,6 +718,7 @@ export default function MatchPage() {
     teamBCups,
     pendingCupIdsForTeamA,
     pendingCupIdsForTeamB,
+    finalWinner,
   ]);
 
   /*
@@ -639,7 +764,7 @@ export default function MatchPage() {
    * RUNDE AUFLÖSEN
    *
    * Wird aufgerufen, sobald alle Spieler des aktiven Teams geworfen
-   * haben (siehe willCompleteRound in handleMiss/handleSaveHit). Bis
+   * haben (siehe describeRoundAfter in handleMiss/handleSaveHit). Bis
    * dahin standen die getroffenen Becher nur markiert da.
    *
    * Jetzt wird abgerechnet (Details siehe planRoundResolution): Die
@@ -682,6 +807,141 @@ export default function MatchPage() {
     }
   };
 
+  /*
+   * PHASENWECHSEL
+   */
+
+  const enterRedemption = (winnerTeam: "A" | "B") => {
+    setPhase({ kind: "redemption", winnerTeam });
+    setRedemptionRound([]);
+    setPendingRedemptionOutcome(null);
+    setUndoFloor(events.length);
+  };
+
+  /*
+   * Verlängerung: beide Teams bekommen neue Becher. Die alten bleiben
+   * als "getroffen" im Array (ihre IDs stehen in den gespeicherten
+   * Aktionen), die neuen bekommen fortlaufende, eindeutige IDs - sonst
+   * ließen sich Treffer der Verlängerung später nicht mehr von denen
+   * des regulären Spiels unterscheiden. Wer beginnt, wird wie zu
+   * Spielbeginn über das "Wer beginnt?"-Overlay gewählt.
+   */
+
+  const startOvertime = () => {
+    const firstId = 10 + overtimeCount * OVERTIME_CUP_COUNT;
+
+    const createOvertimeCups = (): Cup[] =>
+      Array.from({ length: OVERTIME_CUP_COUNT }, (_, index) => ({
+        id: firstId + index + 1,
+        hit: false,
+      }));
+
+    setTeamACups((current) => [...current, ...createOvertimeCups()]);
+    setTeamBCups((current) => [...current, ...createOvertimeCups()]);
+
+    setOvertimeCount((current) => current + 1);
+    setPhase({ kind: "regular" });
+    setRedemptionRound([]);
+    setPendingRedemptionOutcome(null);
+    setTurnEpochStart(events.length);
+    setUndoFloor(events.length);
+    setStartingTeam(null);
+  };
+
+  /*
+   * SPIELENDE PRÜFEN
+   *
+   * Läuft erst, wenn nichts mehr abgerechnet wird (keine offene Runde,
+   * keine offenen Bonus-Becher) und entscheidet dann, wie es
+   * weitergeht:
+   * - normales Spiel: hat ein Team keine Becher mehr -> Endphase
+   * - Endphase: Runde zu Ende -> Verlängerung (alle Becher getroffen),
+   *   nochmal werfen (alle Werfer trafen) oder Match vorbei
+   */
+
+  useEffect(() => {
+    if (!setupDone || finalWinner !== null) {
+      return;
+    }
+
+    if (extraOwed > 0 || roundHits.length > 0) {
+      return;
+    }
+
+    const teamARemaining = teamACups.filter((cup) => !cup.hit).length;
+    const teamBRemaining = teamBCups.filter((cup) => !cup.hit).length;
+
+    if (phase.kind === "regular") {
+      if (teamBRemaining === 0 && teamARemaining > 0) {
+        enterRedemption("A");
+      } else if (teamARemaining === 0 && teamBRemaining > 0) {
+        enterRedemption("B");
+      }
+
+      return;
+    }
+
+    if (!pendingRedemptionOutcome) {
+      return;
+    }
+
+    const winnerRemaining = phase.winnerTeam === "A" ? teamARemaining : teamBRemaining;
+
+    if (winnerRemaining === 0) {
+      startOvertime();
+      return;
+    }
+
+    if (pendingRedemptionOutcome.allHit) {
+      setRedemptionRound([]);
+      setPendingRedemptionOutcome(null);
+      return;
+    }
+
+    setFinalWinner(phase.winnerTeam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    setupDone,
+    finalWinner,
+    extraOwed,
+    roundHits,
+    teamACups,
+    teamBCups,
+    phase,
+    pendingRedemptionOutcome,
+  ]);
+
+  /*
+   * Ist die Runde mit diesem Wurf komplett? Normales Spiel: alle
+   * Spieler des aktiven Teams haben geworfen. Endphase: so viele
+   * Spieler wie erlaubt (siehe redemptionThrowersNeeded) haben
+   * geworfen.
+   */
+
+  const describeRoundAfter = (player: MatchPlayer, type: "hit" | "miss"): RoundCompletion => {
+    if (phase.kind === "redemption" && redemptionTeam) {
+      const thrown = [...redemptionRound, { playerId: player.id, type }];
+
+      return {
+        activeTeam: redemptionTeam,
+        complete: thrown.length >= redemptionThrowersNeeded,
+        redemptionThrown: thrown,
+        allHit: thrown.every((item) => item.type === "hit"),
+      };
+    }
+
+    const activeTeamPlayers = players.filter((item) => item.team === turnState.activeTeam);
+
+    return {
+      activeTeam: turnState.activeTeam,
+      complete: activeTeamPlayers.every(
+        (item) => item.id === player.id || turnState.actedPlayerIds.has(item.id),
+      ),
+      redemptionThrown: null,
+      allHit: false,
+    };
+  };
+
   const handleHit = (player: MatchPlayer) => {
     if (!canPlayerAct(player)) {
       return;
@@ -722,14 +982,11 @@ export default function MatchPage() {
     };
 
     /*
-     * Prüfen, ob DIESE Aktion die Runde des aktiven Teams komplett
-     * macht - BEVOR das Event hinzugefügt wird (turnState.actedPlayerIds
-     * spiegelt den Stand VOR dieser Aktion wider).
+     * Prüfen, ob DIESE Aktion die Runde komplett macht - BEVOR das
+     * Event hinzugefügt wird (turnState bzw. redemptionRound spiegeln
+     * den Stand VOR dieser Aktion wider).
      */
-    const activeTeamPlayers = players.filter((item) => item.team === turnState.activeTeam);
-    const willCompleteRound = activeTeamPlayers.every(
-      (item) => item.id === player.id || turnState.actedPlayerIds.has(item.id),
-    );
+    const round = describeRoundAfter(player, "miss");
 
     setEvents((current) => [...current, event]);
 
@@ -745,8 +1002,16 @@ export default function MatchPage() {
       ),
     );
 
-    if (willCompleteRound) {
-      resolveRound(roundHits, turnState.activeTeam);
+    if (round.redemptionThrown) {
+      setRedemptionRound(round.redemptionThrown);
+    }
+
+    if (round.complete) {
+      if (round.redemptionThrown) {
+        setPendingRedemptionOutcome({ allHit: round.allHit });
+      }
+
+      resolveRound(roundHits, round.activeTeam);
     }
   };
 
@@ -768,6 +1033,31 @@ export default function MatchPage() {
 
     const now = new Date();
 
+    /*
+     * BECHERPOSITION FESTHALTEN
+     *
+     * Jetzt, im Moment des Wurfs, ist die Formation noch die, auf die
+     * geworfen wurde (getroffene Becher werden erst am Rundenende
+     * abgerechnet). Später ließe sich das nicht mehr sauber
+     * rekonstruieren, weil nach einem Re-Rack neu angeordnet wird.
+     */
+
+    const targetCups = selectedPlayer.team === "A" ? teamBCups : teamACups;
+    const targetSlots = selectedPlayer.team === "A" ? teamBCupSlots : teamACupSlots;
+    const targetTier = getFormationTier(targetCups.filter((cup) => !cup.hit).length);
+
+    const recordedFormation: RecordedFormation | undefined =
+      targetTier === "ten" || targetTier === "six" || targetTier === "three"
+        ? targetTier
+        : undefined;
+
+    const recordedSlots = recordedFormation
+      ? cupIds
+          .map((cupId) => targetSlots[cupId])
+          .filter((slot): slot is number => slot !== undefined)
+          .map((slot) => getShooterViewSlot(slot, recordedFormation, selectedPlayer.team))
+      : [];
+
     const event: MatchEvent = {
       id: crypto.randomUUID(),
 
@@ -782,6 +1072,10 @@ export default function MatchPage() {
       shotType,
 
       cupIds,
+
+      formation: recordedFormation,
+
+      hitSlots: recordedSlots.length > 0 ? recordedSlots : undefined,
 
       timestamp: now.toLocaleTimeString([], {
         hour: "2-digit",
@@ -808,10 +1102,7 @@ export default function MatchPage() {
       ),
     );
 
-    const activeTeamPlayers = players.filter((item) => item.team === turnState.activeTeam);
-    const willCompleteRound = activeTeamPlayers.every(
-      (item) => item.id === selectedPlayer.id || turnState.actedPlayerIds.has(item.id),
-    );
+    const round = describeRoundAfter(selectedPlayer, "hit");
 
     const newRoundHit: RoundHit = {
       playerId: selectedPlayer.id,
@@ -821,14 +1112,22 @@ export default function MatchPage() {
       shotType,
     };
 
-    if (willCompleteRound) {
+    if (round.redemptionThrown) {
+      setRedemptionRound(round.redemptionThrown);
+    }
+
+    if (round.complete) {
+      if (round.redemptionThrown) {
+        setPendingRedemptionOutcome({ allHit: round.allHit });
+      }
+
       /*
        * Direkt mit der vollständigen Liste auflösen, statt erst über
        * setRoundHits zu gehen und auf den nächsten Render zu warten -
        * roundHits (State) hätte an dieser Stelle im selben Tick noch
        * nicht den neuen Eintrag.
        */
-      resolveRound([...roundHits, newRoundHit], turnState.activeTeam);
+      resolveRound([...roundHits, newRoundHit], round.activeTeam);
     } else {
       setRoundHits((current) => [...current, newRoundHit]);
     }
@@ -905,7 +1204,7 @@ export default function MatchPage() {
    */
 
   const handleUndo = () => {
-    if (!lastEvent) {
+    if (!lastEvent || !canUndo) {
       return;
     }
 
@@ -916,6 +1215,10 @@ export default function MatchPage() {
     );
 
     setEvents((current) => current.slice(0, -1));
+
+    if (phase.kind === "redemption") {
+      setRedemptionRound((current) => current.slice(0, -1));
+    }
 
     setPlayers((current) =>
       current.map((player) => {
@@ -1110,6 +1413,16 @@ export default function MatchPage() {
         </div>
       </header>
 
+      {/* ENDPHASE-HINWEIS */}
+
+      {phase.kind === "redemption" && redemptionTeam && finalWinner === null && (
+        <div className="shrink-0 border-b border-yellow-400/20 bg-yellow-400/[0.07] px-5 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.12em] text-yellow-300 lg:text-xs">
+          Endphase · Team {redemptionTeam} wirft auf die letzten {redemptionTargetRemaining} Becher
+          von Team {redemptionWinnerTeam} · {redemptionRound.length}/{redemptionThrowersNeeded}{" "}
+          geworfen
+        </div>
+      )}
+
       {/* MOBILE (< lg) */}
 
       <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-4 py-1.5 lg:hidden">
@@ -1195,7 +1508,7 @@ export default function MatchPage() {
                 Team {team}
               </div>
 
-              {startingTeam && turnState.activeTeam === team && extraOwed === 0 && (
+              {startingTeam && activeTeamForDisplay === team && extraOwed === 0 && (
                 <span
                   className={`rounded-full px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] ${
                     team === "A"
@@ -1277,7 +1590,7 @@ export default function MatchPage() {
         <div className="flex shrink-0 justify-center">
           <button
             type="button"
-            disabled={!lastEvent}
+            disabled={!canUndo}
             onClick={handleUndo}
             className="w-full rounded-xl border border-yellow-400/40 bg-yellow-400/10 px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-yellow-300 transition hover:bg-yellow-400/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.02] disabled:text-white/20"
           >
@@ -1321,7 +1634,7 @@ export default function MatchPage() {
               Team A
             </div>
 
-            {startingTeam && turnState.activeTeam === "A" && extraOwed === 0 && (
+            {startingTeam && activeTeamForDisplay === "A" && extraOwed === 0 && (
               <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-cyan-300">
                 Am Zug
               </span>
@@ -1479,7 +1792,7 @@ export default function MatchPage() {
               Team B
             </div>
 
-            {startingTeam && turnState.activeTeam === "B" && extraOwed === 0 && (
+            {startingTeam && activeTeamForDisplay === "B" && extraOwed === 0 && (
               <span className="rounded-full bg-fuchsia-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-fuchsia-300">
                 Am Zug
               </span>
@@ -1570,7 +1883,7 @@ export default function MatchPage() {
           <div className="flex shrink-0 justify-center">
             <button
               type="button"
-              disabled={!lastEvent}
+              disabled={!canUndo}
               onClick={handleUndo}
               className="
                 w-full
@@ -1651,7 +1964,7 @@ export default function MatchPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0c0f16] p-6 text-center">
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-              Vor dem Anwurf
+              {overtimeCount > 0 ? "Verlängerung" : "Vor dem Anwurf"}
             </div>
 
             <h2 className="mt-1 text-lg font-black uppercase">Wer beginnt?</h2>
