@@ -27,23 +27,12 @@ type Summary = {
  *
  * Schlichte Linien-Icons (24x24, 1.5px Strich), alle im selben Stil.
  * Sie erben die Farbe über currentColor - dezent in der Ruhe, cyan beim
- * Hover der Karte (group-hover an der Karte unten).
+ * Hover der Karte (group-hover an der Karte unten). Nur die großen
+ * Karten (01 Performance) haben Icons, "Weitere Statistiken" bewusst nicht.
  * --------------------------------------------------------------------------
  */
 
-type IconName =
-  | "matches"
-  | "winrate"
-  | "hitRate"
-  | "cups"
-  | "wins"
-  | "losses"
-  | "throws"
-  | "hits"
-  | "misses"
-  | "single"
-  | "bounce"
-  | "trickshot";
+type IconName = "matches" | "winrate" | "hitRate" | "cups" | "wins" | "losses";
 
 function StatIcon({ name }: { name: IconName }) {
   const common = {
@@ -104,61 +93,6 @@ function StatIcon({ name }: { name: IconName }) {
         </svg>
       );
 
-    case "throws" /* Ball in Bewegung: Würfe gesamt */:
-      return (
-        <svg {...common}>
-          <circle cx="15.5" cy="12" r="5" />
-          <path d="M3 9h4" />
-          <path d="M2 12h3.5" />
-          <path d="M3 15h4" />
-        </svg>
-      );
-
-    case "hits" /* Haken im Kreis: Treffer */:
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M8 12.5l2.7 2.7L16 9.5" />
-        </svg>
-      );
-
-    case "misses" /* Kreuz im Kreis: Fehlwürfe */:
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9 9l6 6" />
-          <path d="M15 9l-6 6" />
-        </svg>
-      );
-
-    case "single" /* Fadenkreuz: direkter Einzeltreffer */:
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 3v3" />
-          <path d="M12 18v3" />
-          <path d="M3 12h3" />
-          <path d="M18 12h3" />
-        </svg>
-      );
-
-    case "bounce" /* Ball springt vom Boden nach oben: Aufhüpfer */:
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="15.5" r="3" />
-          <path d="M12 10.5V3.5" />
-          <path d="M9 6.5l3-3 3 3" />
-          <path d="M4 21h16" />
-        </svg>
-      );
-
-    case "trickshot" /* Funkeln: Trickshot */:
-      return (
-        <svg {...common}>
-          <path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2L12 3z" />
-        </svg>
-      );
-
     case "losses" /* Trend nach unten */:
       return (
         <svg {...common}>
@@ -169,7 +103,15 @@ function StatIcon({ name }: { name: IconName }) {
   }
 }
 
-export function PerformanceStats() {
+export function PerformanceStats({
+  isPro,
+  extraEyebrow = "02",
+}: {
+  /** "Weitere Statistiken" werden nur mit Pro angezeigt. */
+  isPro: boolean;
+  /** Nummer vor der Überschrift "Weitere Statistiken" (passend zur Seitennummerierung). */
+  extraEyebrow?: string;
+}) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -243,54 +185,93 @@ export function PerformanceStats() {
     );
   }
 
-  const stats: { value: string; label: string; icon: IconName }[] = [
-    { value: String(summary?.matches ?? 0), label: "Matches", icon: "matches" },
-    { value: `${summary?.winrate ?? 0}%`, label: "Winrate", icon: "winrate" },
-    { value: `${summary?.hitRate ?? 0}%`, label: "Trefferquote", icon: "hitRate" },
+  const stats: { value: string; label: string; icon: IconName; accent?: boolean }[] = [
+    { value: String(summary?.matches ?? 0), label: "Matches", icon: "matches", accent: true },
+    { value: `${summary?.winrate ?? 0}%`, label: "Winrate", icon: "winrate", accent: true },
+    { value: `${summary?.hitRate ?? 0}%`, label: "Trefferquote", icon: "hitRate", accent: true },
     { value: String(summary?.cupsRemoved ?? 0), label: "Becher", icon: "cups" },
     { value: String(summary?.wins ?? 0), label: "Siege", icon: "wins" },
     { value: String(summary?.losses ?? 0), label: "Niederlagen", icon: "losses" },
   ];
 
   /*
-   * ZWEITE REIHE: WÜRFE
+   * WEITERE STATISTIKEN (nur Pro)
    *
    * Reine Zählwerte aus den gespeicherten Würfen. Einzeltreffer,
    * Aufhüpfer und Trickshots ergeben zusammen die Treffer-Zahl - bis
    * auf ältere Matches, in denen die Wurfart nicht mitgespeichert wurde.
    */
 
-  const throwStats: { value: string; label: string; icon: IconName }[] = [
-    { value: String(summary?.throws ?? 0), label: "Würfe gesamt", icon: "throws" },
-    { value: String(summary?.hits ?? 0), label: "Treffer", icon: "hits" },
-    { value: String(summary?.misses ?? 0), label: "Fehlwürfe", icon: "misses" },
-    { value: String(summary?.singleHits ?? 0), label: "Einzeltreffer", icon: "single" },
-    { value: String(summary?.bounceHits ?? 0), label: "Aufhüpfer", icon: "bounce" },
-    { value: String(summary?.trickshotHits ?? 0), label: "Trickshots", icon: "trickshot" },
+  const throwStats: { value: string; label: string }[] = [
+    { value: String(summary?.throws ?? 0), label: "Würfe gesamt" },
+    { value: String(summary?.hits ?? 0), label: "Treffer" },
+    { value: String(summary?.misses ?? 0), label: "Fehlwürfe" },
+    { value: String(summary?.singleHits ?? 0), label: "Einzeltreffer" },
+    { value: String(summary?.bounceHits ?? 0), label: "Aufhüpfer" },
+    { value: String(summary?.trickshotHits ?? 0), label: "Trickshots" },
   ];
 
-  const allStats = [...stats, ...throwStats];
-
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-      {allStats.map((stat) => (
-        <div
-          key={stat.label}
-          className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 transition duration-300 hover:border-cyan-400/20 hover:bg-cyan-400/[0.025]"
-        >
-          <div className="absolute right-4 top-4 text-white/20 transition-colors duration-300 group-hover:text-cyan-400/70">
-            <StatIcon name={stat.icon} />
+    <div>
+      {/* 01: die sechs Hauptwerte als Karten */}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 transition duration-300 hover:border-cyan-400/20 hover:bg-cyan-400/[0.025]"
+          >
+            <div className="absolute right-4 top-4 text-white/20 transition-colors duration-300 group-hover:text-cyan-400/70">
+              <StatIcon name={stat.icon} />
+            </div>
+
+            <div
+              className={`text-2xl font-black tracking-[-0.04em] sm:text-3xl ${
+                stat.accent ? "text-cyan-400" : "text-white"
+              }`}
+            >
+              {stat.value}
+            </div>
+
+            <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/25">
+              {stat.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 02: Weitere Statistiken - nur mit Pro */}
+
+      {isPro && (
+        <div className="mt-8 border-t border-white/[0.06] pt-8">
+          <div className="mb-5 flex items-center gap-4">
+            <span className="text-[10px] font-bold tracking-[0.25em] text-cyan-400/50">
+              {extraEyebrow}
+            </span>
+
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
+              Weitere Statistiken
+            </h3>
           </div>
 
-          <div className="text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">
-            {stat.value}
-          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-0">
+            {throwStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="flex flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3 lg:border-l lg:border-white/[0.08] lg:pl-6 lg:first:border-l-0 lg:first:pl-0"
+              >
+                <div className="text-2xl font-black tracking-[-0.04em] text-white">
+                  {stat.value}
+                </div>
 
-          <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/25">
-            {stat.label}
+                <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }

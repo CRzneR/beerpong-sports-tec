@@ -122,6 +122,16 @@ function SpielerPageInner() {
     };
   }, [userEmail]);
 
+  /*
+   * ABSCHNITTS-NUMMERN
+   *
+   * Mit Pro erscheint unter "01 Performance" der Unterabschnitt
+   * "02 Weitere Statistiken" - alle folgenden Abschnitte rutschen dann
+   * um eins nach hinten. Ohne Pro bleibt die Nummerierung lückenlos.
+   */
+
+  const nr = (n: number) => String(n + (isPro ? 1 : 0)).padStart(2, "0");
+
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
@@ -300,12 +310,12 @@ function SpielerPageInner() {
                     onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
-                    <PerformanceStats />
+                    <PerformanceStats isPro={isPro} extraEyebrow="02" />
                   </ProLock>
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="02" title="Performance Verlauf" />
+                  <SectionTitle eyebrow={nr(2)} title="Performance Verlauf" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
@@ -317,7 +327,7 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="03" title="Statistiken im Detail" />
+                  <SectionTitle eyebrow={nr(3)} title="Statistiken im Detail" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
@@ -329,12 +339,12 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="04" title="Achievements" />
+                  <SectionTitle eyebrow={nr(4)} title="Achievements" />
                   <AchievementsSection />
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="05" title="Treffer nach Becherposition" />
+                  <SectionTitle eyebrow={nr(5)} title="Treffer nach Becherposition" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
@@ -346,7 +356,7 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="06" title="Letzte Matches" />
+                  <SectionTitle eyebrow={nr(6)} title="Letzte Matches" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
@@ -358,7 +368,7 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow="07" title="Spieler Rangliste" />
+                  <SectionTitle eyebrow={nr(7)} title="Spieler Rangliste" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}
