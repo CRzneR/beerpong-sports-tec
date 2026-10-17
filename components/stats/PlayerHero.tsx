@@ -4,15 +4,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 
 import { getOwnProfile, type PlayerProfile } from "@/app/spieler/match/playerProfiles";
-import {
-  getPlayerOverallStats,
-  getPlayerRank,
-  type PlayerOverallStats,
-} from "@/app/spieler/match/playerStats";
+import { getPlayerRank } from "@/app/spieler/match/playerStats";
 
 export function PlayerHero() {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [stats, setStats] = useState<PlayerOverallStats | null>(null);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +26,8 @@ export function PlayerHero() {
         setProfile(ownProfile);
 
         if (ownProfile) {
-          const overallStats = await getPlayerOverallStats(ownProfile.id);
-
-          if (!cancelled) {
-            setStats(overallStats);
-          }
-
           /*
-           * Rang separat und ohne await davor: Er braucht die gesamte
+           * Rang separat und ohne await: Er braucht die gesamte
            * Rangliste und soll das Profil nicht ausbremsen. Schlägt er
            * fehl, fehlt nur das Rang-Badge.
            */
@@ -99,8 +88,6 @@ export function PlayerHero() {
       </section>
     );
   } else {
-    const matches = stats?.matches ?? 0;
-
     hero = (
       <section className="relative flex items-center overflow-hidden rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-400/[0.08] via-white/[0.025] to-transparent p-6 sm:p-8">
         {/* Glow */}
@@ -112,12 +99,6 @@ export function PlayerHero() {
           </div>
 
           <div className="min-w-0">
-            <div className="mb-2 flex items-center gap-3">
-              <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-cyan-400">
-                {matches} {matches === 1 ? "Match" : "Matches"}
-              </span>
-            </div>
-
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <h1 className="break-words text-3xl font-black uppercase tracking-[-0.05em] text-white sm:text-4xl">
                 {profile.name}

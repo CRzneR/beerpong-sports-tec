@@ -110,46 +110,49 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
         {unlocked.length} {unlocked.length === 1 ? "Achievement" : "Achievements"} freigeschaltet
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {/* Mobil 2 Karten nebeneinander, darüber 3 bzw. 4 - bewusst kompakt. */}
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3 lg:grid-cols-4">
         {unlocked.map((item) => {
           const tier = TIER_BY_KEY[item.key];
 
           return (
             <div
               key={item.key}
-              className="relative flex flex-col items-center rounded-2xl border border-white/[0.08] bg-[#0b0f14] px-5 pb-5 pt-4 text-center"
+              className="relative flex flex-col items-center rounded-xl border border-white/[0.08] bg-[#0b0f14] px-3 pb-3 pt-2.5 text-center md:rounded-2xl md:px-4 md:pb-4 md:pt-3"
             >
               {item.isNew && (
-                <span className="absolute right-3 top-3 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-yellow-400">
+                <span className="absolute right-2 top-2 z-10 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-yellow-400">
                   Neu
                 </span>
               )}
 
-              <div className="relative h-44 w-full">
+              <div className="relative h-24 w-full md:h-32">
                 <Image
                   src={badgeSrc(item.key)}
                   alt=""
                   fill
-                  sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 90vw"
+                  sizes="(min-width: 1024px) 20vw, (min-width: 768px) 30vw, 45vw"
                   className="object-contain"
                 />
               </div>
 
-              <h3 className="mt-2 text-lg font-black tracking-tight text-white">{item.title}</h3>
+              <h3 className="mt-1.5 text-sm font-black tracking-tight text-white md:text-base">
+                {item.title}
+              </h3>
 
-              <p className="mt-1 max-w-[18rem] text-xs font-semibold leading-relaxed text-white/50">
+              <p className="mt-0.5 text-[10px] font-semibold leading-snug text-white/50 md:text-[11px]">
                 {item.description}
               </p>
 
               <span
-                className={`mt-3 rounded-full border px-4 py-1 text-[10px] font-black uppercase tracking-[0.15em] ${TIER_STYLE[tier]}`}
+                className={`mt-2 rounded-full border px-2.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] md:px-3 md:text-[9px] ${TIER_STYLE[tier]}`}
               >
                 {tier}
               </span>
 
               {item.unlockedAt && (
-                <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.15em] text-white/25">
-                  Freigeschaltet am {formatDate(item.unlockedAt)}
+                <div className="mt-2 text-[8px] font-bold uppercase tracking-[0.1em] text-white/25 md:text-[9px]">
+                  {formatDate(item.unlockedAt)}
                 </div>
               )}
             </div>
