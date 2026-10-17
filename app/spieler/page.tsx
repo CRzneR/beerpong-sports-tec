@@ -445,7 +445,14 @@ function SpielerPageInner() {
 
                 <section className="mt-14">
                   <SectionTitle eyebrow={nr(4)} title="Achievements" />
-                  <AchievementsSection />
+                  <ProLock
+                    isPro={isPro}
+                    loggedIn={Boolean(userEmail)}
+                    onUpgrade={openProPreview}
+                    upgrading={upgrading}
+                  >
+                    <AchievementsSection />
+                  </ProLock>
                 </section>
 
                 <section className="mt-14">
