@@ -21,7 +21,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Unumkehrbares passiert):
  *   1. Turniere vom Account lösen (user_id -> null)
  *   2. Käufe vom Account lösen (Beleg bleibt wegen Aufbewahrungspflicht)
- *   3. Spielerprofil anonymisieren
+ *   3. Achievements löschen, Spielerprofil anonymisieren
  *   4. Login löschen
  *
  * Voraussetzung: account-delete.sql wurde in Supabase ausgeführt
@@ -76,7 +76,30 @@ export async function POST() {
     );
   }
 
-  /* 3. Spielerprofil anonymisieren. */
+  /*
+   * 3. Achievements löschen und Spielerprofil anonymisieren.
+   *
+   * Achievements gehören zur Person, nicht zu den Matches der anderen -
+   * sie werden mitgelöscht. Ein Fehler hier (z. B. Tabelle existiert
+   * nicht) bricht das Löschen nicht ab.
+   */
+
+  const { data: ownProfile } = await admin
+    .from("players")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (ownProfile) {
+    const { error: achievementsError } = await admin
+      .from("achievements")
+      .delete()
+      .eq("player_id", ownProfile.id);
+
+    if (achievementsError) {
+      console.error("Konto löschen - Achievements:", achievementsError);
+    }
+  }
 
   const { error: profileError } = await admin
     .from("players")
