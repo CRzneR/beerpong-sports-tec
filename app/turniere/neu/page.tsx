@@ -8,6 +8,9 @@ import { createTournament } from "../tournamentStorage";
 import { shuffleArray } from "../tournamentLogic";
 import { createClient } from "@/lib/supabase/client";
 
+const MIN_TEAMS = 2;
+const MAX_TEAMS = 64;
+
 export default function NeuesTurnierPage() {
   const router = useRouter();
 
@@ -16,8 +19,18 @@ export default function NeuesTurnierPage() {
   const [step, setStep] = useState<1 | 2>(1);
 
   const [name, setName] = useState("");
-  const [teamCount, setTeamCount] = useState(8);
-  const [groupCount, setGroupCount] = useState(2);
+
+  /*
+   * Die Zahlenfelder halten den getippten TEXT. Würde man bei jedem
+   * Tastendruck direkt auf eine Zahl (mit Mindestwert) zurückrechnen,
+   * ließe sich die letzte Ziffer nicht löschen: leer wird sofort wieder
+   * zu 2 bzw. 1. Korrigiert wird erst beim Verlassen des Feldes (onBlur).
+   */
+  const [teamCountText, setTeamCountText] = useState("8");
+  const [groupCountText, setGroupCountText] = useState("2");
+
+  const teamCount = Number.parseInt(teamCountText, 10) || 0;
+  const groupCount = Number.parseInt(groupCountText, 10) || 0;
 
   const [teamNames, setTeamNames] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
@@ -46,7 +59,28 @@ export default function NeuesTurnierPage() {
   }, [router]);
 
   const step1Valid =
-    name.trim().length > 0 && teamCount >= 2 && groupCount >= 1 && groupCount <= teamCount;
+    name.trim().length > 0 &&
+    teamCount >= MIN_TEAMS &&
+    teamCount <= MAX_TEAMS &&
+    groupCount >= 1 &&
+    groupCount <= teamCount;
+
+  const handleTeamCountBlur = () => {
+    const clamped = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teamCount || MIN_TEAMS));
+
+    setTeamCountText(String(clamped));
+
+    /* Gruppen dürfen nie mehr sein als Teams. */
+    if (groupCount > clamped) {
+      setGroupCountText(String(clamped));
+    }
+  };
+
+  const handleGroupCountBlur = () => {
+    const upper = Math.max(MIN_TEAMS, Math.min(MAX_TEAMS, teamCount || MIN_TEAMS));
+
+    setGroupCountText(String(Math.min(upper, Math.max(1, groupCount || 1))));
+  };
 
   const handleContinue = () => {
     if (!step1Valid) {
@@ -154,10 +188,11 @@ export default function NeuesTurnierPage() {
 
                 <input
                   type="number"
-                  min={2}
-                  max={64}
-                  value={teamCount}
-                  onChange={(event) => setTeamCount(Math.max(2, Number(event.target.value) || 0))}
+                  min={MIN_TEAMS}
+                  max={MAX_TEAMS}
+                  value={teamCountText}
+                  onChange={(event) => setTeamCountText(event.target.value)}
+                  onBlur={handleTeamCountBlur}
                   className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white focus:border-yellow-400/40 focus:outline-none"
                 />
               </div>
@@ -170,9 +205,10 @@ export default function NeuesTurnierPage() {
                 <input
                   type="number"
                   min={1}
-                  max={teamCount}
-                  value={groupCount}
-                  onChange={(event) => setGroupCount(Math.max(1, Number(event.target.value) || 0))}
+                  max={Math.max(teamCount, 1)}
+                  value={groupCountText}
+                  onChange={(event) => setGroupCountText(event.target.value)}
+                  onBlur={handleGroupCountBlur}
                   className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white focus:border-yellow-400/40 focus:outline-none"
                 />
               </div>

@@ -6,7 +6,30 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import { attachMagnetic } from "@/components/landing/gsapUtils";
+/*
+ * --------------------------------------------------------------------------
+ * | HERO (mit GSAP)
+ * --------------------------------------------------------------------------
+ *
+ * - Einlauf: Headline-Zeilen werden aufgedeckt, der Rest folgt gestaffelt
+ * - Scrollen: Hintergrund-Parallax, Inhalt blendet beim Verlassen aus
+ * - Maus (nur mit Zeigergerät): Lichtkegel folgt dem Zeiger, das Foto
+ *   verschiebt sich minimal gegenläufig. Die Buttons bleiben bewusst
+ *   ruhig (kein Magnet-Effekt, kein Hochschieben beim Hover).
+ * - "Reduzierte Bewegung" in den Systemeinstellungen: keine Animation,
+ *   alles ist sofort sichtbar
+ *
+ * Zum Ausblenden VOR dem ersten Frame (kein kurzes Aufblitzen der
+ * fertigen Inhalte) tragen die animierten Elemente das Attribut
+ * data-hero-hide. GSAP blendet sie ein, sobald die Seite hydriert ist.
+ * Ohne JavaScript bzw. bei reduzierter Bewegung greift das CSS nicht.
+ *
+ * Wichtig: Animierte Elemente tragen KEINE Tailwind-Transform-Klassen
+ * (translate/scale/rotate) - GSAP schreibt "transform" inline und würde
+ * sie überschreiben. Bewegt wird deshalb nur an Wrappern, die keine
+ * Hover-Transforms haben.
+ * --------------------------------------------------------------------------
+ */
 
 const HIDE_UNTIL_READY_CSS = `
 @media (prefers-reduced-motion: no-preference) {
@@ -78,7 +101,11 @@ export function Hero() {
               duration: 1.15,
               stagger: 0.12,
               ease: "power4.out",
-
+              /*
+               * Die Masken (overflow: hidden) werden nur fürs Aufdecken
+               * gebraucht - danach wieder öffnen, sonst schneidet der
+               * Rand den Leuchteffekt am Wort "Sport." ab.
+               */
               onComplete: () => {
                 gsap.set(masks, { overflow: "visible" });
               },
@@ -113,6 +140,7 @@ export function Hero() {
         if (badge) {
           intro.fromTo(badge, { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 1 }, 1.4);
 
+          /* schwebt danach dauerhaft leicht auf und ab */
           gsap.to(badge, {
             y: -8,
             duration: 2.6,
@@ -188,8 +216,6 @@ export function Hero() {
 
           root.addEventListener("pointermove", handleMove);
           cleanups.push(() => root.removeEventListener("pointermove", handleMove));
-
-          cleanups.push(attachMagnetic(all("[data-magnetic]"), 0.35));
         }
 
         return () => cleanups.forEach((cleanup) => cleanup());
@@ -209,6 +235,10 @@ export function Hero() {
 
       {/* Hintergrund */}
       <div className="absolute inset-0">
+        {/*
+          Foto: bewusst größer als der Bereich (Rand-Überstand), damit
+          Parallax und Mausbewegung keine Lücken freilegen.
+        */}
         <div
           data-hero="bg"
           className="absolute"
@@ -283,22 +313,18 @@ export function Hero() {
 
           {/* Buttons */}
           <div data-hero="actions" data-hero-hide className="mt-9 flex flex-wrap gap-4">
-            <span data-magnetic className="inline-block">
-              <Link
-                href="/spieler"
-                className="group block rounded-full bg-emerald-400 px-7 py-4 text-sm font-bold text-black shadow-[0_0_40px_rgba(52,211,153,0.15)] transition hover:-translate-y-1 hover:bg-emerald-300"
-              >
-                Jetzt entdecken
-                <span className="ml-3 inline-block transition group-hover:translate-x-1">→</span>
-              </Link>
-            </span>
+            <Link
+              href="/spieler"
+              className="group block rounded-full bg-emerald-400 px-7 py-4 text-sm font-bold text-black shadow-[0_0_40px_rgba(52,211,153,0.15)] transition hover:bg-emerald-300 hover:shadow-[0_0_50px_rgba(52,211,153,0.28)]"
+            >
+              Jetzt entdecken
+              <span className="ml-3 inline-block transition group-hover:translate-x-1">→</span>
+            </Link>
 
-            <span data-magnetic className="inline-block">
-              <button className="block rounded-full border border-white/20 px-7 py-4 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5">
-                <span className="mr-3">▶</span>
-                Video ansehen
-              </button>
-            </span>
+            <button className="block rounded-full border border-white/20 px-7 py-4 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5">
+              <span className="mr-3">▶</span>
+              Video ansehen
+            </button>
           </div>
 
           {/* Features */}

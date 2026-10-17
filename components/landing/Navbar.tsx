@@ -66,17 +66,9 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5 sm:block"
-          >
-            Login
-          </Link>
-
-          <Link
-            href="/registrieren"
             className="rounded-full bg-emerald-400 px-4 py-2.5 text-xs font-bold text-black transition hover:bg-emerald-300 sm:px-5 sm:text-sm"
           >
-            Jetzt starten
-            <span className="ml-2">→</span>
+            Login
           </Link>
         </div>
       </div>

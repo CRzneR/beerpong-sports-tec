@@ -4,26 +4,6 @@ import Link from "next/link";
  * --------------------------------------------------------------------------
  * | DATENSCHUTZERKLÄRUNG
  * --------------------------------------------------------------------------
- *
- * WICHTIG - vor dem Livegang prüfen/ausfüllen:
- *
- * - [ECKIGE KLAMMERN] durch echte Angaben ersetzen (Kontaktdaten wie
- *   im Impressum).
- * - "[EU-Region / Nicht-EU-Region]": prüfen, in welcher Supabase-
- *   Region das Projekt liegt (Supabase Dashboard -> Project Settings
- *   -> General). Bei einer Region außerhalb der EU/des EWR ist ein
- *   zusätzlicher Absatz zu Drittlandtransfers (Standardvertrags-
- *   klauseln) nötig.
- * - Prüfen, ob mit Supabase ein Auftragsverarbeitungsvertrag (AVV)
- *   nach Art. 28 DSGVO abgeschlossen ist (im Supabase Dashboard unter
- *   Organization -> Legal Documents verfügbar).
- * - Diese Erklärung beschreibt bewusst nur das, was die App aktuell
- *   tatsächlich tut - kein Tracking, keine Analytics, keine Werbung,
- *   kein Profilbild-Feature (noch nicht gebaut). Bei neuen Features
- *   entsprechend ergänzen.
- * - Dies ist keine Rechtsberatung - im Zweifel anwaltlich prüfen
- *   lassen.
- * --------------------------------------------------------------------------
  */
 
 export default function DatenschutzPage() {
@@ -57,13 +37,13 @@ export default function DatenschutzPage() {
             <p className="mt-2">
               Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:
               <br />
-              [Vollständiger Name]
+              [Christoph Renz]
               <br />
-              [Straße und Hausnummer]
+              [Bahnhofstraße 12]
               <br />
-              [PLZ und Ort]
+              [81539 München]
               <br />
-              E-Mail: [deine-email@beispiel.de]
+              E-Mail: [kontakt@beerpongsportstec.de]
             </p>
             <p className="mt-2">
               Kontaktdaten wie im{" "}

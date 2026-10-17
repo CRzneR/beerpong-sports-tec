@@ -6,8 +6,6 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import { attachMagnetic } from "@/components/landing/gsapUtils";
-
 /*
  * --------------------------------------------------------------------------
  * | COMMUNITY-SEKTION (mit GSAP)
@@ -17,7 +15,7 @@ import { attachMagnetic } from "@/components/landing/gsapUtils";
  *   kehrt mit der Scrollrichtung um; pausiert, solange es nicht im Bild ist
  * - Foto-Hintergrund mit Parallax, Glow "atmet", Punkte pulsieren
  * - Headline wird zeilenweise aufgedeckt, Text/Buttons laufen ein
- * - Maus (nur mit Zeigergerät): magnetische Buttons
+ * - Buttons bleiben bewusst ruhig (kein Magnet-Effekt, kein Hochschieben)
  * - "Reduzierte Bewegung": keine Animation
  * --------------------------------------------------------------------------
  */
@@ -47,7 +45,6 @@ export function CommunitySection() {
     mm.add(
       {
         motion: "(prefers-reduced-motion: no-preference)",
-        fine: "(hover: hover) and (pointer: fine)",
       },
       (context) => {
         const conditions: Record<string, boolean> = context.conditions ?? {};
@@ -55,8 +52,6 @@ export function CommunitySection() {
         if (!conditions.motion) {
           return undefined;
         }
-
-        const cleanups: Array<() => void> = [];
 
         /* ---------- Laufband ---------- */
 
@@ -221,13 +216,7 @@ export function CommunitySection() {
           }
         }
 
-        /* ---------- Maus (nur mit Zeigergerät) ---------- */
-
-        if (conditions.fine) {
-          cleanups.push(attachMagnetic(all("[data-magnetic]"), 0.35));
-        }
-
-        return () => cleanups.forEach((cleanup) => cleanup());
+        return undefined;
       },
     );
 
@@ -264,7 +253,7 @@ export function CommunitySection() {
             style={{ top: "-12%", height: "124%" }}
           >
             <Image
-              src="/images/landing/community-photo.jpg"
+              src="/images/landing/community-photo.png"
               alt=""
               fill
               sizes="100vw"
@@ -351,26 +340,22 @@ export function CommunitySection() {
             data-community="fade"
             className="mt-10 flex flex-wrap items-center justify-center gap-4"
           >
-            <span data-magnetic className="inline-block">
-              <Link
-                href="/registrieren"
-                className="group block rounded-full bg-emerald-400 px-8 py-4 text-sm font-bold text-black shadow-[0_0_50px_rgba(52,211,153,0.15)] transition duration-300 hover:-translate-y-1 hover:bg-emerald-300 hover:shadow-[0_0_60px_rgba(52,211,153,0.25)]"
-              >
-                Profil erstellen
-                <span className="ml-3 inline-block transition-transform group-hover:translate-x-1">
-                  →
-                </span>
-              </Link>
-            </span>
+            <Link
+              href="/registrieren"
+              className="group block rounded-full bg-emerald-400 px-8 py-4 text-sm font-bold text-black shadow-[0_0_50px_rgba(52,211,153,0.15)] transition duration-300 hover:bg-emerald-300 hover:shadow-[0_0_60px_rgba(52,211,153,0.25)]"
+            >
+              Profil erstellen
+              <span className="ml-3 inline-block transition-transform group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
 
-            <span data-magnetic className="inline-block">
-              <Link
-                href="/spieler"
-                className="block rounded-full border border-white/15 px-8 py-4 text-sm font-semibold text-white transition duration-300 hover:border-white/30 hover:bg-white/5"
-              >
-                Pong Stats entdecken
-              </Link>
-            </span>
+            <Link
+              href="/spieler"
+              className="block rounded-full border border-white/15 px-8 py-4 text-sm font-semibold text-white transition duration-300 hover:border-white/30 hover:bg-white/5"
+            >
+              Pong Stats entdecken
+            </Link>
           </div>
 
           {/* Bottom statement */}
