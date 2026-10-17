@@ -10,8 +10,13 @@ import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
  * | KONTO LÖSCHEN
  * --------------------------------------------------------------------------
  *
- * Kleiner Bereich "Konto" ganz unten auf der Spielerseite. Für Gäste
- * (nicht eingeloggt) rendert die Komponente nichts.
+ * Kleiner Bereich "Konto" ganz unten auf der Spielerseite und auf der
+ * Pong-League-Übersicht. Für Gäste (nicht eingeloggt) rendert die
+ * Komponente nichts.
+ *
+ * tournamentCount (optional, nur Pong League): Anzahl der eigenen
+ * Turniere. Ist sie größer als 0, weist der Dialog darauf hin, dass sie
+ * nach dem Löschen nicht mehr verwaltet werden können.
  *
  * Zum Bestätigen muss der eigene Benutzername eingetippt werden - ein
  * versehentlicher Klick reicht nicht. Die Löschung selbst passiert
@@ -20,7 +25,7 @@ import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
  * --------------------------------------------------------------------------
  */
 
-export function DeleteAccountSection() {
+export function DeleteAccountSection({ tournamentCount = 0 }: { tournamentCount?: number }) {
   const [username, setUsername] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -119,6 +124,13 @@ export function DeleteAccountSection() {
               <li>Das lässt sich nicht rückgängig machen.</li>
               <li>Pro-Status und Statistik-Zuordnung gehen verloren.</li>
               <li>Eigene Turniere bleiben ohne Veranstalter bestehen.</li>
+              {tournamentCount > 0 && (
+                <li className="font-bold text-red-400/80">
+                  {tournamentCount === 1
+                    ? "Dein Turnier lässt sich danach nicht mehr verwalten. Lösche es vorher, wenn du das nicht möchtest."
+                    : `Deine ${tournamentCount} Turniere lassen sich danach nicht mehr verwalten. Lösche sie vorher, wenn du das nicht möchtest.`}
+                </li>
+              )}
             </ul>
 
             <label className="mt-4 block text-[11px] font-bold text-white/50">

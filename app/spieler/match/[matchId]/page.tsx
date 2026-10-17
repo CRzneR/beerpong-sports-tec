@@ -241,6 +241,24 @@ function planRoundResolution(
 const OVERTIME_CUP_COUNT = 3;
 const REDEMPTION_FULL_ROUND_MIN_CUPS = 3;
 
+/*
+ * --------------------------------------------------------------------------
+ * | 1 GEGEN 1: ZWEI WÜRFE PRO RUNDE
+ * --------------------------------------------------------------------------
+ *
+ * Eine Runde heißt "2 Bälle, 2 Würfe pro Team". Ein Team aus zwei
+ * Spielern wirft also zweimal - ein einzelner Spieler (1 gegen 1) bekommt
+ * deshalb beide Bälle und damit 2 Würfe pro Runde.
+ *
+ * Alles andere bleibt wie gehabt: Treffen alle Würfe der Runde, ist
+ * dasselbe Team noch einmal dran; sonst wechselt das Team. Die Endphase
+ * gilt entsprechend (ab REDEMPTION_FULL_ROUND_MIN_CUPS Bechern die volle
+ * Runde, darunter nur ein Wurf).
+ * --------------------------------------------------------------------------
+ */
+
+const SOLO_THROWS_PER_ROUND = 2;
+
 type MatchPhase = { kind: "regular" } | { kind: "redemption"; winnerTeam: "A" | "B" };
 
 type RedemptionThrow = { playerId: string; type: "hit" | "miss" };
@@ -434,25 +452,41 @@ export default function MatchPage() {
    * WESSEN TEAM IST AM ZUG?
    */
 
+  /*
+   * Würfe pro Spieler und Runde: normal 1, bei 1 gegen 1 sind es 2
+   * (siehe SOLO_THROWS_PER_ROUND).
+   */
+
+  const throwsPerPlayer =
+    players.filter((player) => player.team === "A").length === 1 &&
+    players.filter((player) => player.team === "B").length === 1
+      ? SOLO_THROWS_PER_ROUND
+      : 1;
+
   const turnState = useMemo(() => {
     const teamAPlayers = players.filter((player) => player.team === "A");
     const teamBPlayers = players.filter((player) => player.team === "B");
 
     let activeTeam: "A" | "B" = startingTeam ?? (teamAPlayers.length > 0 ? "A" : "B");
 
-    let roundActions = new Map<string, "hit" | "miss">();
+    /* Pro Spieler: die Würfe der laufenden Runde in Reihenfolge. */
+    let roundActions = new Map<string, ("hit" | "miss")[]>();
 
     for (const event of events.slice(turnEpochStart)) {
-      roundActions.set(event.playerId, event.type);
+      roundActions.set(event.playerId, [...(roundActions.get(event.playerId) ?? []), event.type]);
 
       const activeTeamPlayers = activeTeam === "A" ? teamAPlayers : teamBPlayers;
 
       const roundComplete =
         activeTeamPlayers.length > 0 &&
-        activeTeamPlayers.every((player) => roundActions.has(player.id));
+        activeTeamPlayers.every(
+          (player) => (roundActions.get(player.id)?.length ?? 0) >= throwsPerPlayer,
+        );
 
       if (roundComplete) {
-        const allHits = activeTeamPlayers.every((player) => roundActions.get(player.id) === "hit");
+        const allHits = activeTeamPlayers.every((player) =>
+          (roundActions.get(player.id) ?? []).every((type) => type === "hit"),
+        );
 
         if (!allHits) {
           const otherTeam = activeTeam === "A" ? "B" : "A";
@@ -465,10 +499,20 @@ export default function MatchPage() {
       }
     }
 
-    const actedPlayerIds = new Set(roundActions.keys());
+    /* Wie oft jeder Spieler in der laufenden Runde schon geworfen hat. */
+    const throwCounts = new Map<string, number>(
+      Array.from(roundActions.entries()).map(([playerId, types]) => [playerId, types.length]),
+    );
 
-    return { activeTeam, actedPlayerIds };
-  }, [events, players, startingTeam, turnEpochStart]);
+    /* "Fertig" = sein Wurf-Kontingent in dieser Runde ist aufgebraucht. */
+    const actedPlayerIds = new Set(
+      Array.from(throwCounts.entries())
+        .filter(([, count]) => count >= throwsPerPlayer)
+        .map(([playerId]) => playerId),
+    );
+
+    return { activeTeam, actedPlayerIds, throwCounts };
+  }, [events, players, startingTeam, turnEpochStart, throwsPerPlayer]);
 
   /*
    * ENDPHASE: wer wirft auf wen, und wie viele Spieler dürfen werfen?
@@ -486,9 +530,14 @@ export default function MatchPage() {
     ? players.filter((player) => player.team === redemptionTeam)
     : [];
 
-  const redemptionThrowersNeeded =
+  /*
+   * Anzahl WÜRFE in der Endphasen-Runde (nicht Spieler): volle Runde =
+   * jeder Spieler wirft sein Kontingent (bei 1 gegen 1 also 2 Würfe),
+   * sonst genau ein Wurf eines frei gewählten Spielers.
+   */
+  const redemptionThrowsNeeded =
     redemptionTargetRemaining >= REDEMPTION_FULL_ROUND_MIN_CUPS
-      ? redemptionPlayers.length
+      ? redemptionPlayers.length * throwsPerPlayer
       : Math.min(1, redemptionPlayers.length);
 
   /*
@@ -496,6 +545,36 @@ export default function MatchPage() {
    * Endphase das Team ohne Becher, sonst wie gehabt aus turnState.
    */
   const activeTeamForDisplay = redemptionTeam ?? turnState.activeTeam;
+
+  /*
+   * Hinweis "Wurf 1/2" neben "Am Zug" - nur, wenn die Runde mehrere
+   * Würfe hat (1 gegen 1 bzw. volle Endphasen-Runde bei 1 gegen 1).
+   */
+
+  const getRoundThrowLabel = (team: "A" | "B"): string | null => {
+    if (activeTeamForDisplay !== team) {
+      return null;
+    }
+
+    if (phase.kind === "redemption") {
+      return redemptionThrowsNeeded > 1
+        ? `Wurf ${Math.min(redemptionRound.length + 1, redemptionThrowsNeeded)}/${redemptionThrowsNeeded}`
+        : null;
+    }
+
+    if (throwsPerPlayer === 1) {
+      return null;
+    }
+
+    const teamPlayers = players.filter((player) => player.team === team);
+    const done = teamPlayers.reduce(
+      (sum, player) => sum + (turnState.throwCounts.get(player.id) ?? 0),
+      0,
+    );
+    const total = teamPlayers.length * throwsPerPlayer;
+
+    return `Wurf ${Math.min(done + 1, total)}/${total}`;
+  };
 
   const canPlayerAct = (player: MatchPlayer) => {
     if (startingTeam === null || extraOwed !== 0 || finalWinner !== null) {
@@ -506,8 +585,9 @@ export default function MatchPage() {
       return (
         pendingRedemptionOutcome === null &&
         player.team === redemptionTeam &&
-        redemptionRound.length < redemptionThrowersNeeded &&
-        !redemptionRound.some((thrown) => thrown.playerId === player.id)
+        redemptionRound.length < redemptionThrowsNeeded &&
+        redemptionRound.filter((thrown) => thrown.playerId === player.id).length <
+          (redemptionThrowsNeeded === 1 ? 1 : throwsPerPlayer)
       );
     }
 
@@ -914,8 +994,7 @@ export default function MatchPage() {
   /*
    * Ist die Runde mit diesem Wurf komplett? Normales Spiel: alle
    * Spieler des aktiven Teams haben geworfen. Endphase: so viele
-   * Spieler wie erlaubt (siehe redemptionThrowersNeeded) haben
-   * geworfen.
+   * Würfe wie erlaubt (siehe redemptionThrowsNeeded) geworfen wurden.
    */
 
   const describeRoundAfter = (player: MatchPlayer, type: "hit" | "miss"): RoundCompletion => {
@@ -924,7 +1003,7 @@ export default function MatchPage() {
 
       return {
         activeTeam: redemptionTeam,
-        complete: thrown.length >= redemptionThrowersNeeded,
+        complete: thrown.length >= redemptionThrowsNeeded,
         redemptionThrown: thrown,
         allHit: thrown.every((item) => item.type === "hit"),
       };
@@ -932,11 +1011,13 @@ export default function MatchPage() {
 
     const activeTeamPlayers = players.filter((item) => item.team === turnState.activeTeam);
 
+    /* Würfe der laufenden Runde INKL. des Wurfs, der gerade passiert. */
+    const throwsAfter = (item: MatchPlayer) =>
+      (turnState.throwCounts.get(item.id) ?? 0) + (item.id === player.id ? 1 : 0);
+
     return {
       activeTeam: turnState.activeTeam,
-      complete: activeTeamPlayers.every(
-        (item) => item.id === player.id || turnState.actedPlayerIds.has(item.id),
-      ),
+      complete: activeTeamPlayers.every((item) => throwsAfter(item) >= throwsPerPlayer),
       redemptionThrown: null,
       allHit: false,
     };
@@ -1249,15 +1330,26 @@ export default function MatchPage() {
        * Noch nicht aufgelöst - einfach aus den vorgemerkten Treffern
        * entfernen, die Becher standen ja noch nie als "hit" drin.
        */
-      setRoundHits((current) =>
-        current.filter(
-          (hit) =>
-            !(
-              hit.playerId === lastEvent.playerId &&
-              hit.cupIds.join(",") === lastEvent.cupIds.join(",")
-            ),
-        ),
-      );
+      setRoundHits((current) => {
+        /*
+         * Nur EINEN Eintrag entfernen (den letzten passenden): Bei 1 gegen
+         * 1 kann derselbe Spieler in einer Runde zweimal denselben Becher
+         * treffen - ein filter() würde dann beide vormerken-Einträge
+         * löschen, obwohl nur ein Wurf zurückgenommen wird.
+         */
+        let removeIndex = -1;
+
+        current.forEach((hit, index) => {
+          if (
+            hit.playerId === lastEvent.playerId &&
+            hit.cupIds.join(",") === lastEvent.cupIds.join(",")
+          ) {
+            removeIndex = index;
+          }
+        });
+
+        return removeIndex === -1 ? current : current.filter((_, index) => index !== removeIndex);
+      });
 
       return;
     }
@@ -1418,7 +1510,7 @@ export default function MatchPage() {
       {phase.kind === "redemption" && redemptionTeam && finalWinner === null && (
         <div className="shrink-0 border-b border-yellow-400/20 bg-yellow-400/[0.07] px-5 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.12em] text-yellow-300 lg:text-xs">
           Endphase · Team {redemptionTeam} wirft auf die letzten {redemptionTargetRemaining} Becher
-          von Team {redemptionWinnerTeam} · {redemptionRound.length}/{redemptionThrowersNeeded}{" "}
+          von Team {redemptionWinnerTeam} · {redemptionRound.length}/{redemptionThrowsNeeded}{" "}
           geworfen
         </div>
       )}
@@ -1517,6 +1609,7 @@ export default function MatchPage() {
                   }`}
                 >
                   Am Zug
+                  {getRoundThrowLabel(team) ? ` · ${getRoundThrowLabel(team)}` : ""}
                 </span>
               )}
             </div>
@@ -1637,6 +1730,7 @@ export default function MatchPage() {
             {startingTeam && activeTeamForDisplay === "A" && extraOwed === 0 && (
               <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-cyan-300">
                 Am Zug
+                {getRoundThrowLabel("A") ? ` · ${getRoundThrowLabel("A")}` : ""}
               </span>
             )}
           </div>
@@ -1795,6 +1889,7 @@ export default function MatchPage() {
             {startingTeam && activeTeamForDisplay === "B" && extraOwed === 0 && (
               <span className="rounded-full bg-fuchsia-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-fuchsia-300">
                 Am Zug
+                {getRoundThrowLabel("B") ? ` · ${getRoundThrowLabel("B")}` : ""}
               </span>
             )}
           </div>

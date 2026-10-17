@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -96,6 +96,44 @@ function SpielerPageInner() {
     setSigningOut(false);
   };
 
+  /*
+   * MOBILES MENÜ
+   *
+   * Auf dem Handy passt die volle Leiste (Plattform-Name, Regeln,
+   * E-Mail, Abmelden) nicht nebeneinander und drückt die Seite breiter
+   * als den Bildschirm. Unter md bleiben deshalb nur Logo, Pro-Badge und
+   * ein Konto-Knopf; Regeln und Abmelden stehen im aufklappbaren Menü.
+   */
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
   const [isPro, setIsPro] = useState(false);
   const [proLoading, setProLoading] = useState(true);
 
@@ -187,9 +225,9 @@ function SpielerPageInner() {
   return (
     <main className="min-h-screen bg-[#050708] text-white">
       <UsernameGate />
-      <header className="border-b border-white/[0.08]">
+      <header className="relative z-40 border-b border-white/[0.08]">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-          <Link href="/" className="group flex items-center gap-3">
+          <Link href="/" className="group flex shrink-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10">
               <img
                 src="/images/landing/pong-stats-logo.png"
@@ -207,14 +245,14 @@ function SpielerPageInner() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <span className="hidden text-[10px] font-bold uppercase tracking-[0.25em] text-white/25 sm:block">
+          <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.25em] text-white/25 lg:block">
               Player Platform
             </span>
 
-            <div className="h-1 w-1 rounded-full bg-cyan-400" />
+            <div className="hidden h-1 w-1 rounded-full bg-cyan-400 md:block" />
 
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">
+            <span className="hidden text-xs font-black uppercase tracking-[0.2em] text-cyan-400 md:block">
               Pong Stats
             </span>
 
@@ -224,33 +262,102 @@ function SpielerPageInner() {
               </span>
             )}
 
-            <RulesLink />
+            {/* Ab md: komplette Leiste */}
 
-            <div className="ml-2 h-4 w-px bg-white/[0.08]" />
+            <div className="hidden items-center gap-3 md:flex">
+              <RulesLink />
 
-            {authLoading ? null : userEmail ? (
-              <div className="flex items-center gap-2">
-                <span className="hidden max-w-[140px] truncate text-[10px] font-bold text-white/40 sm:block">
-                  {userEmail}
-                </span>
+              <div className="ml-2 h-4 w-px bg-white/[0.08]" />
 
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={signingOut}
-                  className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/50 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              {authLoading ? null : userEmail ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden max-w-[140px] truncate text-[10px] font-bold text-white/40 lg:block">
+                    {userEmail}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={signingOut}
+                    className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/50 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {signingOut ? "…" : "Abmelden"}
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className="rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.15]"
                 >
-                  {signingOut ? "…" : "Abmelden"}
-                </button>
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.15]"
-              >
-                Anmelden
-              </Link>
-            )}
+                  Anmelden
+                </Link>
+              )}
+            </div>
+
+            {/* Unter md: Konto-Knopf mit Menü (bzw. "Anmelden", wenn niemand eingeloggt ist) */}
+
+            <div className="md:hidden">
+              {authLoading ? null : userEmail ? (
+                <div ref={menuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((open) => !open)}
+                    aria-label="Menü"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-400/[0.08] text-xs font-black uppercase text-cyan-400 transition hover:bg-cyan-400/[0.15]"
+                  >
+                    {userEmail.charAt(0)}
+                  </button>
+
+                  {menuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-50 mt-2 w-60 rounded-2xl border border-white/[0.1] bg-[#0c0f16] p-2 shadow-xl"
+                    >
+                      <div className="truncate px-3 py-2 text-[11px] font-bold text-white/40">
+                        {userEmail}
+                      </div>
+
+                      <div className="my-1 h-px bg-white/[0.08]" />
+
+                      <Link
+                        href="/regeln"
+                        role="menuitem"
+                        onClick={() => setMenuOpen(false)}
+                        className="block rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white/70 transition hover:bg-white/[0.06] hover:text-white"
+                      >
+                        Regeln
+                      </Link>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          void handleLogout();
+                        }}
+                        disabled={signingOut}
+                        className="block w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider text-white/70 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {signingOut ? "…" : "Abmelden"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <RulesLink />
+
+                  <Link
+                    href="/login"
+                    className="rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.15]"
+                  >
+                    Anmelden
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

@@ -61,6 +61,7 @@ const rules: Rule[] = [
     items: [
       "2 gegen 2",
       "2 Bälle, 2 Würfe pro Team",
+      "1 gegen 1: Du wirfst beide Bälle (2 Würfe pro Runde)",
       "Ellbogen hinter die Tischkante",
       "Erst trinken, dann werfen!",
       "Formation immer Dreieck",

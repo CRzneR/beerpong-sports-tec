@@ -8,6 +8,7 @@ import { deleteTournament, getTournaments } from "./tournamentStorage";
 import type { Tournament } from "./tournamentLogic";
 import { createClient } from "@/lib/supabase/client";
 import { UsernameGate } from "@/components/stats/UsernameGate";
+import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 
 export default function TurnierePage() {
   const router = useRouter();
@@ -129,6 +130,11 @@ export default function TurnierePage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Konto: dieselbe Löschfunktion wie auf der Spielerseite */}
+        <div className="mt-12">
+          <DeleteAccountSection tournamentCount={tournaments.length} />
         </div>
       </div>
     </main>
