@@ -2,6 +2,24 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/*
+ * --------------------------------------------------------------------------
+ * | PRO-VORSCHAU
+ * --------------------------------------------------------------------------
+ *
+ * Modal mit 4 durchklickbaren Vorschaubildern, die zeigen, wie die
+ * Spielerseite mit Pro aussieht.
+ *
+ * Bedienung:
+ *  - Pfeil-Buttons links/rechts, Punkte unten, Vorschau-Leiste
+ *  - Tastatur: ← / → zum Blättern, Esc zum Schließen
+ *  - Wischen auf dem Handy
+ *  - Klick auf den dunklen Hintergrund schließt das Modal
+ *
+ * Die Bilder liegen in:  public/images/pro-previews/pro-preview-1.svg … 4.svg
+ * --------------------------------------------------------------------------
+ */
+
 type Slide = {
   src: string;
   eyebrow: string;
@@ -34,7 +52,7 @@ const SLIDES: Slide[] = [
   {
     src: "/images/pro-previews/pro-preview-4.svg",
     eyebrow: "04",
-    title: "Spieler-Rangliste",
+    title: "Weltrangliste",
     description:
       "Vergleiche dich mit deinen Freunden: Siege, Trefferquote und Treffer im direkten Ranking.",
   },

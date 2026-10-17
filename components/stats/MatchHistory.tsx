@@ -119,6 +119,13 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
 
         const date = new Date(match.savedAt);
 
+        /* Benutzernamen je Team (bei 2 gegen 2 beide), damit man sieht, gegen wen gespielt wurde. */
+        const teamNames = (team: "A" | "B") =>
+          state.players
+            .filter((player: { team: string }) => player.team === team)
+            .map((player: { name: string }) => player.name)
+            .join(", ");
+
         return (
           <button
             key={match.id}
@@ -174,7 +181,11 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
                   Team A
                 </div>
 
-                <div className="mt-1 text-sm font-black text-white">
+                <div className="mt-1 truncate text-xs font-bold text-white/60">
+                  {teamNames("A") || "–"}
+                </div>
+
+                <div className="mt-1.5 text-sm font-black text-white">
                   {teamACupsRemaining} Becher
                 </div>
               </div>
@@ -193,7 +204,11 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
                   Team B
                 </div>
 
-                <div className="mt-1 text-sm font-black text-white">
+                <div className="mt-1 truncate text-xs font-bold text-white/60">
+                  {teamNames("B") || "–"}
+                </div>
+
+                <div className="mt-1.5 text-sm font-black text-white">
                   {teamBCupsRemaining} Becher
                 </div>
               </div>

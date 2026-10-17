@@ -411,14 +411,12 @@ function SpielerPageInner() {
 
                 <section className="mt-10">
                   <SectionTitle eyebrow="01" title="Performance" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <PerformanceStats isPro={isPro} extraEyebrow="02" />
-                  </ProLock>
+                  {/*
+                    Die sechs Hauptwerte sind für alle sichtbar (auch ohne Pro).
+                    "Weitere Statistiken" blendet PerformanceStats selbst nur mit
+                    Pro ein.
+                  */}
+                  <PerformanceStats isPro={isPro} extraEyebrow="02" />
                 </section>
 
                 <section className="mt-14">
@@ -475,7 +473,7 @@ function SpielerPageInner() {
                 </section>
 
                 <section className="mt-14">
-                  <SectionTitle eyebrow={nr(7)} title="Spieler Rangliste" />
+                  <SectionTitle eyebrow={nr(7)} title="Weltrangliste" />
                   <ProLock
                     isPro={isPro}
                     loggedIn={Boolean(userEmail)}

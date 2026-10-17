@@ -64,7 +64,7 @@ export default function PlayerRanking({ onSelectPlayer }: PlayerRankingProps) {
     <>
       <section className="rounded-2xl border border-white/10 bg-[#111419] p-5">
         <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
-          Spieler-Rangliste
+          Weltrangliste
         </div>
 
         {loading ? (
@@ -108,7 +108,7 @@ export default function PlayerRanking({ onSelectPlayer }: PlayerRankingProps) {
           <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-2xl border border-white/10 bg-[#111419] p-5">
             <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] pb-4">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-                Spieler-Rangliste · Alle {players.length}
+                Weltrangliste · Alle {players.length}
               </div>
 
               <button
