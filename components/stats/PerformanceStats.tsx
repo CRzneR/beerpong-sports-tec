@@ -240,6 +240,10 @@ export function PerformanceStats({
         ))}
       </div>
 
+      <p className="mt-3 text-[10px] font-semibold text-white/25">
+        Es zählen nur Matches gegen registrierte Gegner.
+      </p>
+
       {/* 02: Weitere Statistiken - nur mit Pro */}
 
       {isPro && (

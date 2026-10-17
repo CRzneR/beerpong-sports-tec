@@ -1,7 +1,11 @@
 import { FORMATION_CUP_COUNT, getShooterViewSlot } from "./matchLogic";
 import type { MatchState, Team, HitType, RecordedFormation } from "./matchLogic";
 import { getSavedMatches } from "./matchStorage";
-import { getRegisteredPlayerIds, getStatsResetTimestamps } from "./playerProfiles";
+import {
+  getRatedOpponentIds,
+  getRegisteredPlayerIds,
+  getStatsResetTimestamps,
+} from "./playerProfiles";
 
 export type PlayerMatchStats = {
   playerId: string;
@@ -109,6 +113,39 @@ function isAfterReset(savedAt: string, resetAt: string | null | undefined): bool
   return new Date(savedAt).getTime() > new Date(resetAt).getTime();
 }
 
+/*
+ * --------------------------------------------------------------------------
+ * | NUR MATCHES GEGEN REGISTRIERTE GEGNER ZÄHLEN
+ * --------------------------------------------------------------------------
+ *
+ * Ein Match geht in die Statistiken eines Spielers nur ein, wenn ALLE
+ * Gegner (das andere Team) registriert sind. Mitspieler im eigenen Team
+ * spielen keine Rolle - mit einem Gast als Partner gegen echte Gegner
+ * zählt das Match also weiterhin. Ohne Gegner (z. B. unvollständiges
+ * Match) zählt es nicht.
+ *
+ * Gilt zentral für alles, was auf getPlayerMatchHistory und
+ * getAllPlayerOverallStats aufbaut: Performance, Verlauf, Detail,
+ * Becherpositionen, Profil-Kopf, Rangliste und Ranglistenplatz.
+ * --------------------------------------------------------------------------
+ */
+
+function isAgainstRegisteredOpponents(
+  state: MatchState,
+  playerId: string,
+  ratedIds: Set<string>,
+): boolean {
+  const player = state.players.find((item) => item.id === playerId);
+
+  if (!player) {
+    return false;
+  }
+
+  const opponents = state.players.filter((item) => item.team !== player.team);
+
+  return opponents.length > 0 && opponents.every((opponent) => ratedIds.has(opponent.id));
+}
+
 export type PlayerMatchHistoryEntry = {
   matchId: string;
   savedAt: string;
@@ -137,9 +174,10 @@ export type PlayerMatchHistoryEntry = {
  */
 
 export async function getPlayerMatchHistory(playerId: string): Promise<PlayerMatchHistoryEntry[]> {
-  const [matches, resetTimestamps] = await Promise.all([
+  const [matches, resetTimestamps, ratedIds] = await Promise.all([
     getSavedMatches(),
     getStatsResetTimestamps(),
+    getRatedOpponentIds(),
   ]);
 
   const resetAt = resetTimestamps.get(playerId) ?? null;
@@ -148,6 +186,10 @@ export async function getPlayerMatchHistory(playerId: string): Promise<PlayerMat
 
   for (const savedMatch of matches) {
     if (!isAfterReset(savedMatch.savedAt, resetAt)) {
+      continue;
+    }
+
+    if (!isAgainstRegisteredOpponents(savedMatch.state, playerId, ratedIds)) {
       continue;
     }
 
@@ -199,10 +241,11 @@ export async function getPlayerOverallStats(playerId: string): Promise<PlayerOve
 }
 
 export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> {
-  const [matches, resetTimestamps, registeredIds] = await Promise.all([
+  const [matches, resetTimestamps, registeredIds, ratedIds] = await Promise.all([
     getSavedMatches(),
     getStatsResetTimestamps(),
     getRegisteredPlayerIds(),
+    getRatedOpponentIds(),
   ]);
 
   const byPlayer = new Map<string, PlayerOverallStats>();
@@ -220,6 +263,11 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
       const resetAt = resetTimestamps.get(player.id) ?? null;
 
       if (!isAfterReset(savedMatch.savedAt, resetAt)) {
+        continue;
+      }
+
+      /* Wie im Profil: nur Matches gegen registrierte Gegner zählen. */
+      if (!isAgainstRegisteredOpponents(savedMatch.state, player.id, ratedIds)) {
         continue;
       }
 

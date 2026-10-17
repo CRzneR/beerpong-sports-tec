@@ -410,6 +410,38 @@ export async function getRegisteredPlayerIds(): Promise<Set<string>> {
 
 /*
  * --------------------------------------------------------------------------
+ * | GEGNER, GEGEN DIE STATISTIKEN ZÄHLEN
+ * --------------------------------------------------------------------------
+ *
+ * Statistiken im Profil zählen nur Matches gegen registrierte Gegner.
+ * Dazu zählen auch gelöschte Konten: Beim Löschen wird die players-Zeile
+ * anonymisiert ("Gelöschter Spieler", ohne user_id) statt entfernt - die
+ * Statistiken der Mitspieler sollen dadurch nicht schrumpfen (siehe
+ * app/api/account/delete/route.ts, dort steht derselbe Name).
+ * Gäste haben ebenfalls kein user_id, aber einen frei gewählten Namen.
+ * --------------------------------------------------------------------------
+ */
+
+const DELETED_PLAYER_NAME = "Gelöschter Spieler";
+
+export async function getRatedOpponentIds(): Promise<Set<string>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.from("players").select("id, user_id, name");
+
+  if (error) {
+    throw error;
+  }
+
+  return new Set(
+    (data ?? [])
+      .filter((row) => row.user_id !== null || row.name === DELETED_PLAYER_NAME)
+      .map((row) => row.id as string),
+  );
+}
+
+/*
+ * --------------------------------------------------------------------------
  * | EIGENEN PRO-STATUS LADEN
  * --------------------------------------------------------------------------
  *
