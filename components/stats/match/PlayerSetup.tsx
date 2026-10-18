@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import {
   createPlayerProfile,
   getAllPlayerProfiles,
+  getOwnGuestIds,
   getOwnProfile,
   getRegisteredPlayerIds,
   type PlayerProfile,
@@ -151,12 +152,18 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
    */
 
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
+  const [ownGuestIds, setOwnGuestIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([getAllPlayerProfiles(), getMatchLobby(lobbyId), getRegisteredPlayerIds()])
-      .then(([profileResult, lobbyResult, registeredResult]) => {
+    Promise.all([
+      getAllPlayerProfiles(),
+      getMatchLobby(lobbyId),
+      getRegisteredPlayerIds(),
+      getOwnGuestIds(),
+    ])
+      .then(([profileResult, lobbyResult, registeredResult, ownGuestsResult]) => {
         if (cancelled) {
           return;
         }
@@ -164,6 +171,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
         setProfiles(profileResult);
         setLobby(lobbyResult);
         setRegisteredIds(registeredResult);
+        setOwnGuestIds(ownGuestsResult);
 
         if (!lobbyResult) {
           setError("Match wurde nicht gefunden.");
@@ -224,11 +232,17 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
      * echtes Profil kann sich nur noch selbst über die "Das bist du"-
      * Karte hinzufügen (dort zwingend an den eigenen Login gebunden).
      * Diese Liste zeigt deshalb nur noch Gast-Profile.
+     *
+     * Und auch davon nur die, die man SELBST angelegt hat (ownGuestIds):
+     * Gäste anderer Spieler sollen nicht in fremden Lobbys zur Auswahl
+     * stehen. Wer schon in einem Team ist, wird weiterhin normal
+     * angezeigt (teamA/teamB nutzen alle Profile).
      */
     return profiles.filter(
-      (profile) => !joinedIds.has(profile.id) && !registeredIds.has(profile.id),
+      (profile) =>
+        !joinedIds.has(profile.id) && !registeredIds.has(profile.id) && ownGuestIds.has(profile.id),
     );
-  }, [profiles, lobby, registeredIds]);
+  }, [profiles, lobby, registeredIds, ownGuestIds]);
 
   /*
    * IST DAS EIGENE PROFIL SCHON IN DER LOBBY?
@@ -343,6 +357,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       const profile = await createPlayerProfile(trimmed);
 
       setProfiles((current) => [...current, profile]);
+      setOwnGuestIds((current) => new Set(current).add(profile.id));
       setNewName("");
 
       await handleJoin(profile.id, team);
@@ -452,11 +467,23 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   return (
     <main className="min-h-screen bg-[#07090d] px-5 py-6 text-white">
       <div className="mx-auto max-w-3xl">
-        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
-          Pong Stats
-        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
+              Pong Stats
+            </div>
 
-        <h1 className="mt-1 text-lg font-black uppercase">Match-Lobby</h1>
+            <h1 className="mt-1 text-lg font-black uppercase">Match-Lobby</h1>
+          </div>
+
+          {/* ABBRECHEN - zurück zum Profil in Pong Stats, ohne ein Match zu starten */}
+          <Link
+            href="/spieler"
+            className="shrink-0 rounded-full border border-white/[0.1] bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:border-red-400/30 hover:bg-red-400/[0.08] hover:text-red-400"
+          >
+            Abbrechen
+          </Link>
+        </div>
 
         <p className="mt-2 text-xs text-white/35">
           Andere Spieler scannen den Code und wählen dann ihr Profil.
@@ -662,7 +689,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
         </div>
 
         {/* START */}
-        <div className="mt-8 flex justify-center pb-10">
+        <div className="mt-8 flex flex-col items-center gap-4 pb-10">
           <button
             type="button"
             disabled={teamA.length === 0 || teamB.length === 0 || starting}
@@ -671,6 +698,13 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
           >
             {starting ? "Starte …" : "Match starten"}
           </button>
+
+          <Link
+            href="/spieler"
+            className="text-[10px] font-black uppercase tracking-wider text-white/35 transition hover:text-red-400"
+          >
+            Abbrechen
+          </Link>
         </div>
       </div>
     </main>

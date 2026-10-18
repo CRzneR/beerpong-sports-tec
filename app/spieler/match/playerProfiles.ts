@@ -133,9 +133,17 @@ export async function createPlayerProfile(name: string): Promise<PlayerProfile> 
   const initials = computeInitials(trimmed);
   const id = crypto.randomUUID();
 
+  /*
+   * Ersteller merken: Eingeloggte Nutzer tragen sich als created_by ein
+   * (Spalte aus guest-owner.sql). Ohne Login geht das nicht - dann merkt
+   * sich nur dieses Gerät die ID (siehe rememberGuestOnDevice).
+   */
+  const { data: userData } = await supabase.auth.getUser();
+  const creatorId = userData.user?.id ?? null;
+
   const { data, error } = await supabase
     .from("players")
-    .insert({ id, name: trimmed, initials })
+    .insert({ id, name: trimmed, initials, ...(creatorId ? { created_by: creatorId } : {}) })
     .select("id, name, initials")
     .single();
 
@@ -143,11 +151,74 @@ export async function createPlayerProfile(name: string): Promise<PlayerProfile> 
     throw error;
   }
 
+  if (!creatorId) {
+    rememberGuestOnDevice(data.id);
+  }
+
   return {
     id: data.id,
     name: data.name,
     initials: data.initials ?? initials,
   };
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | EIGENE GAST-PROFILE
+ * --------------------------------------------------------------------------
+ *
+ * In der Lobby sollen nur Gäste auswählbar sein, die man selbst angelegt
+ * hat. Eingeloggt: alle players-Zeilen mit created_by = eigene User-ID.
+ * Nicht eingeloggt: die auf diesem Gerät gemerkten IDs (localStorage).
+ * Gäste anderer Leute (und ältere Gäste ohne Ersteller) tauchen hier
+ * nicht auf - sie bleiben aber in Matches sichtbar, in denen sie spielen.
+ * --------------------------------------------------------------------------
+ */
+
+const DEVICE_GUESTS_KEY = "bpst:guest-ids";
+
+function readDeviceGuests(): string[] {
+  try {
+    const raw = window.localStorage.getItem(DEVICE_GUESTS_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberGuestOnDevice(playerId: string): void {
+  try {
+    const ids = readDeviceGuests();
+
+    if (!ids.includes(playerId)) {
+      window.localStorage.setItem(DEVICE_GUESTS_KEY, JSON.stringify([...ids, playerId]));
+    }
+  } catch {
+    /* Speicher gesperrt: der Gast bleibt dann nur bis zum Neuladen auswählbar. */
+  }
+}
+
+export async function getOwnGuestIds(): Promise<Set<string>> {
+  const supabase = createClient();
+  const { data: userData } = await supabase.auth.getUser();
+
+  if (!userData.user) {
+    return new Set(readDeviceGuests());
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .select("id")
+    .eq("created_by", userData.user.id)
+    .is("user_id", null);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Set((data ?? []).map((row) => row.id as string));
 }
 
 /*
