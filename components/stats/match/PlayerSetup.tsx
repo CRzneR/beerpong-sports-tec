@@ -16,6 +16,7 @@ import {
 
 import {
   getMatchLobby,
+  isLobbyHost,
   joinMatchLobby,
   leaveMatchLobby,
   startMatchLobby,
@@ -57,6 +58,20 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
    */
 
   const [isHost, setIsHost] = useState(false);
+
+  /*
+   * ERSTELLER DER LOBBY
+   *
+   * Nur das Gerät, das die Lobby eröffnet hat, darf das Match starten
+   * (siehe isLobbyHost in matchLobby.ts). Wer per QR-Code beitritt, sieht
+   * stattdessen einen Hinweis. Erst nach dem Mount lesbar (localStorage).
+   */
+
+  const [isCreator, setIsCreator] = useState(false);
+
+  useEffect(() => {
+    setIsCreator(isLobbyHost(lobbyId));
+  }, [lobbyId]);
 
   /*
    * BEITRITTS-LINK FÜR DEN QR-CODE
@@ -368,7 +383,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   };
 
   const handleStart = async () => {
-    if (teamA.length === 0 || teamB.length === 0 || starting) {
+    if (!isCreator || teamA.length === 0 || teamB.length === 0 || starting) {
       return;
     }
 
@@ -690,14 +705,21 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
 
         {/* START */}
         <div className="mt-8 flex flex-col items-center gap-4 pb-10">
-          <button
-            type="button"
-            disabled={teamA.length === 0 || teamB.length === 0 || starting}
-            onClick={handleStart}
-            className="rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-cyan-400 transition hover:bg-cyan-400/[0.18] disabled:cursor-not-allowed disabled:opacity-20"
-          >
-            {starting ? "Starte …" : "Match starten"}
-          </button>
+          {isCreator ? (
+            <button
+              type="button"
+              disabled={teamA.length === 0 || teamB.length === 0 || starting}
+              onClick={handleStart}
+              className="rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-cyan-400 transition hover:bg-cyan-400/[0.18] disabled:cursor-not-allowed disabled:opacity-20"
+            >
+              {starting ? "Starte …" : "Match starten"}
+            </button>
+          ) : (
+            <p className="max-w-xs text-center text-xs font-semibold text-white/40">
+              Nur der Ersteller der Lobby kann das Match starten. Sobald es losgeht, siehst du es
+              hier.
+            </p>
+          )}
 
           <Link
             href="/spieler"

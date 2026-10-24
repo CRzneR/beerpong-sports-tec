@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/client";
  * --------------------------------------------------------------------------
  * | MATCH-LOBBY
  * --------------------------------------------------------------------------
+ *
+ * Geteilter Zustand für die Phase VOR dem eigentlichen Match: Ein Spieler
+ * eröffnet ein Match (createMatchLobby), andere treten über den Link
+ * /spieler/match/<id> mit ihrem Profil bei (joinMatchLobby). Änderungen
+ * werden per Supabase Realtime an alle verbundenen Geräte verteilt.
+ * --------------------------------------------------------------------------
  */
 
 export type LobbyStatus = "lobby" | "live" | "finished";
@@ -52,7 +58,56 @@ export async function createMatchLobby(): Promise<MatchLobby> {
     throw error;
   }
 
+  rememberHostedLobby((data as LobbyRow).id);
+
   return mapRow(data as LobbyRow);
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | ERSTELLER DER LOBBY
+ * --------------------------------------------------------------------------
+ *
+ * Nur wer die Lobby eröffnet hat, darf das Match starten. Der Ersteller
+ * wird auf dem Gerät gemerkt, auf dem createMatchLobby() lief (gleiches
+ * Prinzip wie das Host-Gerät beim Match selbst) - wer per QR-Code oder
+ * Link beitritt, ist damit automatisch kein Ersteller. Funktioniert auch
+ * ohne Login. Öffnet der Ersteller die Lobby auf einem anderen Gerät oder
+ * löscht er die Browserdaten, ist er dort kein Ersteller mehr.
+ * --------------------------------------------------------------------------
+ */
+
+const HOSTED_LOBBIES_KEY = "bpst:hosted-lobbies";
+const HOSTED_LOBBIES_MAX = 50;
+
+function readHostedLobbies(): string[] {
+  try {
+    const raw = window.localStorage.getItem(HOSTED_LOBBIES_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberHostedLobby(lobbyId: string): void {
+  try {
+    const ids = readHostedLobbies().filter((id) => id !== lobbyId);
+
+    /* Nur die letzten Lobbys behalten, damit der Speicher nicht wächst. */
+    window.localStorage.setItem(
+      HOSTED_LOBBIES_KEY,
+      JSON.stringify([...ids, lobbyId].slice(-HOSTED_LOBBIES_MAX)),
+    );
+  } catch {
+    /* Speicher gesperrt: dann kann dieses Gerät die Lobby nicht als Ersteller starten. */
+  }
+}
+
+/** true, wenn diese Lobby auf DIESEM Gerät eröffnet wurde. */
+export function isLobbyHost(lobbyId: string): boolean {
+  return readHostedLobbies().includes(lobbyId);
 }
 
 /*
