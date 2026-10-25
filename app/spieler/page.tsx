@@ -20,7 +20,7 @@ import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { MatchupStats } from "@/components/stats/MatchupStats";
 import { ComebackStats } from "@/components/stats/ComebackStats";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
-import { StatsRangeFilter } from "@/components/stats/StatsRangeFilter";
+import { StatsRangeFilter } from "@/components/stats/Statsrangefilter";
 import {
   DashboardCustomizeButton,
   DashboardCustomizeModal,
@@ -615,6 +615,7 @@ function SpielerPageInner() {
         onUpgrade={handleUpgrade}
         upgrading={upgrading}
         error={upgradeError}
+        loggedIn={Boolean(userEmail)}
       />
     </main>
   );
@@ -645,6 +646,10 @@ function ProLock({
     return <>{children}</>;
   }
 
+  /*
+   * Gäste sehen zuerst die Vorschau (ProPreviewModal) und werden erst
+   * danach zur Anmeldung geführt - der Knopf hier öffnet nur die Vorschau.
+   */
   if (!loggedIn) {
     return (
       <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 text-center">
@@ -652,14 +657,15 @@ function ProLock({
           🔒 Pro-Funktion
         </div>
 
-        <p className="mt-2 text-sm text-white/40">Melde dich an, um diesen Bereich zu sehen.</p>
+        <p className="mt-2 text-sm text-white/40">Sieh dir an, was du mit Pro freischaltest.</p>
 
-        <Link
-          href="/login?next=/spieler"
-          className="mt-4 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
+        <button
+          type="button"
+          onClick={onUpgrade}
+          className="mt-4 rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
         >
-          Anmelden
-        </Link>
+          Vorschau ansehen
+        </button>
       </div>
     );
   }

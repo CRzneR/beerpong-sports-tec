@@ -1,23 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 /*
  * --------------------------------------------------------------------------
  * | PRO-VORSCHAU
  * --------------------------------------------------------------------------
  *
- * Modal mit 4 durchklickbaren Vorschaubildern, die zeigen, wie die
- * Spielerseite mit Pro aussieht.
- *
- * Bedienung:
- *  - Pfeil-Buttons links/rechts, Punkte unten, Vorschau-Leiste
- *  - Tastatur: ← / → zum Blättern, Esc zum Schließen
- *  - Wischen auf dem Handy
- *  - Klick auf den dunklen Hintergrund schließt das Modal
- *
- * Die Bilder liegen in:  public/images/pro-previews/pro-preview-1.svg … 4.svg
- * --------------------------------------------------------------------------
+
  */
 
 type Slide = {
@@ -56,6 +47,20 @@ const SLIDES: Slide[] = [
     description:
       "Vergleiche dich mit deinen Freunden: Siege, Trefferquote und Treffer im direkten Ranking.",
   },
+  {
+    src: "/images/pro-previews/pro-preview-5.png",
+    eyebrow: "05",
+    title: "Treffer nach Becherposition",
+    description:
+      "Sieh auf einen Blick, welche Becher du am häufigsten triffst – getrennt nach 10er-, 6er- und 3er-Formation, als Heatmap aus deiner Wurfrichtung.",
+  },
+  {
+    src: "/images/pro-previews/pro-preview-6.png",
+    eyebrow: "06",
+    title: "Jetzt Pro freischalten",
+    description:
+      "Mehr Statistiken, tiefere Analysen und dein komplettes Spiel auf dem nächsten Level – einmalige Zahlung, keine Abos, sofortiger Zugriff.",
+  },
 ];
 
 interface ProPreviewModalProps {
@@ -67,8 +72,12 @@ interface ProPreviewModalProps {
   upgrading?: boolean;
   /** Fehlermeldung, falls der Checkout nicht gestartet werden konnte. */
   error?: string | null;
-  /** Mit welchem Bild gestartet wird (0–3). */
+  /** Mit welchem Bild gestartet wird (0–5). */
   initialIndex?: number;
+  /** false = Gast: der Haupt-Button führt zur Anmeldung statt zum Checkout. */
+  loggedIn?: boolean;
+  /** Ziel des Anmelden-Buttons für Gäste. */
+  loginHref?: string;
 }
 
 export default function ProPreviewModal({
@@ -78,6 +87,8 @@ export default function ProPreviewModal({
   upgrading = false,
   error = null,
   initialIndex = 0,
+  loggedIn = true,
+  loginHref = "/login?next=/spieler",
 }: ProPreviewModalProps) {
   const [index, setIndex] = useState(initialIndex);
   const touchStartX = useRef<number | null>(null);
@@ -368,16 +379,25 @@ export default function ProPreviewModal({
             Vielleicht später
           </button>
 
-          <button
-            type="button"
-            disabled={upgrading}
-            onClick={() => {
-              onUpgrade?.();
-            }}
-            className="w-full rounded-full bg-cyan-400 px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
-          >
-            {upgrading ? "Lädt …" : "Jetzt Pro freischalten"}
-          </button>
+          {loggedIn ? (
+            <button
+              type="button"
+              disabled={upgrading}
+              onClick={() => {
+                onUpgrade?.();
+              }}
+              className="w-full rounded-full bg-cyan-400 px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
+            >
+              {upgrading ? "Lädt …" : "Jetzt Pro freischalten"}
+            </button>
+          ) : (
+            <Link
+              href={loginHref}
+              className="w-full rounded-full bg-cyan-400 px-8 py-3.5 text-center text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 md:w-auto"
+            >
+              Anmelden &amp; Pro freischalten
+            </Link>
+          )}
         </div>
       </div>
     </div>
