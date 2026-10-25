@@ -21,6 +21,7 @@ import { PanelModal } from "@/components/stats/PanelCard";
 export type DashboardCardId =
   | "summary"
   | "more"
+  | "rating"
   | "chart"
   | "cups"
   | "detail"
@@ -46,6 +47,11 @@ export const DASHBOARD_CARDS: {
     label: "Weitere Statistiken",
     description: "Würfe, Treffer, Fehlwürfe und Trefferarten als Zahlen",
     pro: true,
+  },
+  {
+    id: "rating",
+    label: "Skill-Rating",
+    description: "Dein Rating von 0 bis 1000, Rang, Verlauf und Bestleistung",
   },
   {
     id: "chart",

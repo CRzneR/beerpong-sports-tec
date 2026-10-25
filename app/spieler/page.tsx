@@ -19,6 +19,7 @@ import { AchievementsSection } from "@/components/stats/AchievementsSection";
 import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { MatchupStats } from "@/components/stats/MatchupStats";
 import { ComebackStats } from "@/components/stats/ComebackStats";
+import { SkillRating } from "@/components/stats/Skillrating";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 import { StatsRangeFilter } from "@/components/stats/StatsRangeFilter";
 import {
@@ -445,6 +446,13 @@ function SpielerPageInner() {
                           showMain={layout.isVisible("summary")}
                           showMore={layout.isVisible("more")}
                         />
+                      </section>
+                    )}
+
+                    {layout.isVisible("rating") && userEmail && (
+                      <section className="mt-6 md:mt-8">
+                        {/* Für alle angemeldeten Spieler sichtbar (kein Pro nötig). */}
+                        <SkillRating />
                       </section>
                     )}
 

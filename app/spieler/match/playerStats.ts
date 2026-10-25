@@ -6,6 +6,13 @@ import {
   getRegisteredPlayerIds,
   getStatsResetTimestamps,
 } from "./playerProfiles";
+import {
+  MIN_RANKED_MATCHES,
+  computeRatings,
+  rankPlayers,
+  type RatingMatchInput,
+  type RatingStep,
+} from "./skillRating";
 
 export type PlayerMatchStats = {
   playerId: string;
@@ -511,6 +518,110 @@ export async function getPlayerRank(
   }
 
   return { rank: index + 1, total: all.length };
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | SKILL-RATING EINES SPIELERS
+ * --------------------------------------------------------------------------
+ *
+ * Rechnet ALLE gespeicherten Matches von alt nach neu durch (die Formel
+ * steht in skillRating.ts), weil sich das Rating eines Spielers aus der
+ * Stärke seiner Gegner ergibt - und deren Rating wiederum aus ihren Matches.
+ * Es wird nichts in der Datenbank gespeichert und braucht kein SQL.
+ *
+ * Es gelten dieselben Regeln wie bei den übrigen Statistiken:
+ *  - nur Matches gegen registrierte Gegner (isAgainstRegisteredOpponents),
+ *  - nur Matches nach dem eigenen Statistik-Reset.
+ *
+ * Der Zeitraum-Filter (Heute / Letzte 10 ...) wirkt hier bewusst NICHT:
+ * ein Rating ist immer der Gesamtstand.
+ * --------------------------------------------------------------------------
+ */
+
+export const RATING_HISTORY_LIMIT = 30;
+
+export type SkillRatingOverview = {
+  rating: number;
+  matches: number;
+  provisional: boolean;
+  best: number;
+  bestSavedAt: string | null;
+  /** Veränderung durch das letzte Match, z. B. +24. */
+  lastDelta: number | null;
+  /** null, solange der Spieler weniger als MIN_RANKED_MATCHES Matches hat. */
+  rank: { rank: number; total: number } | null;
+  /** Wie viele Matches bis zur Platzierung noch fehlen (0 = platziert). */
+  matchesToRank: number;
+  /** Die letzten RATING_HISTORY_LIMIT Matches, ÄLTESTE ZUERST. */
+  history: RatingStep[];
+};
+
+function toRatingInput(
+  savedMatch: Awaited<ReturnType<typeof getSavedMatches>>[number],
+  resetTimestamps: Map<string, string | null>,
+  ratedIds: Set<string>,
+): RatingMatchInput {
+  const { state } = savedMatch;
+  const removedBy: Record<Team, Set<number>> = { A: new Set(), B: new Set() };
+
+  for (const action of state.actions) {
+    if (action.type === "hit") {
+      action.cupIds.forEach((cupId) => removedBy[action.team].add(cupId));
+    }
+  }
+
+  return {
+    matchId: savedMatch.id,
+    savedAt: savedMatch.savedAt,
+    winner: state.winner ?? null,
+    cups: { A: removedBy.A.size, B: removedBy.B.size },
+    players: state.players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      team: player.team,
+      counts:
+        isAfterReset(savedMatch.savedAt, resetTimestamps.get(player.id) ?? null) &&
+        isAgainstRegisteredOpponents(state, player.id, ratedIds),
+    })),
+  };
+}
+
+export async function getPlayerSkillRating(playerId: string): Promise<SkillRatingOverview | null> {
+  const [matches, resetTimestamps, registeredIds, ratedIds] = await Promise.all([
+    getSavedMatches(),
+    getStatsResetTimestamps(),
+    getRegisteredPlayerIds(),
+    getRatedOpponentIds(),
+  ]);
+
+  /* getSavedMatches liefert neueste zuerst, das Rating braucht älteste zuerst. */
+  const inputs = [...matches]
+    .reverse()
+    .map((match) => toRatingInput(match, resetTimestamps, ratedIds));
+
+  const ratings = computeRatings(inputs);
+  const own = ratings.get(playerId);
+
+  if (!own) {
+    return null;
+  }
+
+  const ranking = rankPlayers(ratings, registeredIds);
+  const index = ranking.findIndex((item) => item.playerId === playerId);
+  const last = own.history[own.history.length - 1];
+
+  return {
+    rating: own.rating,
+    matches: own.matches,
+    provisional: own.provisional,
+    best: own.best,
+    bestSavedAt: own.bestSavedAt,
+    lastDelta: last ? last.delta : null,
+    rank: index === -1 ? null : { rank: index + 1, total: ranking.length },
+    matchesToRank: Math.max(0, MIN_RANKED_MATCHES - own.matches),
+    history: own.history.slice(-RATING_HISTORY_LIMIT),
+  };
 }
 
 /*
