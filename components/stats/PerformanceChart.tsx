@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
-import { getPlayerMatchHistory } from "@/app/spieler/match/playerStats";
+import { getPlayerMatchHistory, type StatsRange } from "@/app/spieler/match/playerStats";
 
 type MatchPoint = {
   matchId: string;
@@ -15,7 +15,7 @@ const MAX_MATCHES = 16;
 /* Beschriftung der Y-Achse, von oben nach unten (5 Gitterlinien). */
 const AXIS_LABELS = [100, 75, 50, 25, 0];
 
-export function PerformanceChart() {
+export function PerformanceChart({ range = "all" }: { range?: StatsRange }) {
   const [points, setPoints] = useState<MatchPoint[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -41,7 +41,7 @@ export function PerformanceChart() {
          * eigenen Stats-Reset (siehe playerStats.ts) - dieser Chart
          * muss das nicht mehr selbst wissen.
          */
-        const history = await getPlayerMatchHistory(profile.id);
+        const history = await getPlayerMatchHistory(profile.id, range);
 
         /*
          * history liefert (wie getSavedMatches()) neueste zuerst -
@@ -74,7 +74,7 @@ export function PerformanceChart() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [range]);
 
   if (loading) {
     return (

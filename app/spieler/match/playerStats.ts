@@ -146,6 +146,49 @@ function isAgainstRegisteredOpponents(
   return opponents.length > 0 && opponents.every((opponent) => ratedIds.has(opponent.id));
 }
 
+/*
+ * --------------------------------------------------------------------------
+ * | ZEITRAUM-FILTER
+ * --------------------------------------------------------------------------
+ *
+ * "today"  = Matches von heute (ab 0 Uhr, lokale Zeit des Geräts)
+ * "last10" = die letzten 10 Matches
+ * "last30" = die letzten 30 Matches
+ * "all"    = alles (Standard)
+ *
+ * Greift zentral in getPlayerMatchHistory und damit automatisch bei
+ * Performance, Verlauf, Detail und Becherpositionen. Rangliste und
+ * Ranglistenplatz sind bewusst NICHT betroffen (immer Gesamtstand).
+ * --------------------------------------------------------------------------
+ */
+
+export type StatsRange = "today" | "last10" | "last30" | "all";
+
+export const STATS_RANGES: { value: StatsRange; label: string }[] = [
+  { value: "today", label: "Heute" },
+  { value: "last10", label: "Letzte 10" },
+  { value: "last30", label: "Letzte 30" },
+  { value: "all", label: "Alle" },
+];
+
+/* entries muss neueste zuerst sortiert sein (so liefert es getSavedMatches). */
+function applyRange<T extends { savedAt: string }>(entries: T[], range: StatsRange): T[] {
+  switch (range) {
+    case "today": {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      return entries.filter((entry) => new Date(entry.savedAt).getTime() >= startOfToday.getTime());
+    }
+    case "last10":
+      return entries.slice(0, 10);
+    case "last30":
+      return entries.slice(0, 30);
+    default:
+      return entries;
+  }
+}
+
 export type PlayerMatchHistoryEntry = {
   matchId: string;
   savedAt: string;
@@ -173,7 +216,10 @@ export type PlayerMatchHistoryEntry = {
  * --------------------------------------------------------------------------
  */
 
-export async function getPlayerMatchHistory(playerId: string): Promise<PlayerMatchHistoryEntry[]> {
+export async function getPlayerMatchHistory(
+  playerId: string,
+  range: StatsRange = "all",
+): Promise<PlayerMatchHistoryEntry[]> {
   const [matches, resetTimestamps, ratedIds] = await Promise.all([
     getSavedMatches(),
     getStatsResetTimestamps(),
@@ -207,11 +253,14 @@ export async function getPlayerMatchHistory(playerId: string): Promise<PlayerMat
     });
   }
 
-  return result;
+  return applyRange(result, range);
 }
 
-export async function getPlayerOverallStats(playerId: string): Promise<PlayerOverallStats | null> {
-  const history = await getPlayerMatchHistory(playerId);
+export async function getPlayerOverallStats(
+  playerId: string,
+  range: StatsRange = "all",
+): Promise<PlayerOverallStats | null> {
+  const history = await getPlayerMatchHistory(playerId, range);
 
   let result: PlayerOverallStats | null = null;
 
@@ -340,8 +389,11 @@ export type CupPositionFormationStats = {
 
 export type CupPositionStats = Record<RecordedFormation, CupPositionFormationStats>;
 
-export async function getPlayerCupPositionStats(playerId: string): Promise<CupPositionStats> {
-  const history = await getPlayerMatchHistory(playerId);
+export async function getPlayerCupPositionStats(
+  playerId: string,
+  range: StatsRange = "all",
+): Promise<CupPositionStats> {
+  const history = await getPlayerMatchHistory(playerId, range);
 
   const result: CupPositionStats = {
     ten: { total: 0, counts: Array(FORMATION_CUP_COUNT.ten).fill(0), legacyHits: 0 },
@@ -497,8 +549,11 @@ export type PlayerDetailStats = {
   };
 };
 
-export async function getPlayerDetailStats(playerId: string): Promise<PlayerDetailStats | null> {
-  const history = await getPlayerMatchHistory(playerId);
+export async function getPlayerDetailStats(
+  playerId: string,
+  range: StatsRange = "all",
+): Promise<PlayerDetailStats | null> {
+  const history = await getPlayerMatchHistory(playerId, range);
 
   const chronological = [...history].reverse();
 

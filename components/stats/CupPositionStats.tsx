@@ -6,6 +6,7 @@ import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import {
   getPlayerCupPositionStats,
   type CupPositionStats as CupPositionData,
+  type StatsRange,
 } from "@/app/spieler/match/playerStats";
 
 /*
@@ -78,7 +79,7 @@ function heatStroke(intensity: number): string {
   return `rgba(248, 113, 113, ${(0.18 + intensity * 0.6).toFixed(3)})`;
 }
 
-export function CupPositionStats() {
+export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
   const [data, setData] = useState<CupPositionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -100,7 +101,7 @@ export function CupPositionStats() {
           return;
         }
 
-        const stats = await getPlayerCupPositionStats(profile.id);
+        const stats = await getPlayerCupPositionStats(profile.id, range);
 
         if (!cancelled) {
           setData(stats);
@@ -123,7 +124,7 @@ export function CupPositionStats() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [range]);
 
   /* Start-Tab: die Formation mit den meisten Treffern. */
   const activeFormation: Formation = useMemo(() => {

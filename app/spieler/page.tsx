@@ -18,12 +18,13 @@ import { UsernameGate } from "@/components/stats/UsernameGate";
 import { AchievementsSection } from "@/components/stats/AchievementsSection";
 import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
+import { StatsRangeFilter } from "@/components/stats/Statsrangefilter";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
 
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
-import type { PlayerOverallStats } from "@/app/spieler/match/playerStats";
+import type { PlayerOverallStats, StatsRange } from "@/app/spieler/match/playerStats";
 
 function SpielerPageInner() {
   const searchParams = useSearchParams();
@@ -31,6 +32,9 @@ function SpielerPageInner() {
 
   const [selectedMatch, setSelectedMatch] = useState<SavedMatch | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerOverallStats | null>(null);
+
+  /* Zeitraum für Performance, Verlauf, Detail und Becherpositionen. */
+  const [range, setRange] = useState<StatsRange>("all");
 
   /*
    * LOGIN-STATUS
@@ -409,6 +413,12 @@ function SpielerPageInner() {
                   </div>
                 )}
 
+                {userEmail && (
+                  <section className="mt-10">
+                    <StatsRangeFilter value={range} onChange={setRange} />
+                  </section>
+                )}
+
                 <section className="mt-10">
                   <SectionTitle eyebrow="01" title="Performance" />
                   {/*
@@ -416,7 +426,7 @@ function SpielerPageInner() {
                     "Weitere Statistiken" blendet PerformanceStats selbst nur mit
                     Pro ein.
                   */}
-                  <PerformanceStats isPro={isPro} extraEyebrow="02" />
+                  <PerformanceStats isPro={isPro} extraEyebrow="02" range={range} />
                 </section>
 
                 <section className="mt-14">
@@ -427,7 +437,7 @@ function SpielerPageInner() {
                     onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
-                    <PerformanceChart />
+                    <PerformanceChart range={range} />
                   </ProLock>
                 </section>
 
@@ -439,7 +449,7 @@ function SpielerPageInner() {
                     onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
-                    <PerformanceDetail />
+                    <PerformanceDetail range={range} />
                   </ProLock>
                 </section>
 
@@ -463,7 +473,7 @@ function SpielerPageInner() {
                     onUpgrade={openProPreview}
                     upgrading={upgrading}
                   >
-                    <CupPositionStats />
+                    <CupPositionStats range={range} />
                   </ProLock>
                 </section>
 

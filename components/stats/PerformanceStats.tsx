@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
-import { getPlayerOverallStats } from "@/app/spieler/match/playerStats";
+import { getPlayerOverallStats, type StatsRange } from "@/app/spieler/match/playerStats";
 
 type Summary = {
   matches: number;
@@ -106,11 +106,14 @@ function StatIcon({ name }: { name: IconName }) {
 export function PerformanceStats({
   isPro,
   extraEyebrow = "02",
+  range = "all",
 }: {
   /** "Weitere Statistiken" werden nur mit Pro angezeigt. */
   isPro: boolean;
   /** Nummer vor der Überschrift "Weitere Statistiken" (passend zur Seitennummerierung). */
   extraEyebrow?: string;
+  /** Zeitraum-Filter (Standard: alle Matches). */
+  range?: StatsRange;
 }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,7 +135,7 @@ export function PerformanceStats({
           return;
         }
 
-        const overall = await getPlayerOverallStats(profile.id);
+        const overall = await getPlayerOverallStats(profile.id, range);
 
         if (!cancelled) {
           const matches = overall?.matches ?? 0;
@@ -167,7 +170,7 @@ export function PerformanceStats({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [range]);
 
   if (loading) {
     return (

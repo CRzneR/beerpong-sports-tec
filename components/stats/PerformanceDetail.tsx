@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 
 import { getOwnProfile, resetPlayerStats } from "@/app/spieler/match/playerProfiles";
-import { getPlayerDetailStats, type PlayerDetailStats } from "@/app/spieler/match/playerStats";
+import {
+  getPlayerDetailStats,
+  type PlayerDetailStats,
+  type StatsRange,
+} from "@/app/spieler/match/playerStats";
 
 const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function PerformanceDetail() {
+export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [stats, setStats] = useState<PlayerDetailStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +47,7 @@ export function PerformanceDetail() {
 
         setProfileId(profile.id);
 
-        const detail = await getPlayerDetailStats(profile.id);
+        const detail = await getPlayerDetailStats(profile.id, range);
 
         if (!cancelled) {
           setStats(detail);
@@ -62,7 +66,7 @@ export function PerformanceDetail() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [range]);
 
   const handleConfirmReset = async () => {
     if (!profileId || resetting) {
