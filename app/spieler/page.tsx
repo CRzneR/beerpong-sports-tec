@@ -17,14 +17,24 @@ import ProPreviewModal from "@/components/stats/ProPreviewModal";
 import { UsernameGate } from "@/components/stats/UsernameGate";
 import { AchievementsSection } from "@/components/stats/AchievementsSection";
 import { CupPositionStats } from "@/components/stats/CupPositionStats";
+import { MatchupStats } from "@/components/stats/MatchupStats";
+import { ComebackStats } from "@/components/stats/ComebackStats";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
-import { StatsRangeFilter } from "@/components/stats/Statsrangefilter";
+import { StatsRangeFilter } from "@/components/stats/StatsRangeFilter";
+import {
+  DashboardCustomizeButton,
+  DashboardCustomizeModal,
+  DASHBOARD_CARDS,
+  useDashboardLayout,
+} from "@/components/stats/DashboardLayout";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
 
 import type { SavedMatch } from "@/app/spieler/match/matchStorage";
 import type { PlayerOverallStats, StatsRange } from "@/app/spieler/match/playerStats";
+
+const DASHBOARD_CARD_COUNT = DASHBOARD_CARDS.length;
 
 function SpielerPageInner() {
   const searchParams = useSearchParams();
@@ -35,6 +45,10 @@ function SpielerPageInner() {
 
   /* Zeitraum für Performance, Verlauf, Detail und Becherpositionen. */
   const [range, setRange] = useState<StatsRange>("all");
+
+  /* Dashboard anpassen: welche Karten sind sichtbar (pro Gerät gespeichert). */
+  const layout = useDashboardLayout();
+  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   /*
    * LOGIN-STATUS
@@ -163,16 +177,6 @@ function SpielerPageInner() {
       cancelled = true;
     };
   }, [userEmail]);
-
-  /*
-   * ABSCHNITTS-NUMMERN
-   *
-   * Mit Pro erscheint unter "01 Performance" der Unterabschnitt
-   * "02 Weitere Statistiken" - alle folgenden Abschnitte rutschen dann
-   * um eins nach hinten. Ohne Pro bleibt die Nummerierung lückenlos.
-   */
-
-  const nr = (n: number) => String(n + (isPro ? 1 : 0)).padStart(2, "0");
 
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
@@ -414,96 +418,159 @@ function SpielerPageInner() {
                 )}
 
                 {userEmail && (
-                  <section className="mt-10">
-                    <StatsRangeFilter value={range} onChange={setRange} />
+                  <section className="mt-8">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                      <StatsRangeFilter value={range} onChange={setRange} />
+
+                      <DashboardCustomizeButton
+                        hiddenCount={layout.hidden.length}
+                        onClick={() => setCustomizeOpen(true)}
+                      />
+                    </div>
                   </section>
                 )}
 
-                <section className="mt-10">
-                  <SectionTitle eyebrow="01" title="Performance" />
-                  {/*
-                    Die sechs Hauptwerte sind für alle sichtbar (auch ohne Pro).
-                    "Weitere Statistiken" blendet PerformanceStats selbst nur mit
-                    Pro ein.
-                  */}
-                  <PerformanceStats isPro={isPro} extraEyebrow="02" range={range} />
-                </section>
+                {layout.ready && (
+                  <>
+                    {(layout.isVisible("summary") || layout.isVisible("more")) && (
+                      <section className="mt-4">
+                        {/*
+                          Die sechs Hauptwerte sind für alle sichtbar (auch ohne Pro).
+                          "Weitere Statistiken" blendet PerformanceStats selbst nur mit
+                          Pro ein.
+                        */}
+                        <PerformanceStats
+                          isPro={isPro}
+                          range={range}
+                          showMain={layout.isVisible("summary")}
+                          showMore={layout.isVisible("more")}
+                        />
+                      </section>
+                    )}
 
-                <section className="mt-14">
-                  <SectionTitle eyebrow={nr(2)} title="Performance Verlauf" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <PerformanceChart range={range} />
-                  </ProLock>
-                </section>
+                    {(layout.isVisible("chart") || layout.isVisible("cups")) && (
+                      <section className="mt-6 md:mt-8">
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          {/* Zwei Karten nebeneinander (mobil untereinander), gleich hoch; eine allein volle Breite. */}
+                          <div
+                            className={`grid gap-6 ${
+                              layout.isVisible("chart") && layout.isVisible("cups")
+                                ? "md:grid-cols-2"
+                                : ""
+                            }`}
+                          >
+                            {layout.isVisible("chart") && <PerformanceChart range={range} />}
+                            {layout.isVisible("cups") && <CupPositionStats range={range} />}
+                          </div>
+                        </ProLock>
+                      </section>
+                    )}
 
-                <section className="mt-14">
-                  <SectionTitle eyebrow={nr(3)} title="Statistiken im Detail" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <PerformanceDetail range={range} />
-                  </ProLock>
-                </section>
+                    {layout.isVisible("detail") && (
+                      <section className="mt-6 md:mt-8">
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          <PerformanceDetail range={range} />
+                        </ProLock>
+                      </section>
+                    )}
 
-                <section className="mt-14">
-                  <SectionTitle eyebrow={nr(4)} title="Achievements" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <AchievementsSection />
-                  </ProLock>
-                </section>
+                    {layout.isVisible("flow") && (
+                      <section className="mt-6 md:mt-8">
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          <ComebackStats range={range} />
+                        </ProLock>
+                      </section>
+                    )}
 
-                <section className="mt-14">
-                  <SectionTitle eyebrow={nr(5)} title="Treffer nach Becherposition" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <CupPositionStats range={range} />
-                  </ProLock>
-                </section>
+                    {layout.isVisible("matchup") && (
+                      <section className="mt-6 md:mt-8">
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          <MatchupStats range={range} />
+                        </ProLock>
+                      </section>
+                    )}
 
-                <section className="mt-14">
-                  <SectionTitle eyebrow={nr(6)} title="Letzte Matches" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <MatchHistory onSelectMatch={setSelectedMatch} />
-                  </ProLock>
-                </section>
+                    {(layout.isVisible("achievements") || layout.isVisible("history")) && (
+                      <section className="mt-6 md:mt-8">
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          {/* Zwei Karten nebeneinander (mobil untereinander), gleich hoch; eine allein volle Breite. */}
+                          <div
+                            className={`grid gap-6 ${
+                              layout.isVisible("achievements") && layout.isVisible("history")
+                                ? "md:grid-cols-2"
+                                : ""
+                            }`}
+                          >
+                            {layout.isVisible("achievements") && <AchievementsSection />}
+                            {layout.isVisible("history") && (
+                              <MatchHistory onSelectMatch={setSelectedMatch} />
+                            )}
+                          </div>
+                        </ProLock>
+                      </section>
+                    )}
 
-                <section className="mt-14">
-                  <SectionTitle eyebrow={nr(7)} title="Weltrangliste" />
-                  <ProLock
-                    isPro={isPro}
-                    loggedIn={Boolean(userEmail)}
-                    onUpgrade={openProPreview}
-                    upgrading={upgrading}
-                  >
-                    <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
-                  </ProLock>
-                </section>
+                    {layout.isVisible("ranking") && (
+                      <section className="mt-6 md:mt-8">
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
+                        </ProLock>
+                      </section>
+                    )}
+
+                    {layout.hidden.length === DASHBOARD_CARD_COUNT && (
+                      <section className="mt-6 md:mt-8">
+                        <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 text-center">
+                          <div className="text-sm font-bold text-white/50">
+                            Alle Karten sind ausgeblendet.
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={layout.showAll}
+                            className="mt-4 rounded-full border border-cyan-400/30 bg-cyan-400/[0.08] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-300 transition hover:bg-cyan-400/[0.16]"
+                          >
+                            Alle anzeigen
+                          </button>
+                        </div>
+                      </section>
+                    )}
+                  </>
+                )}
               </>
             )}
 
-            <section className="mt-14 pb-16">
+            <section className="mt-8 pb-16">
               <Link
                 href="/spieler/match"
                 className="group relative flex min-h-28 items-center justify-between overflow-hidden rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.05] px-6 transition duration-300 hover:border-cyan-400/40 hover:bg-cyan-400/[0.08] sm:px-8"
@@ -528,10 +595,19 @@ function SpielerPageInner() {
               </Link>
             </section>
 
-            <DeleteAccountSection />
+            <DeleteAccountSection showResetStats />
           </>
         )}
       </div>
+
+      {customizeOpen && (
+        <DashboardCustomizeModal
+          hidden={layout.hidden}
+          onToggle={layout.toggle}
+          onShowAll={layout.showAll}
+          onClose={() => setCustomizeOpen(false)}
+        />
+      )}
 
       <ProPreviewModal
         open={showProPreview}
@@ -549,18 +625,6 @@ export default function SpielerPage() {
     <Suspense fallback={null}>
       <SpielerPageInner />
     </Suspense>
-  );
-}
-
-function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return (
-    <div className="mb-5 flex items-end gap-4">
-      <span className="text-[10px] font-bold tracking-[0.25em] text-cyan-400/50">{eyebrow}</span>
-
-      <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-white sm:text-2xl">
-        {title}
-      </h2>
-    </div>
   );
 }
 

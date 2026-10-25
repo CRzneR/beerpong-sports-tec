@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { PanelTitle } from "@/components/stats/PanelCard";
 import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import { getPlayerOverallStats, type StatsRange } from "@/app/spieler/match/playerStats";
 
@@ -105,15 +106,18 @@ function StatIcon({ name }: { name: IconName }) {
 
 export function PerformanceStats({
   isPro,
-  extraEyebrow = "02",
   range = "all",
+  showMain = true,
+  showMore = true,
 }: {
   /** "Weitere Statistiken" werden nur mit Pro angezeigt. */
   isPro: boolean;
-  /** Nummer vor der Überschrift "Weitere Statistiken" (passend zur Seitennummerierung). */
-  extraEyebrow?: string;
   /** Zeitraum-Filter (Standard: alle Matches). */
   range?: StatsRange;
+  /** Die sechs Hauptwerte anzeigen (Dashboard anpassen). */
+  showMain?: boolean;
+  /** Die Karte "Weitere Statistiken" anzeigen (zusätzlich zu Pro nötig). */
+  showMore?: boolean;
 }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,6 +192,11 @@ export function PerformanceStats({
     );
   }
 
+  /* Beides ausgeblendet: nichts rendern. */
+  if (!showMain && !(isPro && showMore)) {
+    return null;
+  }
+
   const stats: { value: string; label: string; icon: IconName; accent?: boolean }[] = [
     { value: String(summary?.matches ?? 0), label: "Matches", icon: "matches", accent: true },
     { value: `${summary?.winrate ?? 0}%`, label: "Winrate", icon: "winrate", accent: true },
@@ -218,50 +227,50 @@ export function PerformanceStats({
     <div>
       {/* 01: die sechs Hauptwerte als Karten */}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 transition duration-300 hover:border-cyan-400/20 hover:bg-cyan-400/[0.025]"
-          >
-            <div className="absolute right-4 top-4 text-white/20 transition-colors duration-300 group-hover:text-cyan-400/70">
-              <StatIcon name={stat.icon} />
-            </div>
+      {showMain && (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 transition duration-300 hover:border-cyan-400/20 hover:bg-cyan-400/[0.025]"
+              >
+                <div className="absolute right-4 top-4 text-white/20 transition-colors duration-300 group-hover:text-cyan-400/70">
+                  <StatIcon name={stat.icon} />
+                </div>
 
-            <div
-              className={`text-2xl font-black tracking-[-0.04em] sm:text-3xl ${
-                stat.accent ? "text-cyan-400" : "text-white"
-              }`}
-            >
-              {stat.value}
-            </div>
+                <div
+                  className={`text-2xl font-black tracking-[-0.04em] sm:text-3xl ${
+                    stat.accent ? "text-cyan-400" : "text-white"
+                  }`}
+                >
+                  {stat.value}
+                </div>
 
-            <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/25">
-              {stat.label}
-            </div>
+                <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.2em] text-white/25">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <p className="mt-3 text-[10px] font-semibold text-white/25">
-        Es zählen nur Matches gegen registrierte Gegner.
-      </p>
+          <p className="mt-3 text-[10px] font-semibold text-white/25">
+            Es zählen nur Matches gegen registrierte Gegner.
+          </p>
+        </>
+      )}
 
       {/* 02: Weitere Statistiken - nur mit Pro */}
 
-      {isPro && (
-        <div className="mt-8 border-t border-white/[0.06] pt-8">
-          <div className="mb-5 flex items-center gap-4">
-            <span className="text-[10px] font-bold tracking-[0.25em] text-cyan-400/50">
-              {extraEyebrow}
-            </span>
+      {isPro && showMore && (
+        <div
+          className={`rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7 ${
+            showMain ? "mt-6 md:mt-8" : ""
+          }`}
+        >
+          <PanelTitle>Weitere Statistiken</PanelTitle>
 
-            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
-              Weitere Statistiken
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-0">
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-0">
             {throwStats.map((stat) => (
               <div
                 key={stat.label}

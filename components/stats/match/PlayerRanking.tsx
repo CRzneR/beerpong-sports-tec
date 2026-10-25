@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PanelTitle } from "@/components/stats/PanelCard";
 import { getAllPlayerOverallStats, type PlayerOverallStats } from "@/app/spieler/match/playerStats";
 
 interface PlayerRankingProps {
@@ -62,10 +63,8 @@ export default function PlayerRanking({ onSelectPlayer }: PlayerRankingProps) {
 
   return (
     <>
-      <section className="rounded-2xl border border-white/10 bg-[#111419] p-5">
-        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
-          Weltrangliste
-        </div>
+      <section className="rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
+        <PanelTitle>Weltrangliste</PanelTitle>
 
         {loading ? (
           <div className="mt-4 text-sm font-bold text-white/40">Lade Rangliste …</div>

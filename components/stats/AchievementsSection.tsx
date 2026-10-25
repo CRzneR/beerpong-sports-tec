@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import {
@@ -9,6 +9,7 @@ import {
   type AchievementKey,
   type AchievementView,
 } from "@/app/spieler/match/achievements";
+import { PanelModal, PanelTitle } from "./PanelCard";
 
 /*
  * --------------------------------------------------------------------------
@@ -163,11 +164,21 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
   );
 }
 
+/*
+ * KARTE IM PROFIL
+ *
+ * Zeigt die drei zuletzt freigeschalteten Achievements als kleine Vorschau.
+ * "Alle Achievements" öffnet die komplette Übersicht in einem Overlay.
+ */
+
+const PREVIEW_COUNT = 3;
+
 export function AchievementsSection() {
   const [achievements, setAchievements] = useState<AchievementView[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,29 +220,131 @@ export function AchievementsSection() {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/40">
-        Lade Achievements …
-      </div>
-    );
-  }
+  const unlocked = (achievements ?? [])
+    .filter((item) => item.unlocked)
+    .sort((a, b) => {
+      const timeA = a.unlockedAt ? new Date(a.unlockedAt).getTime() : 0;
+      const timeB = b.unlockedAt ? new Date(b.unlockedAt).getTime() : 0;
 
-  if (!loggedIn) {
-    return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/50">
+      return timeB - timeA;
+    });
+
+  let body: ReactNode;
+
+  if (loading) {
+    body = (
+      <div className="py-8 text-center text-sm font-bold text-white/40">Lade Achievements …</div>
+    );
+  } else if (!loggedIn) {
+    body = (
+      <div className="py-8 text-center text-sm font-bold text-white/50">
         Melde dich an, um deine Achievements zu sehen.
       </div>
     );
-  }
-
-  if (error || !achievements) {
-    return (
-      <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-6 text-center text-sm font-bold text-red-400/80">
+  } else if (error || !achievements) {
+    body = (
+      <div className="py-8 text-center text-sm font-bold text-red-400/80">
         {error ?? "Achievements konnten nicht geladen werden."}
+      </div>
+    );
+  } else if (unlocked.length === 0) {
+    body = (
+      <div className="flex items-center gap-4 rounded-2xl border border-white/[0.05] bg-white/[0.02] p-4 sm:gap-5 sm:p-5">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/[0.04] text-white/25 sm:h-16 sm:w-16">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-7 w-7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8 21h8M12 17v4" />
+            <path d="M7 4h10v5a5 5 0 0 1-10 0V4z" />
+            <path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3" />
+          </svg>
+        </div>
+
+        <div>
+          <div className="text-sm font-bold text-white/70">
+            Noch keine Achievements freigeschaltet.
+          </div>
+          <div className="mt-1 text-xs font-semibold text-white/35">
+            Spiele Matches, um Achievements zu entdecken.
+          </div>
+        </div>
+      </div>
+    );
+  } else {
+    body = (
+      <div className="grid grid-cols-3 gap-2.5">
+        {unlocked.slice(0, PREVIEW_COUNT).map((item) => (
+          <div
+            key={item.key}
+            className="relative flex flex-col items-center rounded-xl border border-white/[0.06] bg-[#0b0f14] px-2 pb-2.5 pt-2 text-center"
+          >
+            {item.isNew && (
+              <span className="absolute right-1.5 top-1.5 z-10 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-yellow-400">
+                Neu
+              </span>
+            )}
+
+            <div className="relative h-16 w-full sm:h-20">
+              <Image
+                src={badgeSrc(item.key)}
+                alt=""
+                fill
+                sizes="(min-width: 768px) 12vw, 28vw"
+                className="object-contain"
+              />
+            </div>
+
+            <div className="mt-1 text-[10px] font-black leading-tight text-white sm:text-[11px]">
+              {item.title}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
-  return <AchievementsView achievements={achievements} />;
+  return (
+    <>
+      <section className="flex h-full flex-col rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
+        <PanelTitle
+          action={
+            unlocked.length > 0 ? (
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                {unlocked.length} freigeschaltet
+              </span>
+            ) : null
+          }
+        >
+          Achievements
+        </PanelTitle>
+
+        <div className="mt-5">{body}</div>
+
+        {loggedIn && !loading && !error && achievements && (
+          <div className="mt-auto flex justify-end pt-5">
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-400/[0.06] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-300 transition hover:bg-cyan-400/[0.14]"
+            >
+              Alle Achievements
+            </button>
+          </div>
+        )}
+      </section>
+
+      {showAll && achievements && (
+        <PanelModal title="Achievements" onClose={() => setShowAll(false)}>
+          <AchievementsView achievements={achievements} />
+        </PanelModal>
+      )}
+    </>
+  );
 }
