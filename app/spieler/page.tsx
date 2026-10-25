@@ -20,7 +20,7 @@ import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { MatchupStats } from "@/components/stats/MatchupStats";
 import { ComebackStats } from "@/components/stats/ComebackStats";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
-import { StatsRangeFilter } from "@/components/stats/Statsrangefilter";
+import { StatsRangeFilter } from "@/components/stats/StatsRangeFilter";
 import {
   DashboardCustomizeButton,
   DashboardCustomizeModal,
