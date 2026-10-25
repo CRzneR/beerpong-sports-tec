@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 
+import { isNonThrowAction } from "./matchLogic";
 import { getSavedMatches, type SavedMatch } from "./matchStorage";
 import { getRegisteredPlayerIds } from "./playerProfiles";
 
@@ -255,7 +256,8 @@ export function evaluateAchievements(
     let bestStreakInMatch = 0;
 
     for (const action of actions) {
-      if (action.playerId !== playerId) {
+      /* Strafbecher/Umgeworfen sind keine Würfe und zählen hier nicht mit. */
+      if (action.playerId !== playerId || isNonThrowAction(action)) {
         continue;
       }
 
@@ -336,7 +338,11 @@ export function evaluateAchievements(
       let finalIndex = -1;
 
       for (let index = actions.length - 1; index >= 0; index -= 1) {
-        if (actions[index].type === "hit" && actions[index].team === me.team) {
+        if (
+          actions[index].type === "hit" &&
+          actions[index].team === me.team &&
+          !isNonThrowAction(actions[index])
+        ) {
           finalIndex = index;
           break;
         }

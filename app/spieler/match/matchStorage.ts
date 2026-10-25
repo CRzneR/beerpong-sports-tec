@@ -1,3 +1,4 @@
+import { isNonThrowAction } from "./matchLogic";
 import type { MatchState, Cup, RecordedFormation } from "./matchLogic";
 import { createClient } from "@/lib/supabase/client";
 
@@ -45,7 +46,8 @@ type ActionRow = {
   player_id: string;
   team: "A" | "B";
   action_type: "hit" | "miss";
-  hit_type: "single" | "bounce" | "trickshot" | null;
+  /* "penalty" und "knockover" brauchen penalty-cups.sql in der Datenbank. */
+  hit_type: "single" | "bounce" | "trickshot" | "penalty" | "knockover" | null;
   cup_ids: unknown;
   action_index: number;
   /* NEU: Becherposition beim Treffer (siehe matchLogic.ts, RecordedFormation) */
@@ -269,6 +271,30 @@ export async function getSavedMatches(): Promise<SavedMatch[]> {
 }
 
 /*
+ * Strafbecher/Umgeworfen in den letzten normalen Treffer des Teams einrechnen
+ * (nur Sicherheitsnetz in saveMatch, siehe dort).
+ */
+
+function foldBonusCupActions(actions: MatchState["actions"]): MatchState["actions"] {
+  const result = actions
+    .filter((action) => !isNonThrowAction(action))
+    .map((action) => ({ ...action }));
+
+  for (const bonus of actions.filter((action) => isNonThrowAction(action))) {
+    for (let index = result.length - 1; index >= 0; index -= 1) {
+      const candidate = result[index];
+
+      if (candidate.type === "hit" && candidate.team === bonus.team) {
+        candidate.cupIds = [...candidate.cupIds, ...bonus.cupIds];
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+/*
  * --------------------------------------------------------------------------
  * | MATCH SPEICHERN
  * --------------------------------------------------------------------------
@@ -328,23 +354,49 @@ export async function saveMatch(state: MatchState): Promise<SavedMatch> {
     }
   }
 
-  const actionRows = state.actions.map((action, index) => ({
-    match_id: match.id,
-    player_id: action.playerId,
-    team: action.team,
-    action_type: action.type,
-    hit_type: action.type === "hit" ? (action.hitType ?? null) : null,
-    cup_ids: action.cupIds,
-    formation: action.type === "hit" ? (action.formation ?? null) : null,
-    hit_slots: action.type === "hit" ? (action.hitSlots ?? null) : null,
-    action_index: index,
-  }));
+  const toRows = (actions: MatchState["actions"]) =>
+    actions.map((action, index) => ({
+      match_id: match.id,
+      player_id: action.playerId,
+      team: action.team,
+      action_type: action.type,
+      hit_type: action.type === "hit" ? (action.hitType ?? null) : null,
+      cup_ids: action.cupIds,
+      formation: action.type === "hit" ? (action.formation ?? null) : null,
+      hit_slots: action.type === "hit" ? (action.hitSlots ?? null) : null,
+      action_index: index,
+    }));
+
+  const actionRows = toRows(state.actions);
 
   if (actionRows.length > 0) {
     const { error } = await supabase.from("actions").insert(actionRows);
 
     if (error) {
-      throw error;
+      /*
+       * SICHERHEITSNETZ: Lehnt die Datenbank "penalty"/"knockover" ab, weil
+       * penalty-cups.sql noch nicht ausgeführt wurde, geht das Match nicht
+       * verloren. Die Strafbecher werden dann dem letzten normalen Treffer
+       * des Teams zugeschlagen (wie die Bonus-Becher): der Endstand stimmt,
+       * nur die Gutschrift auf den Spieler fehlt.
+       */
+      if (!state.actions.some((action) => isNonThrowAction(action))) {
+        throw error;
+      }
+
+      console.error(
+        "Aktionen konnten nicht gespeichert werden - Strafbecher werden zusammengeführt. " +
+          "Bitte penalty-cups.sql ausführen:",
+        error,
+      );
+
+      const { error: fallbackError } = await supabase
+        .from("actions")
+        .insert(toRows(foldBonusCupActions(state.actions)));
+
+      if (fallbackError) {
+        throw fallbackError;
+      }
     }
   }
 

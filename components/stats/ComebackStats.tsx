@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
+import { PanelModal } from "@/components/stats/PanelCard";
 import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import {
   CLOSE_MATCH_MARGIN,
@@ -27,7 +28,9 @@ import {
  *     Vorsprung, trotzdem gewonnen).
  *   - Starttreffer: erster Wurf in der Eröffnungsrunde bei eigenem Anwurf.
  *   - Ergebnisse: größter Sieg, größte Niederlage, knappe Matches, Ø Differenz.
- *   - Match-Verlauf: Becherverlauf der letzten Matches als Mini-Diagramm.
+ *   - Match-Verlauf: Becherverlauf der letzten RECENT_SHOWN (4) Matches als
+ *     Mini-Diagramm. Ein Klick auf ein Match öffnet ein Overlay mit dem
+ *     großen Verlauf und ein paar Kennzahlen (MatchFlowModal).
  *
  * Oben rechts wählt man den Spielmodus (Alle Spiele / 1 gegen 1 / 2 gegen 2).
  * Die Berechnung steht in playerStats.ts (getPlayerComebackStats).
@@ -40,7 +43,8 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const OUTER = "rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7";
 const INNER = "min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5";
 
-const RECENT_OPTIONS = [6, 12] as const;
+/* Im Match-Verlauf werden immer nur die letzten Matches gezeigt. */
+const RECENT_SHOWN = 4;
 
 function formatScore(score: MatchScore | null): string {
   return score ? `${score.own} : ${score.opp}` : "–";
@@ -451,15 +455,22 @@ function MiniChart({ entry }: { entry: MatchFlowEntry }) {
   );
 }
 
-function MatchTile({ entry }: { entry: MatchFlowEntry }) {
+function MatchTile({ entry, onOpen }: { entry: MatchFlowEntry; onOpen: () => void }) {
   const diff = entry.own - entry.opp;
 
   const diffClass = diff > 0 ? "text-emerald-400" : diff < 0 ? "text-red-400" : "text-white/50";
   const diffText = diff === 0 ? "±0 Becher" : `${diff > 0 ? "+" : "−"}${Math.abs(diff)} Becher`;
 
   return (
-    <div className="flex min-w-0 flex-col rounded-xl border border-white/[0.08] bg-[#0a0d11] p-3.5">
-      <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Verlauf ansehen: ${entry.won ? "Sieg" : "Niederlage"} ${entry.own} zu ${entry.opp} gegen ${
+        entry.opponents.join(" und ") || "Unbekannt"
+      }`}
+      className="flex min-w-0 cursor-pointer flex-col rounded-xl border border-white/[0.08] bg-[#0a0d11] p-3.5 text-left transition duration-200 hover:border-cyan-400/30 hover:bg-[#0c1116] focus:outline-none focus-visible:border-cyan-400/50"
+    >
+      <div className="flex w-full flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
         <span className="text-[11px] font-semibold text-white/40">{formatDate(entry.savedAt)}</span>
 
         <span
@@ -474,7 +485,7 @@ function MatchTile({ entry }: { entry: MatchFlowEntry }) {
       </div>
 
       <div
-        className="mt-2 truncate text-sm font-black text-white"
+        className="mt-2 w-full truncate text-sm font-black text-white"
         title={entry.opponents.join(" & ")}
       >
         vs. {entry.opponents.join(" & ") || "Unbekannt"}
@@ -486,8 +497,221 @@ function MatchTile({ entry }: { entry: MatchFlowEntry }) {
 
       <MiniChart entry={entry} />
 
-      <div className={`mt-2 text-center text-xs font-bold ${diffClass}`}>{diffText}</div>
-    </div>
+      <div className={`mt-2 w-full text-center text-xs font-bold ${diffClass}`}>{diffText}</div>
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Overlay: Verlauf eines einzelnen Matches                                  */
+/* ------------------------------------------------------------------------ */
+
+const BIG_W = 360;
+const BIG_H = 200;
+const BIG_LEFT = 26;
+const BIG_RIGHT = 24;
+const BIG_TOP = 12;
+const BIG_BOTTOM = 26;
+
+/* Kennzahlen aus den beiden Becherreihen (ein Eintrag pro Wurf). */
+function summarizeFlow(entry: MatchFlowEntry) {
+  const steps = Math.max(0, Math.min(entry.ownSeries.length, entry.oppSeries.length) - 1);
+
+  let maxLead = 0;
+  let maxDeficit = 0;
+  let leadChanges = 0;
+  let lastLeader = 0;
+
+  for (let index = 0; index <= steps; index += 1) {
+    const diff = entry.ownSeries[index] - entry.oppSeries[index];
+
+    maxLead = Math.max(maxLead, diff);
+    maxDeficit = Math.max(maxDeficit, -diff);
+
+    const leader = Math.sign(diff);
+
+    if (leader !== 0) {
+      if (lastLeader !== 0 && leader !== lastLeader) {
+        leadChanges += 1;
+      }
+
+      lastLeader = leader;
+    }
+  }
+
+  return { steps, maxLead, maxDeficit, leadChanges };
+}
+
+function BigChart({ entry }: { entry: MatchFlowEntry }) {
+  const steps = Math.max(1, Math.min(entry.ownSeries.length, entry.oppSeries.length) - 1);
+  const maxValue = Math.max(10, ...entry.ownSeries, ...entry.oppSeries);
+
+  const plotW = BIG_W - BIG_LEFT - BIG_RIGHT;
+  const plotH = BIG_H - BIG_TOP - BIG_BOTTOM;
+
+  const x = (index: number) => BIG_LEFT + (index / steps) * plotW;
+  const y = (value: number) => BIG_TOP + plotH - (value / maxValue) * plotH;
+
+  const points = (series: number[]) =>
+    series.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(" ");
+
+  const ownColor = entry.won ? "#22d3ee" : "#f87171";
+  const baseline = y(0);
+
+  const gridValues: number[] = [];
+
+  for (let value = 0; value <= maxValue; value += 5) {
+    gridValues.push(value);
+  }
+
+  const xTicks = Array.from(new Set([0, Math.round(steps / 2), steps]));
+
+  return (
+    <svg
+      viewBox={`0 0 ${BIG_W} ${BIG_H}`}
+      className="block w-full"
+      role="img"
+      aria-label={`Becherverlauf: ${entry.own} zu ${entry.opp}`}
+    >
+      {gridValues.map((value) => (
+        <g key={value}>
+          <line
+            x1={BIG_LEFT}
+            x2={BIG_W - BIG_RIGHT}
+            y1={y(value)}
+            y2={y(value)}
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth="0.6"
+          />
+          <text
+            x={BIG_LEFT - 6}
+            y={y(value) + 3}
+            textAnchor="end"
+            fontSize="9"
+            fill="rgba(255,255,255,0.4)"
+          >
+            {value}
+          </text>
+        </g>
+      ))}
+
+      <polygon
+        points={`${x(0).toFixed(1)},${baseline} ${points(entry.ownSeries)} ${x(entry.ownSeries.length - 1).toFixed(1)},${baseline}`}
+        fill={ownColor}
+        fillOpacity="0.12"
+      />
+
+      <polyline
+        points={points(entry.oppSeries)}
+        fill="none"
+        stroke="#94a3b8"
+        strokeOpacity="0.85"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+
+      <polyline
+        points={points(entry.ownSeries)}
+        fill="none"
+        stroke={ownColor}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+
+      {/* Endwerte */}
+      <circle cx={x(entry.oppSeries.length - 1)} cy={y(entry.opp)} r="3" fill="#94a3b8" />
+      <circle cx={x(entry.ownSeries.length - 1)} cy={y(entry.own)} r="3.5" fill={ownColor} />
+
+      {xTicks.map((tick) => (
+        <text
+          key={tick}
+          x={x(tick)}
+          y={BIG_H - 8}
+          textAnchor="middle"
+          fontSize="9"
+          fill="rgba(255,255,255,0.4)"
+        >
+          {tick === 0 ? "Start" : `Wurf ${tick}`}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function MatchFlowModal({ entry, onClose }: { entry: MatchFlowEntry; onClose: () => void }) {
+  const summary = summarizeFlow(entry);
+  const diff = entry.own - entry.opp;
+
+  const facts: { label: string; value: string }[] = [
+    { label: "Endstand", value: `${entry.own} : ${entry.opp}` },
+    {
+      label: "Becherdifferenz",
+      value: diff === 0 ? "±0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff)}`,
+    },
+    { label: "Würfe im Match", value: String(summary.steps) },
+    { label: "Größter Vorsprung", value: summary.maxLead > 0 ? `${summary.maxLead} Becher` : "–" },
+    {
+      label: "Größter Rückstand",
+      value: summary.maxDeficit > 0 ? `${summary.maxDeficit} Becher` : "–",
+    },
+    { label: "Führungswechsel", value: String(summary.leadChanges) },
+  ];
+
+  return (
+    <PanelModal
+      title={`Match-Verlauf · vs. ${entry.opponents.join(" & ") || "Unbekannt"}`}
+      onClose={onClose}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${
+              entry.won
+                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                : "border-red-400/30 bg-red-400/10 text-red-300"
+            }`}
+          >
+            {entry.won ? "Sieg" : "Niederlage"}
+          </span>
+
+          <span className="text-xs font-semibold text-white/40">{formatDate(entry.savedAt)}</span>
+        </div>
+
+        <div className="flex items-center gap-4 text-[11px] font-semibold text-white/45">
+          <span className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${entry.won ? "bg-cyan-400" : "bg-red-400"}`} />
+            Dein Team
+          </span>
+
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-slate-400" />
+            Gegner
+          </span>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-4 w-full max-w-xl rounded-xl border border-white/[0.08] bg-[#0a0d11] p-3 sm:p-4">
+        <BigChart entry={entry} />
+      </div>
+
+      <p className="mt-2 text-center text-[11px] font-semibold text-white/30">
+        Entfernte Becher pro Wurf – so hat sich das Match entwickelt.
+      </p>
+
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {facts.map((fact) => (
+          <div
+            key={fact.label}
+            className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3"
+          >
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">
+              {fact.label}
+            </div>
+            <div className="mt-1 text-lg font-black text-white">{fact.value}</div>
+          </div>
+        ))}
+      </div>
+    </PanelModal>
   );
 }
 
@@ -501,7 +725,7 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
   const [loggedIn, setLoggedIn] = useState(true);
   const [error, setError] = useState(false);
   const [mode, setMode] = useState<GameMode>("all");
-  const [recentCount, setRecentCount] = useState<number>(RECENT_OPTIONS[0]);
+  const [openMatch, setOpenMatch] = useState<MatchFlowEntry | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -625,7 +849,7 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
     { icon: "balance", label: "Ø Becherdifferenz", value: formatDiff(stats.avgDiff) },
   ];
 
-  const recent = stats.recent.slice(0, recentCount);
+  const recent = stats.recent.slice(0, RECENT_SHOWN);
 
   return (
     <div className={OUTER}>
@@ -761,38 +985,26 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
           <SectionHead
             icon="trend"
             title="Match-Verlauf"
-            subtitle="Ergebnis und Becherverlauf deiner letzten Matches."
+            subtitle="Deine letzten 4 Matches. Tippe eins an, um den Verlauf zu sehen."
           />
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-4 text-[11px] font-semibold text-white/45">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                Dein Team
-              </span>
+          <div className="flex items-center gap-4 text-[11px] font-semibold text-white/45">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-cyan-400" />
+              Dein Team
+            </span>
 
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-slate-400" />
-                Gegner
-              </span>
-            </div>
-
-            <Select
-              value={String(recentCount)}
-              onChange={(value) => setRecentCount(Number(value))}
-              options={RECENT_OPTIONS.map((count) => ({
-                value: String(count),
-                label: `Letzte ${count} Matches`,
-              }))}
-              label="Anzahl der Matches im Verlauf"
-            />
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-400" />
+              Gegner
+            </span>
           </div>
         </div>
 
         {recent.length > 0 ? (
-          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             {recent.map((entry) => (
-              <MatchTile key={entry.matchId} entry={entry} />
+              <MatchTile key={entry.matchId} entry={entry} onOpen={() => setOpenMatch(entry)} />
             ))}
           </div>
         ) : (
@@ -801,6 +1013,8 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
           </div>
         )}
       </div>
+
+      {openMatch && <MatchFlowModal entry={openMatch} onClose={() => setOpenMatch(null)} />}
     </div>
   );
 }

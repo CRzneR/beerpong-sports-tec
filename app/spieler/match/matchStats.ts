@@ -1,3 +1,4 @@
+import { isNonThrowAction } from "./matchLogic";
 import type { MatchState, Team } from "./matchLogic";
 
 /*
@@ -21,6 +22,9 @@ export type PlayerStats = {
   hits: number;
   accuracy: number;
   cupsHit: number;
+  /* Strafbecher und umgeworfene Becher, die der Spieler gutgeschrieben bekam (keine Würfe). */
+  penaltyCups: number;
+  knockedOverCups: number;
 };
 
 export type TeamStats = {
@@ -49,8 +53,11 @@ function computeTeamStats(state: MatchState, team: Team): TeamStats {
 
   const teamActions = state.actions.filter((action) => teamPlayerIds.has(action.playerId));
 
-  const hits = teamActions.filter((action) => action.type === "hit").length;
-  const misses = teamActions.filter((action) => action.type === "miss").length;
+  /* Strafbecher/Umgeworfen sind keine Würfe: nicht in Treffern, Daneben und Quote. */
+  const throwActions = teamActions.filter((action) => !isNonThrowAction(action));
+
+  const hits = throwActions.filter((action) => action.type === "hit").length;
+  const misses = throwActions.filter((action) => action.type === "miss").length;
   const throws = hits + misses;
 
   const cupsHit = teamActions
@@ -85,13 +92,20 @@ function computeTeamStats(state: MatchState, team: Team): TeamStats {
 function computePlayerStats(state: MatchState): PlayerStats[] {
   return state.players.map((player) => {
     const playerActions = state.actions.filter((action) => action.playerId === player.id);
+    const throwActions = playerActions.filter((action) => !isNonThrowAction(action));
 
-    const hits = playerActions.filter((action) => action.type === "hit").length;
-    const throws = playerActions.length;
+    const hits = throwActions.filter((action) => action.type === "hit").length;
+    const throws = throwActions.length;
 
+    /* Becher inkl. Strafbecher und umgeworfener Becher. */
     const cupsHit = playerActions
       .filter((action) => action.type === "hit")
       .reduce((total, action) => total + action.cupIds.length, 0);
+
+    const cupsOf = (hitType: string) =>
+      playerActions
+        .filter((action) => action.type === "hit" && action.hitType === hitType)
+        .reduce((total, action) => total + action.cupIds.length, 0);
 
     return {
       playerId: player.id,
@@ -101,6 +115,8 @@ function computePlayerStats(state: MatchState): PlayerStats[] {
       hits,
       accuracy: throws > 0 ? Math.round((hits / throws) * 100) : 0,
       cupsHit,
+      penaltyCups: cupsOf("penalty"),
+      knockedOverCups: cupsOf("knockover"),
     };
   });
 }

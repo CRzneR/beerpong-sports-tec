@@ -4,7 +4,20 @@ import { useState } from "react";
 
 import BeerPongTable, { Cup, CupSlotAssignment } from "@/components/stats/match/BeerPongTable";
 
-export type ShotType = "single" | "bounce" | "trickshot" | "extra";
+/*
+ * Das Overlay hat drei Modi:
+ * - "hit" (Standard, "Getroffen"): Einzeltreffer, Aufhüpfen, Trickshot
+ * - "special" (Knopf "Special"): Umgeworfen und Strafbecher - Becher, die
+ *   gutgeschrieben werden, ohne dass es ein Wurf war
+ * - Bonus-Becher (defaultShotType="extra"): automatisch nach Rundenende
+ *
+ * "extra" ist KEINE auswählbare Trefferart mehr, sondern wird nur noch
+ * intern für die automatischen Bonus-Becher nach Rundenende verwendet
+ * (defaultShotType="extra"). "penalty" (Strafbecher) und "knockover"
+ * (Umgeworfen) sind Becher, die dem Spieler gutgeschrieben werden, ohne dass
+ * es ein Wurf war (siehe isNonThrowHitType in matchLogic.ts).
+ */
+export type ShotType = "single" | "bounce" | "trickshot" | "extra" | "penalty" | "knockover";
 
 interface HitOverlayProps {
   playerName: string;
@@ -33,6 +46,13 @@ interface HitOverlayProps {
   defaultShotType?: ShotType;
 
   /**
+   * "hit" (Standard) oder "special" (Umgeworfen / Strafbecher). Special wird
+   * über einen eigenen Knopf geöffnet und ist unabhängig davon möglich, ob der
+   * Spieler in dieser Runde schon geworfen hat.
+   */
+  mode?: "hit" | "special";
+
+  /**
    * Nur im "extra"-Modus relevant: wie viele Bonus-Becher auf einmal
    * zu wählen sind (siehe calculateExtraCups in page.tsx). Im
    * normalen Modus wird weiterhin genau EIN Becher pro Treffer
@@ -45,13 +65,15 @@ interface HitOverlayProps {
   onSave: (data: { shotType: ShotType; cupIds: number[] }) => void;
 }
 
-const shotTypes: {
+type ShotTypeOption = {
   id: ShotType;
 
   title: string;
 
   description: string;
-}[] = [
+};
+
+const hitShotTypes: ShotTypeOption[] = [
   {
     id: "single",
 
@@ -75,15 +97,34 @@ const shotTypes: {
 
     description: "Besonderer Wurf",
   },
+];
+
+const specialShotTypes: ShotTypeOption[] = [
+  {
+    id: "knockover",
+
+    title: "Umgeworfen",
+
+    description: "Becher des Gegners wurde umgeworfen",
+  },
 
   {
-    id: "extra",
+    id: "penalty",
 
-    title: "Extra Treffer",
+    title: "Strafbecher",
 
-    description: "Bonus-Becher dieser Runde",
+    description: "Becher durch Regelverstoß des Gegners",
   },
 ];
+
+/* Nur für den automatischen Bonus-Becher-Modus: eine feste, nicht wählbare Karte. */
+const extraShotType: ShotTypeOption = {
+  id: "extra",
+
+  title: "Extra Treffer",
+
+  description: "Bonus-Becher dieser Runde",
+};
 
 export default function HitOverlay({
   playerName,
@@ -93,6 +134,7 @@ export default function HitOverlay({
   teamACupSlots,
   teamBCupSlots,
   defaultShotType = "single",
+  mode = "hit",
   requiredCupCount = 1,
   onClose,
   onSave,
@@ -147,7 +189,34 @@ export default function HitOverlay({
     });
   };
 
+  /* Im Bonus-Becher-Modus ist die Trefferart fest, sonst alle Arten wählbar. */
+  const isSpecialMode = !isExtraMode && mode === "special";
+
+  const visibleShotTypes = isExtraMode
+    ? [extraShotType]
+    : isSpecialMode
+      ? specialShotTypes
+      : hitShotTypes;
+
+  /* Statische Klassen (Tailwind): Anzahl Spalten der Trefferart-Leiste am Handy. */
+  const mobileColumns = isExtraMode ? "grid-cols-1" : isSpecialMode ? "grid-cols-2" : "grid-cols-3";
+
+  /* Strafbecher/Umgeworfen: kein Wurf, der Spieler wirft danach ganz normal weiter. */
+  const isCreditOnly = shotType === "penalty" || shotType === "knockover";
+
+  const saveLabel = isExtraMode
+    ? "Bonus-Becher speichern"
+    : isSpecialMode && shotType === "penalty"
+      ? "Strafbecher speichern"
+      : isSpecialMode && shotType === "knockover"
+        ? "Umgeworfen speichern"
+        : "Treffer speichern";
+
   const handleShotTypeChange = (next: ShotType) => {
+    if (isExtraMode) {
+      return;
+    }
+
     setShotType(next);
     setSelectedCups([]);
   };
@@ -226,7 +295,11 @@ export default function HitOverlay({
                 lg:text-[10px]
               "
             >
-              {isExtraMode ? `Bonus-Becher auswählen · ${selectionLimit}` : "Treffer erfassen"}
+              {isExtraMode
+                ? `Bonus-Becher auswählen · ${selectionLimit}`
+                : isSpecialMode
+                  ? "Special erfassen"
+                  : "Treffer erfassen"}
             </div>
 
             <h2
@@ -277,11 +350,11 @@ export default function HitOverlay({
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 lg:hidden">
           <div className="shrink-0">
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
-              01 · Trefferart
+              01 · {isSpecialMode ? "Special" : "Trefferart"}
             </div>
 
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
-              {shotTypes.map((type) => {
+            <div className={`mt-2 grid gap-1.5 ${mobileColumns}`}>
+              {visibleShotTypes.map((type) => {
                 const active = shotType === type.id;
 
                 return (
@@ -306,6 +379,12 @@ export default function HitOverlay({
                 );
               })}
             </div>
+
+            {isCreditOnly && (
+              <p className="mt-1.5 text-[9px] font-semibold leading-snug text-white/35">
+                Kein Wurf: Der Becher wird gutgeschrieben, Würfe und Quote bleiben gleich.
+              </p>
+            )}
           </div>
 
           {/* BECHER-AUSWAHL */}
@@ -361,7 +440,7 @@ export default function HitOverlay({
                 disabled:text-white/20
               "
             >
-              {defaultShotType === "extra" ? "Bonus-Becher speichern" : "Treffer speichern"}
+              {saveLabel}
             </button>
 
             {defaultShotType !== "extra" && (
@@ -412,7 +491,7 @@ export default function HitOverlay({
                 text-white/30
               "
             >
-              01 · Trefferart
+              01 · {isSpecialMode ? "Special" : "Trefferart"}
             </div>
 
             <div
@@ -421,7 +500,7 @@ export default function HitOverlay({
                 space-y-3
               "
             >
-              {shotTypes.map((type) => {
+              {visibleShotTypes.map((type) => {
                 const active = shotType === type.id;
 
                 return (
@@ -433,7 +512,7 @@ export default function HitOverlay({
                         w-full
                         rounded-2xl
                         border
-                        p-5
+                        p-4
                         text-left
                         transition
 
@@ -478,6 +557,13 @@ export default function HitOverlay({
                 );
               })}
             </div>
+
+            {isCreditOnly && (
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-relaxed text-white/50">
+                Kein Wurf: Der Becher wird dem Spieler gutgeschrieben und sofort entfernt. Würfe,
+                Treffer und Trefferquote bleiben unverändert, der Spieler wirft danach ganz normal.
+              </div>
+            )}
 
             {shotType === "bounce" && (
               <div className="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] p-3 text-[11px] leading-relaxed text-yellow-200/80">
@@ -569,7 +655,7 @@ export default function HitOverlay({
                 disabled:text-white/20
               "
             >
-              {defaultShotType === "extra" ? "Bonus-Becher speichern" : "Treffer speichern"}
+              {saveLabel}
             </button>
 
             {/* ABBRECHEN */}

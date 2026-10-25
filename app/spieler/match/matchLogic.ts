@@ -31,7 +31,24 @@ export type Team = "A" | "B";
  * das hat den Produktions-Build mit einem Typecheck-Fehler
  * abgebrochen, sobald ein solcher Becher ins Spiel kam.
  */
-export type HitType = "single" | "bounce" | "trickshot" | "extra";
+export type HitType = "single" | "bounce" | "trickshot" | "extra" | "penalty" | "knockover";
+
+/*
+ * STRAFBECHER UND UMGEWORFEN
+ *
+ * Beides sind Becher, die der Spieler gutgeschrieben bekommt, ohne dafür
+ * geworfen zu haben (Regelverstoß bzw. umgeworfener Becher des Gegners).
+ * Sie entfernen einen gegnerischen Becher und zählen im Endstand mit, sind
+ * aber KEIN Wurf: nicht in Würfen, Treffern, Trefferquote, Serien,
+ * Endphase-Quote, Trefferarten und Becherpositionen.
+ */
+export function isNonThrowHitType(hitType: HitType | null | undefined): boolean {
+  return hitType === "penalty" || hitType === "knockover";
+}
+
+export function isNonThrowAction(action: { type: ActionType; hitType?: HitType | null }): boolean {
+  return action.type === "hit" && isNonThrowHitType(action.hitType);
+}
 
 /*
  * --------------------------------------------------------------------------
@@ -692,15 +709,17 @@ function createActionId(): string {
  * Anzahl aller Würfe eines Spielers.
  */
 export function getPlayerAttempts(state: MatchState, playerId: string): number {
-  return state.actions.filter((action) => action.playerId === playerId).length;
+  return state.actions.filter((action) => action.playerId === playerId && !isNonThrowAction(action))
+    .length;
 }
 
 /**
  * Anzahl der Treffer eines Spielers.
  */
 export function getPlayerHits(state: MatchState, playerId: string): number {
-  return state.actions.filter((action) => action.playerId === playerId && action.type === "hit")
-    .length;
+  return state.actions.filter(
+    (action) => action.playerId === playerId && action.type === "hit" && !isNonThrowAction(action),
+  ).length;
 }
 
 /**

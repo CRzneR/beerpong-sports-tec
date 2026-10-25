@@ -18,14 +18,34 @@ interface PlayerCardProps {
   onMiss: (player: MatchPlayer) => void;
 
   /**
+   * "Special": Umgeworfen / Strafbecher. Bleibt auch dann bedienbar, wenn der
+   * Spieler in dieser Runde schon geworfen hat oder das andere Team dran ist
+   * (siehe specialDisabled) - ein Becher kann jederzeit umfallen.
+   */
+  onSpecial: (player: MatchPlayer) => void;
+
+  /**
    * true = Spieler ist gerade nicht dran (falsches Team am Zug
-   * oder in dieser Runde schon aktiv gewesen). Buttons sind dann
-   * gesperrt und die Karte wird abgedunkelt.
+   * oder in dieser Runde schon aktiv gewesen). Daneben/Getroffen sind
+   * dann gesperrt und die Kopfzeile wird abgedunkelt.
    */
   disabled?: boolean;
+
+  /**
+   * true = auch Special gesperrt (z. B. vor dem Anwurf, während Bonus-Becher
+   * gewählt werden oder nach Spielende).
+   */
+  specialDisabled?: boolean;
 }
 
-export default function PlayerCard({ player, onHit, onMiss, disabled = false }: PlayerCardProps) {
+export default function PlayerCard({
+  player,
+  onHit,
+  onMiss,
+  onSpecial,
+  disabled = false,
+  specialDisabled = false,
+}: PlayerCardProps) {
   const hitRate = player.throws > 0 ? Math.round((player.hits / player.throws) * 100) : 0;
 
   return (
@@ -41,8 +61,6 @@ export default function PlayerCard({ player, onHit, onMiss, disabled = false }: 
         transition-colors
         transition-opacity
         lg:p-4
-
-        ${disabled ? "opacity-45" : "opacity-100"}
       `}
     >
       {/* Team indicator */}
@@ -59,7 +77,11 @@ export default function PlayerCard({ player, onHit, onMiss, disabled = false }: 
         `}
       />
 
-      <div className="flex items-start justify-between gap-3">
+      <div
+        className={`flex items-start justify-between gap-3 transition-opacity ${
+          disabled ? "opacity-45" : "opacity-100"
+        }`}
+      >
         {/* Player */}
 
         <div className="flex min-w-0 items-center gap-2 lg:gap-3">
@@ -135,7 +157,7 @@ export default function PlayerCard({ player, onHit, onMiss, disabled = false }: 
 
       {/* Actions */}
 
-      <div className="mt-2 grid grid-cols-2 gap-2 lg:mt-4">
+      <div className="mt-2 grid grid-cols-3 gap-2 lg:mt-4">
         <button
           type="button"
           onClick={() => onMiss(player)}
@@ -157,6 +179,7 @@ export default function PlayerCard({ player, onHit, onMiss, disabled = false }: 
             hover:text-white
             active:scale-[0.98]
             disabled:cursor-not-allowed
+            disabled:opacity-45
             disabled:hover:border-white/[0.08]
             disabled:hover:bg-white/[0.025]
             disabled:hover:text-white/50
@@ -194,6 +217,36 @@ export default function PlayerCard({ player, onHit, onMiss, disabled = false }: 
           "
         >
           Getroffen
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSpecial(player)}
+          disabled={specialDisabled}
+          className="
+            min-h-9
+            rounded-xl
+            border
+            border-yellow-400/30
+            bg-yellow-400/[0.07]
+            text-[10px]
+            font-black
+            uppercase
+            tracking-[0.12em]
+            text-yellow-300
+            transition-all
+            hover:border-yellow-400/50
+            hover:bg-yellow-400/[0.14]
+            active:scale-[0.98]
+            disabled:cursor-not-allowed
+            disabled:opacity-40
+            disabled:hover:border-yellow-400/30
+            disabled:hover:bg-yellow-400/[0.07]
+            disabled:active:scale-100
+            lg:min-h-12
+          "
+        >
+          Special
         </button>
       </div>
     </div>

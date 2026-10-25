@@ -15,7 +15,7 @@ import PlayerSetup from "@/components/stats/match/PlayerSetup";
 
 import HitOverlay, { ShotType } from "@/components/stats/match/HitOverlay";
 
-import { getShooterViewSlot } from "../matchLogic";
+import { getShooterViewSlot, isNonThrowHitType } from "../matchLogic";
 import type { MatchAction, MatchState, RecordedFormation } from "../matchLogic";
 import { getMatchStats } from "../matchStats";
 import MatchResult from "@/components/stats/match/MatchResult";
@@ -54,6 +54,11 @@ type MatchEvent =
        */
       shooterTeam: "A" | "B";
 
+      /*
+       * "penalty" (Strafbecher) und "knockover" (Umgeworfen) sind Becher,
+       * die dem Spieler gutgeschrieben werden, ohne dass er geworfen hat -
+       * sie zählen nicht als Wurf der Runde (siehe isNonThrowHitType).
+       */
       shotType: ShotType;
 
       cupIds: number[];
@@ -405,6 +410,16 @@ export default function MatchPage() {
   const [showHitOverlay, setShowHitOverlay] = useState(false);
 
   /*
+   * SPECIAL (Umgeworfen / Strafbecher)
+   *
+   * Eigenes Overlay mit eigenem Spieler, unabhängig von selectedPlayer /
+   * showHitOverlay (normaler Treffer) und davon, ob der Spieler in dieser
+   * Runde schon geworfen hat - ein Becher kann jederzeit umfallen.
+   */
+
+  const [specialPlayer, setSpecialPlayer] = useState<MatchPlayer | null>(null);
+
+  /*
    * WER BEGINNT?
    */
 
@@ -473,6 +488,11 @@ export default function MatchPage() {
     let roundActions = new Map<string, ("hit" | "miss")[]>();
 
     for (const event of events.slice(turnEpochStart)) {
+      /* Strafbecher/Umgeworfen sind kein Wurf und verbrauchen keinen Wurf der Runde. */
+      if (event.type === "hit" && isNonThrowHitType(event.shotType)) {
+        continue;
+      }
+
       roundActions.set(event.playerId, [...(roundActions.get(event.playerId) ?? []), event.type]);
 
       const activeTeamPlayers = activeTeam === "A" ? teamAPlayers : teamBPlayers;
@@ -595,6 +615,26 @@ export default function MatchPage() {
   };
 
   /*
+   * Special (Umgeworfen / Strafbecher) ist unabhängig vom Zug möglich, aber
+   * nicht vor dem Anwurf, nicht solange Bonus-Becher gewählt werden, nicht
+   * während eine Endphasen-Runde abgerechnet wird und nicht nach Spielende.
+   */
+
+  const canUseSpecial =
+    startingTeam !== null &&
+    extraOwed === 0 &&
+    finalWinner === null &&
+    pendingRedemptionOutcome === null;
+
+  const handleSpecial = (player: MatchPlayer) => {
+    if (!canUseSpecial) {
+      return;
+    }
+
+    setSpecialPlayer(player);
+  };
+
+  /*
    * RÜCKGÄNGIG: nur innerhalb der aktuellen Phase und nur, solange
    * nichts mehr abgerechnet wird. Eine bereits abgeschlossene
    * Endphasen-Runde bzw. ein Phasenwechsel lässt sich nicht mehr
@@ -608,7 +648,9 @@ export default function MatchPage() {
     events.length > undoFloor &&
     extraOwed === 0 &&
     pendingRedemptionOutcome === null &&
-    (phase.kind === "regular" || redemptionRound.length > 0);
+    (phase.kind === "regular" ||
+      redemptionRound.length > 0 ||
+      (lastEvent.type === "hit" && isNonThrowHitType(lastEvent.shotType)));
 
   /*
    * MATCH STATISTIK PRO TEAM
@@ -620,7 +662,11 @@ export default function MatchPage() {
         players.filter((player) => player.team === team).map((player) => player.id),
       );
 
-      const teamEvents = events.filter((event) => teamPlayerIds.has(event.playerId));
+      const teamEvents = events.filter(
+        (event) =>
+          teamPlayerIds.has(event.playerId) &&
+          !(event.type === "hit" && isNonThrowHitType(event.shotType)),
+      );
 
       const throwsCount = teamEvents.length;
       const hitsCount = teamEvents.filter((event) => event.type === "hit").length;
@@ -768,14 +814,33 @@ export default function MatchPage() {
         return;
       }
 
-      for (let index = actions.length - 1; index >= 0; index -= 1) {
-        const candidate = actions[index];
+      /*
+       * Bevorzugt dem letzten echten Wurf-Treffer zuschlagen, nicht einem
+       * Strafbecher/Umgeworfen (das wären gutgeschriebene Becher des
+       * Spielers, keine Bonus-Becher einer Runde).
+       */
+      const findLastHit = (allowCredit: boolean) => {
+        for (let index = actions.length - 1; index >= 0; index -= 1) {
+          const candidate = actions[index];
 
-        if (candidate.type === "hit" && candidate.team === team) {
-          actions[index] = { ...candidate, cupIds: [...candidate.cupIds, ...missingIds] };
-
-          break;
+          if (
+            candidate.type === "hit" &&
+            candidate.team === team &&
+            (allowCredit || !isNonThrowHitType(candidate.hitType))
+          ) {
+            return index;
+          }
         }
+
+        return -1;
+      };
+
+      const targetIndex = findLastHit(false) !== -1 ? findLastHit(false) : findLastHit(true);
+
+      if (targetIndex !== -1) {
+        const target = actions[targetIndex];
+
+        actions[targetIndex] = { ...target, cupIds: [...target.cupIds, ...missingIds] };
       }
     });
 
@@ -1097,6 +1162,66 @@ export default function MatchPage() {
   };
 
   /*
+   * SPECIAL SPEICHERN (STRAFBECHER / UMGEWORFEN)
+   *
+   * Der Becher wird dem gewählten Spieler gutgeschrieben (Strafbecher: er
+   * hat den Gegner dazu gebracht, umgeworfen: der Becher des Gegners fiel
+   * um) und sofort entfernt - wie ein Bonus-Becher, unabhängig vom
+   * Runden-System. Es ist KEIN Wurf: der Spieler behält seinen Wurf der
+   * Runde, Würfe/Treffer/Quote ändern sich nicht (siehe turnState,
+   * teamStats und isNonThrowHitType), und es wird kein Treffer für die
+   * Rundenabrechnung vorgemerkt.
+   */
+
+  const handleSaveCreditedCup = ({
+    shotType,
+    cupIds,
+  }: {
+    shotType: ShotType;
+
+    cupIds: number[];
+  }) => {
+    if (!specialPlayer || cupIds.length === 0 || !isNonThrowHitType(shotType)) {
+      return;
+    }
+
+    const now = new Date();
+
+    const event: MatchEvent = {
+      id: crypto.randomUUID(),
+
+      playerId: specialPlayer.id,
+
+      playerName: specialPlayer.name,
+
+      type: "hit",
+
+      shooterTeam: specialPlayer.team,
+
+      shotType,
+
+      cupIds,
+
+      timestamp: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+
+      timestampMs: now.getTime(),
+    };
+
+    setEvents((current) => [...current, event]);
+
+    const removeCups = (cups: Cup[]) =>
+      cups.map((cup) => (cupIds.includes(cup.id) ? { ...cup, hit: true } : cup));
+
+    if (specialPlayer.team === "A") {
+      setTeamBCups(removeCups);
+    } else {
+      setTeamACups(removeCups);
+    }
+
+    setSpecialPlayer(null);
+  };
+
+  /*
    * TREFFER SPEICHERN
    */
 
@@ -1286,6 +1411,26 @@ export default function MatchPage() {
 
   const handleUndo = () => {
     if (!lastEvent || !canUndo) {
+      return;
+    }
+
+    /*
+     * Strafbecher/Umgeworfen zurücknehmen: nur den Becher zurückholen. Es war
+     * kein Wurf, also bleiben Würfe/Treffer des Spielers, die Runde und die
+     * vorgemerkten Treffer unberührt.
+     */
+    if (lastEvent.type === "hit" && isNonThrowHitType(lastEvent.shotType)) {
+      setEvents((current) => current.slice(0, -1));
+
+      const restoreCredited = (cups: Cup[]) =>
+        cups.map((cup) => (lastEvent.cupIds.includes(cup.id) ? { ...cup, hit: false } : cup));
+
+      if (lastEvent.shooterTeam === "A") {
+        setTeamBCups(restoreCredited);
+      } else {
+        setTeamACups(restoreCredited);
+      }
+
       return;
     }
 
@@ -1626,11 +1771,13 @@ export default function MatchPage() {
                   return (
                     <div
                       key={player.id}
-                      className={`transition-opacity ${
-                        playerDisabled ? "opacity-45" : "opacity-100"
-                      } ${index > 0 ? "mt-2 border-t border-white/[0.06] pt-2" : ""}`}
+                      className={index > 0 ? "mt-2 border-t border-white/[0.06] pt-2" : ""}
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div
+                        className={`flex items-center justify-between gap-2 transition-opacity ${
+                          playerDisabled ? "opacity-45" : "opacity-100"
+                        }`}
+                      >
                         <div className="flex min-w-0 items-center gap-2">
                           <div
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-black ${
@@ -1652,7 +1799,7 @@ export default function MatchPage() {
                         </span>
                       </div>
 
-                      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleMiss(player)}
@@ -1669,6 +1816,15 @@ export default function MatchPage() {
                           className="min-h-7 rounded-lg bg-cyan-400 text-[9px] font-black uppercase tracking-[0.1em] text-black transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-cyan-400/30"
                         >
                           Getroffen
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSpecial(player)}
+                          disabled={!canUseSpecial}
+                          className="min-h-7 rounded-lg border border-yellow-400/30 bg-yellow-400/[0.07] text-[9px] font-black uppercase tracking-[0.1em] text-yellow-300 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Special
                         </button>
                       </div>
                     </div>
@@ -1744,7 +1900,9 @@ export default function MatchPage() {
                   player={player}
                   onHit={handleHit}
                   onMiss={handleMiss}
+                  onSpecial={handleSpecial}
                   disabled={!canPlayerAct(player)}
+                  specialDisabled={!canUseSpecial}
                 />
               ))}
           </div>
@@ -1845,7 +2003,11 @@ export default function MatchPage() {
                                 ? "Aufhüpfen"
                                 : event.shotType === "trickshot"
                                   ? "Trickshot"
-                                  : "Extra Treffer"}
+                                  : event.shotType === "penalty"
+                                    ? "Strafbecher"
+                                    : event.shotType === "knockover"
+                                      ? "Umgeworfen"
+                                      : "Extra Treffer"}
                         </span>
                       </div>
 
@@ -1903,7 +2065,9 @@ export default function MatchPage() {
                   player={player}
                   onHit={handleHit}
                   onMiss={handleMiss}
+                  onSpecial={handleSpecial}
                   disabled={!canPlayerAct(player)}
+                  specialDisabled={!canUseSpecial}
                 />
               ))}
           </div>
@@ -2024,6 +2188,23 @@ export default function MatchPage() {
             setSelectedPlayer(null);
           }}
           onSave={handleSaveHit}
+        />
+      )}
+
+      {/* SPECIAL-OVERLAY (Umgeworfen / Strafbecher) */}
+
+      {specialPlayer && (
+        <HitOverlay
+          playerName={specialPlayer.name}
+          playerTeam={specialPlayer.team}
+          teamACups={teamACups}
+          teamBCups={teamBCups}
+          teamACupSlots={teamACupSlots}
+          teamBCupSlots={teamBCupSlots}
+          mode="special"
+          defaultShotType="knockover"
+          onClose={() => setSpecialPlayer(null)}
+          onSave={handleSaveCreditedCup}
         />
       )}
 

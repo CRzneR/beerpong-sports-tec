@@ -19,6 +19,8 @@ type Summary = {
   singleHits: number;
   bounceHits: number;
   trickshotHits: number;
+  penaltyCups: number;
+  knockedOverCups: number;
 };
 
 /*
@@ -158,6 +160,8 @@ export function PerformanceStats({
             singleHits: overall?.singleHits ?? 0,
             bounceHits: overall?.bounceHits ?? 0,
             trickshotHits: overall?.trickshotHits ?? 0,
+            penaltyCups: overall?.penaltyCups ?? 0,
+            knockedOverCups: overall?.knockedOverCups ?? 0,
           });
         }
       } catch (err) {
@@ -221,6 +225,9 @@ export function PerformanceStats({
     { value: String(summary?.singleHits ?? 0), label: "Einzeltreffer" },
     { value: String(summary?.bounceHits ?? 0), label: "Aufhüpfer" },
     { value: String(summary?.trickshotHits ?? 0), label: "Trickshots" },
+    /* Gutgeschriebene Becher ohne Wurf - zählen nicht in Würfe, Treffer und Quote. */
+    { value: String(summary?.penaltyCups ?? 0), label: "Strafbecher" },
+    { value: String(summary?.knockedOverCups ?? 0), label: "Umgeworfen" },
   ];
 
   return (
@@ -270,11 +277,13 @@ export function PerformanceStats({
         >
           <PanelTitle>Weitere Statistiken</PanelTitle>
 
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-0">
-            {throwStats.map((stat) => (
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-0">
+            {throwStats.map((stat, index) => (
               <div
                 key={stat.label}
-                className="flex flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3 lg:border-l lg:border-white/[0.08] lg:pl-6 lg:first:border-l-0 lg:first:pl-0"
+                className={`flex flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3 ${
+                  index % 4 === 0 ? "" : "lg:border-l lg:border-white/[0.08] lg:pl-6"
+                }`}
               >
                 <div className="text-2xl font-black tracking-[-0.04em] text-white">
                   {stat.value}

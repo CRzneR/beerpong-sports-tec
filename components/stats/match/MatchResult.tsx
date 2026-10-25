@@ -38,6 +38,17 @@ function PlayerRow({ player }: { player: PlayerStats }) {
         <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-white/25">
           Team {player.team}
         </div>
+
+        {(player.penaltyCups > 0 || player.knockedOverCups > 0) && (
+          <div className="mt-1 text-[9px] font-bold text-white/35">
+            {[
+              player.penaltyCups > 0 ? `${player.penaltyCups} Strafbecher` : null,
+              player.knockedOverCups > 0 ? `${player.knockedOverCups} umgeworfen` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </div>
+        )}
       </div>
 
       <div className="text-center">

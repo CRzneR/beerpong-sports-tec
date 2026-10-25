@@ -1,4 +1,4 @@
-import { FORMATION_CUP_COUNT, getShooterViewSlot } from "./matchLogic";
+import { FORMATION_CUP_COUNT, getShooterViewSlot, isNonThrowAction } from "./matchLogic";
 import type { MatchState, Team, HitType, RecordedFormation } from "./matchLogic";
 import { getSavedMatches } from "./matchStorage";
 import {
@@ -23,6 +23,9 @@ export type PlayerMatchStats = {
   singleHits: number;
   bounceHits: number;
   trickshotHits: number;
+  /* Strafbecher und umgeworfene Becher: gutgeschrieben, aber keine Würfe. */
+  penaltyCups: number;
+  knockedOverCups: number;
 };
 
 export type PlayerOverallStats = PlayerMatchStats;
@@ -44,10 +47,29 @@ function emptyStats(player: MatchState["players"][number]): PlayerMatchStats {
     singleHits: 0,
     bounceHits: 0,
     trickshotHits: 0,
+    penaltyCups: 0,
+    knockedOverCups: 0,
   };
 }
 
 function addAction(stats: PlayerMatchStats, action: MatchState["actions"][number]) {
+  /*
+   * Strafbecher und umgeworfene Becher zählen zu den entfernten Bechern,
+   * aber nicht als Wurf: weder Würfe noch Treffer noch Trefferquote ändern
+   * sich dadurch.
+   */
+  if (isNonThrowAction(action)) {
+    stats.cupsRemoved += action.cupIds.length;
+
+    if (action.hitType === "penalty") {
+      stats.penaltyCups += action.cupIds.length;
+    } else {
+      stats.knockedOverCups += action.cupIds.length;
+    }
+
+    return;
+  }
+
   stats.throws += 1;
 
   if (action.type === "miss") {
@@ -292,6 +314,8 @@ export async function getPlayerOverallStats(
     result.singleHits += entry.stats.singleHits;
     result.bounceHits += entry.stats.bounceHits;
     result.trickshotHits += entry.stats.trickshotHits;
+    result.penaltyCups += entry.stats.penaltyCups;
+    result.knockedOverCups += entry.stats.knockedOverCups;
   }
 
   if (!result) return null;
@@ -352,6 +376,8 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
       existing.singleHits += matchStats.singleHits;
       existing.bounceHits += matchStats.bounceHits;
       existing.trickshotHits += matchStats.trickshotHits;
+      existing.penaltyCups += matchStats.penaltyCups;
+      existing.knockedOverCups += matchStats.knockedOverCups;
     }
   }
 
@@ -426,7 +452,8 @@ export async function getPlayerCupPositionStats(
 
       action.cupIds.forEach((cupId) => removedBefore[action.team].add(cupId));
 
-      if (action.playerId !== playerId) {
+      /* Strafbecher/Umgeworfen sind keine geworfenen Treffer, also auch keine Becherposition. */
+      if (action.playerId !== playerId || isNonThrowAction(action)) {
         continue;
       }
 
@@ -609,7 +636,12 @@ function endphaseCounts(
   for (const action of actions) {
     const standing = CUPS_PER_SIDE - removed[action.team].size;
 
-    if (action.playerId === playerId && standing >= 1 && standing <= ENDPHASE_MAX_CUPS) {
+    if (
+      action.playerId === playerId &&
+      !isNonThrowAction(action) &&
+      standing >= 1 &&
+      standing <= ENDPHASE_MAX_CUPS
+    ) {
       throws += 1;
 
       if (action.type === "hit") {
@@ -642,7 +674,8 @@ function longestHitStreakInMatch(actions: MatchState["actions"], playerId: strin
   let longest = 0;
 
   for (const action of actions) {
-    if (action.playerId !== playerId) {
+    /* Strafbecher/Umgeworfen unterbrechen oder verlängern keine Serie. */
+    if (action.playerId !== playerId || isNonThrowAction(action)) {
       continue;
     }
 
@@ -967,7 +1000,9 @@ export const RECENT_FLOW_LIMIT = 12;
 
 const ROUND_THROWS = 2;
 
-function openingThrow(actions: MatchState["actions"], playerId: string): "hit" | "miss" | null {
+function openingThrow(allActions: MatchState["actions"], playerId: string): "hit" | "miss" | null {
+  /* Strafbecher/Umgeworfen sind keine Würfe und können keinen Anwurf eröffnen. */
+  const actions = allActions.filter((action) => !isNonThrowAction(action));
   const first = actions[0];
 
   if (!first) {
