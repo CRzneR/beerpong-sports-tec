@@ -20,7 +20,7 @@ const SITE_URL = "https://beerpong-sportstec.de";
 const BRAND = "BeerPong Sports Tec";
 
 // TODO: Echte Kontaktdaten eintragen (werden auch für die strukturierten Daten genutzt)
-const EMAIL = "info@beerpong-sportstec.de";
+const EMAIL = "kontakt@beerpong-sportstec.de";
 const PHONE = "+49 151 23456789";
 const PHONE_HREF = `tel:${PHONE.replace(/\s/g, "")}`;
 
