@@ -1,0 +1,23 @@
+# BeerPongSportsTec
+
+> BeerPongSportsTec ist eine deutschsprachige Web-App für Beer Pong: Matches live erfassen, Statistiken und ein Skill-Rating verfolgen und Turniere mit Gruppenphase und Tabellen organisieren. Standort: München.
+
+Die Plattform besteht aus zwei Bereichen: Pong Stats (Spielerprofil, Match-Erfassung, Statistiken, Rangliste) und Pong League (Turniere).
+
+## Produkte
+
+- [Pong Stats](https://www.beerpongsportstec.de/spieler): Profil mit Statistiken zu Trefferquote, Becherpositionen, Spielverlauf, Achievements, Match-Historie, Rangliste und Skill-Rating (0 bis 1000). Matches werden Wurf für Wurf live erfasst.
+- [Pong League](https://www.beerpongsportstec.de/turniere): Turniere mit automatischer Gruppenverteilung, Spielplan und Tabellen.
+
+## Über das Projekt
+
+- [Über uns](https://www.beerpongsportstec.de/about)
+- [Community](https://www.beerpongsportstec.de/community)
+- [Regeln](https://www.beerpongsportstec.de/regeln)
+- [Kontakt](https://www.beerpongsportstec.de/kontakt)
+
+## Rechtliches
+
+- [Impressum](https://www.beerpongsportstec.de/impressum)
+- [Datenschutz](https://www.beerpongsportstec.de/datenschutz)
+- [AGB](https://www.beerpongsportstec.de/agb)
