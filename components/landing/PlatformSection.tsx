@@ -10,21 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * --------------------------------------------------------------------------
  * | PLATTFORM-SEKTION (mit GSAP)
  * --------------------------------------------------------------------------
- *
- * - Beim Scrollen: Überschrift (Zeilen werden aufgedeckt), Karten bauen sich
- *   auf, die Feature-Zeilen laufen nacheinander ein
- * - In den Vorschauen: Zahlen zählen hoch, Balken wachsen, die
- *   Liga-Spiele laufen ein, "LIVE" pulsiert
- * - Maus (nur mit Zeigergerät): Karten kippen leicht, ein Licht-Spot
- *   folgt dem Zeiger über die Karte
- * - "Reduzierte Bewegung": keine Animation, alles bleibt wie im Quelltext
- *
- * Die Karte besteht aus drei Schichten, weil GSAP "transform" inline
- * schreibt und Tailwinds Hover-Transform sonst blockieren würde:
- *   area  (ruhend, liefert stabile Maße für die Mausposition)
- *   card  (GSAP: Einlauf + Kippen)
- *   inner (das sichtbare Design samt hover:-translate-y-1)
- * --------------------------------------------------------------------------
+
  */
 
 function formatCount(value: number, decimals: number, suffix: string, thousands: boolean) {
@@ -639,12 +625,6 @@ function StatsPreview() {
 /* =======================================================
    STAT BOX
 ======================================================= */
-
-/*
- * Der Zahlentext steht im Quelltext bereits in seiner Endform (auch ohne
- * JavaScript und für Suchmaschinen korrekt) - die Animation zählt nur
- * dorthin hoch.
- */
 
 function StatBox({
   value,

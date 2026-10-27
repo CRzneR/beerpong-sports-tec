@@ -10,8 +10,6 @@ import { Footer } from "@/components/landing/Footer";
 const SITE_URL = "https://www.beerpongsportstec.de";
 const SITE_NAME = "BeerPongSportsTec";
 
-// Titel, Description und Open Graph erbt die Seite aus dem Root-Layout.
-// Nur der Canonical gehört hier hin.
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };

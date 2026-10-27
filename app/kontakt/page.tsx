@@ -305,7 +305,7 @@ export default function KontaktPage() {
 
               <div className="relative min-h-[220px] md:min-h-[280px]">
                 <Image
-                  src="/images/landing/kontakt-lounge.jpg"
+                  src="/images/landing/.jpg"
                   alt="Lounge von BeerPong Sports Tec"
                   fill
                   sizes="(min-width: 768px) 33vw, 100vw"

@@ -10,25 +10,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * --------------------------------------------------------------------------
  * | HERO (mit GSAP)
  * --------------------------------------------------------------------------
- *
- * - Einlauf: Headline-Zeilen werden aufgedeckt, der Rest folgt gestaffelt
- * - Scrollen: Hintergrund-Parallax, Inhalt blendet beim Verlassen aus
- * - Maus (nur mit Zeigergerät): Lichtkegel folgt dem Zeiger, das Foto
- *   verschiebt sich minimal gegenläufig. Die Buttons bleiben bewusst
- *   ruhig (kein Magnet-Effekt, kein Hochschieben beim Hover).
- * - "Reduzierte Bewegung" in den Systemeinstellungen: keine Animation,
- *   alles ist sofort sichtbar
- *
- * Zum Ausblenden VOR dem ersten Frame (kein kurzes Aufblitzen der
- * fertigen Inhalte) tragen die animierten Elemente das Attribut
- * data-hero-hide. GSAP blendet sie ein, sobald die Seite hydriert ist.
- * Ohne JavaScript bzw. bei reduzierter Bewegung greift das CSS nicht.
- *
- * Wichtig: Animierte Elemente tragen KEINE Tailwind-Transform-Klassen
- * (translate/scale/rotate) - GSAP schreibt "transform" inline und würde
- * sie überschreiben. Bewegt wird deshalb nur an Wrappern, die keine
- * Hover-Transforms haben.
- * --------------------------------------------------------------------------
  */
 
 const HIDE_UNTIL_READY_CSS = `
@@ -101,11 +82,7 @@ export function Hero() {
               duration: 1.15,
               stagger: 0.12,
               ease: "power4.out",
-              /*
-               * Die Masken (overflow: hidden) werden nur fürs Aufdecken
-               * gebraucht - danach wieder öffnen, sonst schneidet der
-               * Rand den Leuchteffekt am Wort "Sport." ab.
-               */
+
               onComplete: () => {
                 gsap.set(masks, { overflow: "visible" });
               },
@@ -245,7 +222,7 @@ export function Hero() {
           style={{ left: "-3%", right: "-3%", top: "-12%", height: "124%" }}
         >
           <Image
-            src="/images/landing/hero-background.png"
+            src="/images/landing/hero-background.webp"
             alt=""
             fill
             priority
@@ -256,8 +233,7 @@ export function Hero() {
 
         {/*
           Dunkler Verlauf von links (wo der Text sitzt, fast deckend)
-          nach rechts (Foto bleibt sichtbar) - sorgt für Lesbarkeit,
-          ohne das Foto komplett zu verdecken.
+          nach rechts (Foto bleibt sichtbar) 
         */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#050708] via-[#050708]/85 to-transparent" />
 
@@ -357,13 +333,6 @@ export function Hero() {
     </section>
   );
 }
-
-/*
- * Eine Headline-Zeile mit Maske: Der Text schiebt sich beim Einlauf von
- * unten in die Zeile. Etwas Innenabstand (bei gleichem Zeilenabstand durch
- * negativen Außenabstand ausgeglichen) verhindert, dass die enge
- * Zeilenhöhe Oberlängen abschneidet.
- */
 
 function HeroLine({ children }: { children: ReactNode }) {
   return (

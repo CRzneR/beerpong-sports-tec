@@ -10,14 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * --------------------------------------------------------------------------
  * | COMMUNITY-SEKTION (mit GSAP)
  * --------------------------------------------------------------------------
- *
- * - Laufband oben: läuft dauerhaft, wird beim Scrollen schneller und
- *   kehrt mit der Scrollrichtung um; pausiert, solange es nicht im Bild ist
- * - Foto-Hintergrund mit Parallax, Glow "atmet", Punkte pulsieren
- * - Headline wird zeilenweise aufgedeckt, Text/Buttons laufen ein
- * - Buttons bleiben bewusst ruhig (kein Magnet-Effekt, kein Hochschieben)
- * - "Reduzierte Bewegung": keine Animation
- * --------------------------------------------------------------------------
+
  */
 
 const MARQUEE_WORDS = ["Play", "Track", "Compete", "Connect"];
@@ -253,21 +246,13 @@ export function CommunitySection() {
             style={{ top: "-12%", height: "124%" }}
           >
             <Image
-              src="/images/landing/community-photo.png"
+              src="/images/landing/community-photo.webp"
               alt=""
               fill
               sizes="100vw"
               className="object-cover object-center"
             />
           </div>
-
-          {/*
-            Kräftiger, gleichmäßiger Verlauf - anders als bei Hero.tsx, wo
-            der Text links sitzt und rechts Platz für das Foto bleibt, ist
-            hier der Text zentriert und füllt die ganze Breite. Deshalb
-            rundum abdunkeln statt nur von einer Seite, sonst wird der Text
-            über der ganzen Breite schwer lesbar.
-          */}
 
           <div className="absolute inset-0 bg-[#050708]/80" />
 
@@ -375,12 +360,6 @@ export function CommunitySection() {
   );
 }
 
-/*
- * Eine Headline-Zeile mit Maske (Text schiebt sich von unten ein).
- * Innenabstand + negativer Außenabstand gleichen sich aus, damit die enge
- * Zeilenhöhe nichts abschneidet (z. B. die Pünktchen des Ä).
- */
-
 function MaskLine({ children }: { children: ReactNode }) {
   return (
     <span
@@ -394,12 +373,6 @@ function MaskLine({ children }: { children: ReactNode }) {
     </span>
   );
 }
-
-/*
- * Eine Gruppe des Laufbands. Die Spur enthält zwei identische Gruppen und
- * läuft um genau eine Gruppenbreite (-50 %) - dadurch ist die Schleife
- * nahtlos. Jedes zweite Wort ist nur umrandet.
- */
 
 function MarqueeGroup() {
   return (
