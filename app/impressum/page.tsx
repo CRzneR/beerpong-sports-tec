@@ -1,4 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Impressum",
+  description:
+    "Impressum von Pong Stats: Anbieterkennzeichnung und Kontaktdaten der Beer-Pong-Statistik-App.",
+  alternates: {
+    canonical: "/impressum",
+  },
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default function ImpressumPage() {
   return (
@@ -8,7 +22,9 @@ export default function ImpressumPage() {
           href="/"
           className="group mb-8 inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
         >
-          <span className="transition-transform group-hover:-translate-x-1">←</span>
+          <span aria-hidden="true" className="transition-transform group-hover:-translate-x-1">
+            ←
+          </span>
           Zurück zur Startseite
         </Link>
 

@@ -14,19 +14,26 @@ const geistMono = Geist_Mono({
 
 const siteUrl = "https://www.beerpongsportstec.de";
 const siteName = "BeerPongSportsTec";
+const title = `${siteName} - Beer Pong Statistiken & Turniere`;
 const description =
   "Beer-Pong-Matches live erfassen, Statistiken verfolgen und Turniere mit Gruppenphase und Tabellen organisieren - alles an einem Ort.";
+
+const ogImage = {
+  url: "/og-image.png",
+  width: 1200,
+  height: 630,
+  alt: title,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${siteName} - Beer Pong Statistiken & Turniere`,
+    default: title,
     template: `%s | ${siteName}`,
   },
   description,
-  alternates: {
-    canonical: siteUrl,
-  },
+  // Kein alternates.canonical hier: Er würde an jede Unterseite vererbt.
+  // Der Canonical wird pro Seite gesetzt (Startseite: "/").
   icons: {
     icon: [
       { url: "/images/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -38,25 +45,19 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/apple-icon-180.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
-    title: `${siteName} - Beer Pong Statistiken & Turniere`,
+    title,
     description,
     url: siteUrl,
     siteName,
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-      },
-    ],
+    images: [ogImage],
     locale: "de_DE",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} - Beer Pong Statistiken & Turniere`,
+    title,
     description,
-    images: ["/og-image.png"],
+    images: [ogImage.url],
   },
 };
 

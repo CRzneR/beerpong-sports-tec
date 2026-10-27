@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 /*
@@ -5,6 +6,19 @@ import Link from "next/link";
  * | DATENSCHUTZERKLÄRUNG
  * --------------------------------------------------------------------------
  */
+
+export const metadata: Metadata = {
+  title: "Datenschutzerklärung",
+  description:
+    "Datenschutzerklärung von Pong Stats: Welche Daten die Beer-Pong-App verarbeitet, wie lange sie gespeichert werden und welche Rechte du hast.",
+  alternates: {
+    canonical: "/datenschutz",
+  },
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 export default function DatenschutzPage() {
   return (
@@ -14,7 +28,9 @@ export default function DatenschutzPage() {
           href="/"
           className="group mb-8 inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
         >
-          <span className="transition-transform group-hover:-translate-x-1">←</span>
+          <span aria-hidden="true" className="transition-transform group-hover:-translate-x-1">
+            ←
+          </span>
           Zurück zur Startseite
         </Link>
 
