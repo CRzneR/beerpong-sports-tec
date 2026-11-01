@@ -8,13 +8,20 @@ import { PanelModal } from "@/components/stats/PanelCard";
  * --------------------------------------------------------------------------
  * | DASHBOARD ANPASSEN: KARTEN EIN- UND AUSBLENDEN
  * --------------------------------------------------------------------------
+ *
+ * useDashboardLayout merkt sich, welche Karten ausgeblendet sind. Die Wahl
+ * liegt im Browser (localStorage) und gilt damit pro Gerät und Browser. Es
+ * braucht keine Datenbank und kein SQL. Ist der Speicher nicht verfügbar
+ * (privates Fenster, blockiert), funktioniert die Auswahl bis zum Neuladen.
+ *
+ * DashboardCustomizeButton öffnet das Fenster mit den Schaltern.
+ * --------------------------------------------------------------------------
  */
 
 export type DashboardCardId =
   | "summary"
   | "more"
   | "rating"
-  | "tournament"
   | "chart"
   | "cups"
   | "detail"
@@ -22,7 +29,8 @@ export type DashboardCardId =
   | "matchup"
   | "achievements"
   | "history"
-  | "ranking";
+  | "ranking"
+  | "tournament";
 
 export const DASHBOARD_CARDS: {
   id: DashboardCardId;
@@ -45,11 +53,6 @@ export const DASHBOARD_CARDS: {
     id: "rating",
     label: "Skill-Rating",
     description: "Dein Rating von 0 bis 1000, Rang, Verlauf und Bestleistung",
-  },
-  {
-    id: "tournament",
-    label: "Turnier (Pong League)",
-    description: "Dein Platz, Tabelle und nächstes Spiel, wenn du mit einem Team verknüpft bist",
   },
   {
     id: "chart",
@@ -94,6 +97,11 @@ export const DASHBOARD_CARDS: {
     pro: true,
   },
   { id: "ranking", label: "Weltrangliste", description: "Alle Spieler im Vergleich", pro: true },
+  {
+    id: "tournament",
+    label: "Turnier (Pong League)",
+    description: "Dein Platz, Tabelle und nächstes Spiel, wenn du mit einem Team verknüpft bist",
+  },
 ];
 
 const STORAGE_KEY = "pongstats.dashboard.hidden.v1";

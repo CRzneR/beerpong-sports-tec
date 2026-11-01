@@ -457,13 +457,6 @@ function SpielerPageInner() {
                       </section>
                     )}
 
-                    {layout.isVisible("tournament") && userEmail && (
-                      /* Erscheint nur, wenn man in der Pong League mit einem Team verknüpft ist. */
-                      <section className="mt-6 empty:hidden md:mt-8">
-                        <TournamentCard />
-                      </section>
-                    )}
-
                     {(layout.isVisible("chart") || layout.isVisible("cups")) && (
                       <section className="mt-6 md:mt-8">
                         <ProLock
@@ -561,6 +554,13 @@ function SpielerPageInner() {
                         >
                           <PlayerRanking onSelectPlayer={(player) => setSelectedPlayer(player)} />
                         </ProLock>
+                      </section>
+                    )}
+
+                    {layout.isVisible("tournament") && userEmail && (
+                      /* Erscheint nur, wenn man in der Pong League mit einem Team verknüpft ist. */
+                      <section className="mt-6 empty:hidden md:mt-8">
+                        <TournamentCard />
                       </section>
                     )}
 
