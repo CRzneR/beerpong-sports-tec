@@ -1,5 +1,6 @@
 import { FORMATION_CUP_COUNT, getShooterViewSlot, isNonThrowAction } from "./matchLogic";
 import type { MatchState, Team, HitType, RecordedFormation } from "./matchLogic";
+import { isAgainstRegisteredOpponents } from "./matchEligibility";
 import { getSavedMatches } from "./matchStorage";
 import {
   getRatedOpponentIds,
@@ -140,39 +141,6 @@ function isAfterReset(savedAt: string, resetAt: string | null | undefined): bool
   }
 
   return new Date(savedAt).getTime() > new Date(resetAt).getTime();
-}
-
-/*
- * --------------------------------------------------------------------------
- * | NUR MATCHES GEGEN REGISTRIERTE GEGNER ZÄHLEN
- * --------------------------------------------------------------------------
- *
- * Ein Match geht in die Statistiken eines Spielers nur ein, wenn ALLE
- * Gegner (das andere Team) registriert sind. Mitspieler im eigenen Team
- * spielen keine Rolle - mit einem Gast als Partner gegen echte Gegner
- * zählt das Match also weiterhin. Ohne Gegner (z. B. unvollständiges
- * Match) zählt es nicht.
- *
- * Gilt zentral für alles, was auf getPlayerMatchHistory und
- * getAllPlayerOverallStats aufbaut: Performance, Verlauf, Detail,
- * Becherpositionen, Profil-Kopf, Rangliste und Ranglistenplatz.
- * --------------------------------------------------------------------------
- */
-
-function isAgainstRegisteredOpponents(
-  state: MatchState,
-  playerId: string,
-  ratedIds: Set<string>,
-): boolean {
-  const player = state.players.find((item) => item.id === playerId);
-
-  if (!player) {
-    return false;
-  }
-
-  const opponents = state.players.filter((item) => item.team !== player.team);
-
-  return opponents.length > 0 && opponents.every((opponent) => ratedIds.has(opponent.id));
 }
 
 /*

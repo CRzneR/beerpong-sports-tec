@@ -7,6 +7,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 import {
   createPlayerProfile,
+  deleteGuestProfile,
   getAllPlayerProfiles,
   getOwnGuestIds,
   getOwnProfile,
@@ -43,6 +44,17 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   const [newName, setNewName] = useState("");
   const [busyPlayerId, setBusyPlayerId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+
+  /*
+   * GAST-PROFIL LÖSCHEN
+   *
+   * confirmDeleteId: für diesen Gast wird gerade "Löschen?" abgefragt.
+   * notice: Hinweis nach dem Löschen (z. B. wenn der Gast in einem gespeicherten
+   * Match vorkommt und deshalb nur aus der Liste verschwindet).
+   */
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   /*
    * NUR DAS GERÄT, DAS "MATCH STARTEN" GEKLICKT HAT, SPIELT WIRKLICH
@@ -341,6 +353,36 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     }
   };
 
+  const handleDeleteGuest = async (profile: PlayerProfile) => {
+    setBusyPlayerId(profile.id);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await deleteGuestProfile(profile.id);
+
+      setOwnGuestIds((current) => {
+        const next = new Set(current);
+        next.delete(profile.id);
+        return next;
+      });
+
+      if (result === "deleted") {
+        setProfiles((current) => current.filter((item) => item.id !== profile.id));
+      } else {
+        setNotice(
+          `${profile.name} kommt in einem gespeicherten Match vor und bleibt dort sichtbar, steht aber nicht mehr in deiner Gästeliste.`,
+        );
+      }
+    } catch (err) {
+      console.error("Fehler beim Löschen des Gast-Profils:", err);
+      setError("Gast-Profil konnte nicht gelöscht werden.");
+    } finally {
+      setConfirmDeleteId(null);
+      setBusyPlayerId(null);
+    }
+  };
+
   const handleCreateAndJoin = async (team: "A" | "B") => {
     const trimmed = newName.trim();
 
@@ -558,6 +600,12 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
           </div>
         )}
 
+        {notice && (
+          <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-4 py-3 text-xs font-bold text-cyan-400/80">
+            {notice}
+          </div>
+        )}
+
         {/* ECHTES PROFIL ERSTELLEN - nur relevant, solange niemand eingeloggt ist */}
 
         {!ownProfile && (
@@ -646,39 +694,88 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
             </div>
           ) : (
             <div className="mt-3 flex flex-wrap gap-2">
-              {available.map((profile) => (
-                <div
-                  key={profile.id}
-                  className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2"
-                >
-                  <span className="text-xs font-bold text-white">
-                    {profile.name}
-                    {profile.id === ownProfile?.id && (
-                      <span className="ml-1 text-[9px] font-black uppercase tracking-wider text-cyan-400">
-                        (Du)
-                      </span>
-                    )}
-                  </span>
-
-                  <button
-                    type="button"
-                    disabled={busyPlayerId === profile.id}
-                    onClick={() => handleJoin(profile.id, "A")}
-                    className="rounded-lg border border-blue-400/20 bg-blue-400/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-400 disabled:opacity-40"
+              {available.map((profile) =>
+                confirmDeleteId === profile.id ? (
+                  <div
+                    key={profile.id}
+                    className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-400/[0.06] px-3 py-2"
                   >
-                    Team A
-                  </button>
+                    <span className="text-xs font-bold text-white">{profile.name} löschen?</span>
 
-                  <button
-                    type="button"
-                    disabled={busyPlayerId === profile.id}
-                    onClick={() => handleJoin(profile.id, "B")}
-                    className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-red-400 disabled:opacity-40"
+                    <button
+                      type="button"
+                      disabled={busyPlayerId === profile.id}
+                      onClick={() => handleDeleteGuest(profile)}
+                      className="rounded-lg border border-red-400/30 bg-red-400/[0.15] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-red-300 disabled:opacity-40"
+                    >
+                      Löschen
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busyPlayerId === profile.id}
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white/50 disabled:opacity-40"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    key={profile.id}
+                    className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2"
                   >
-                    Team B
-                  </button>
-                </div>
-              ))}
+                    <span className="text-xs font-bold text-white">
+                      {profile.name}
+                      {profile.id === ownProfile?.id && (
+                        <span className="ml-1 text-[9px] font-black uppercase tracking-wider text-cyan-400">
+                          (Du)
+                        </span>
+                      )}
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={busyPlayerId === profile.id}
+                      onClick={() => handleJoin(profile.id, "A")}
+                      className="rounded-lg border border-blue-400/20 bg-blue-400/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-400 disabled:opacity-40"
+                    >
+                      Team A
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busyPlayerId === profile.id}
+                      onClick={() => handleJoin(profile.id, "B")}
+                      className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-red-400 disabled:opacity-40"
+                    >
+                      Team B
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busyPlayerId === profile.id}
+                      onClick={() => setConfirmDeleteId(profile.id)}
+                      aria-label={`Gast-Profil ${profile.name} löschen`}
+                      title="Gast-Profil löschen"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/25 transition hover:bg-red-400/[0.12] hover:text-red-400 disabled:opacity-30"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6" />
+                      </svg>
+                    </button>
+                  </div>
+                ),
+              )}
             </div>
           )}
         </div>

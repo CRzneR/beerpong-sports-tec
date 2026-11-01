@@ -19,6 +19,8 @@ export type Tournament = {
   groupCount: number;
   status: TournamentStatus;
   createdAt: string;
+  /* Code für den Beitritts-Link (/turniere/beitreten/<code>). */
+  joinCode: string;
 };
 
 export type TournamentTeam = {
@@ -256,4 +258,162 @@ export function computeGroupStandings(
 
     return a.team.name.localeCompare(b.team.name);
   });
+}
+
+/*
+|--------------------------------------------------------------------------
+| PROFIL-VERKNÜPFUNG (PONG LEAGUE <-> PONG STATS)
+|--------------------------------------------------------------------------
+|
+| Jeder Spieler verknüpft sein EIGENES Profil über den Beitritts-Link mit
+| einem Team. Teams dürfen höchstens MAX_TEAM_SIZE Spieler haben (gleiche
+| Grenze wie in der Datenbankfunktion join_tournament_team).
+|
+*/
+
+export const MAX_TEAM_SIZE = 4;
+
+export type TournamentMember = {
+  playerId: string;
+  teamId: string;
+  name: string;
+};
+
+export type JoinPreviewTeam = {
+  id: string;
+  name: string;
+  groupLabel: string;
+  members: string[];
+};
+
+export type JoinPreview = {
+  id: string;
+  name: string;
+  status: TournamentStatus;
+  teamCount: number;
+  groupCount: number;
+  myTeamId: string | null;
+  teams: JoinPreviewTeam[];
+};
+
+export type JoinResult = "joined" | "login" | "no_profile" | "invalid" | "finished" | "full";
+
+export function buildInviteUrl(origin: string, joinCode: string): string {
+  return `${origin.replace(/\/$/, "")}/turniere/beitreten/${joinCode}`;
+}
+
+/*
+|--------------------------------------------------------------------------
+| ZUSAMMENFASSUNG FÜR DIE CARD IN PONG STATS
+|--------------------------------------------------------------------------
+|
+| Aus Turnier, Teams und Spielen wird alles berechnet, was die Card zeigt:
+| Platz in der eigenen Gruppe, Bilanz, letztes und nächstes Spiel.
+|
+*/
+
+export type SummaryMatch = {
+  match: TournamentMatch;
+  opponent: TournamentTeam;
+  /* Aus Sicht des eigenen Teams. null, solange nicht gespielt. */
+  ownScore: number | null;
+  opponentScore: number | null;
+};
+
+export type MyTournamentSummary = {
+  tournament: Tournament;
+  team: TournamentTeam;
+  groupLabel: string;
+  groupStandings: GroupStanding[];
+  /* 1-basiert; null, falls das Team nicht in der Tabelle auftaucht. */
+  rank: number | null;
+  standing: GroupStanding | null;
+  nextMatch: SummaryMatch | null;
+  lastMatch: (SummaryMatch & { result: MatchResultLetter }) | null;
+  openMatches: number;
+  totalMatches: number;
+};
+
+function toSummaryMatch(
+  match: TournamentMatch,
+  myTeamId: string,
+  teamsById: Map<string, TournamentTeam>,
+): SummaryMatch | null {
+  const isA = match.teamAId === myTeamId;
+  const opponent = teamsById.get(isA ? match.teamBId : match.teamAId);
+
+  if (!opponent) {
+    return null;
+  }
+
+  return {
+    match,
+    opponent,
+    ownScore: isA ? match.teamAScore : match.teamBScore,
+    opponentScore: isA ? match.teamBScore : match.teamAScore,
+  };
+}
+
+export function buildTournamentSummary(
+  tournament: Tournament,
+  teams: TournamentTeam[],
+  matches: TournamentMatch[],
+  myTeamId: string,
+): MyTournamentSummary | null {
+  const team = teams.find((entry) => entry.id === myTeamId);
+
+  if (!team) {
+    return null;
+  }
+
+  const teamsById = new Map(teams.map((entry) => [entry.id, entry]));
+  const groupTeams = teams.filter((entry) => entry.groupLabel === team.groupLabel);
+  const groupMatches = matches.filter((match) => match.groupLabel === team.groupLabel);
+  const groupStandings = computeGroupStandings(groupTeams, groupMatches);
+
+  const index = groupStandings.findIndex((row) => row.team.id === team.id);
+
+  const ownMatches = groupMatches.filter(
+    (match) => match.teamAId === team.id || match.teamBId === team.id,
+  );
+
+  const isFinished = (match: TournamentMatch) =>
+    match.status === "finished" && match.teamAScore !== null && match.teamBScore !== null;
+
+  const pending = ownMatches.filter((match) => !isFinished(match));
+  const finished = ownMatches.filter(isFinished).sort((a, b) => {
+    const aTime = a.finishedAt ? new Date(a.finishedAt).getTime() : 0;
+    const bTime = b.finishedAt ? new Date(b.finishedAt).getTime() : 0;
+
+    return bTime - aTime;
+  });
+
+  const nextMatch = pending.length > 0 ? toSummaryMatch(pending[0], team.id, teamsById) : null;
+
+  let lastMatch: MyTournamentSummary["lastMatch"] = null;
+
+  if (finished.length > 0) {
+    const base = toSummaryMatch(finished[0], team.id, teamsById);
+
+    if (base && base.ownScore !== null && base.opponentScore !== null) {
+      lastMatch = {
+        ...base,
+        result:
+          base.ownScore > base.opponentScore ? "S" : base.ownScore < base.opponentScore ? "N" : "U",
+      };
+    }
+  }
+
+  return {
+    tournament,
+    team,
+    groupLabel: team.groupLabel,
+    groupStandings,
+    rank: index >= 0 ? index + 1 : null,
+    standing: index >= 0 ? groupStandings[index] : null,
+    nextMatch,
+    lastMatch,
+    openMatches: pending.length,
+    totalMatches: ownMatches.length,
+  };
 }

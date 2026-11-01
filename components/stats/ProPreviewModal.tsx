@@ -20,35 +20,35 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    src: "/images/pro-previews/pro-preview-1.webP",
+    src: "/images/pro-previews/pro-preview-1.webp",
     eyebrow: "01",
     title: "Performance auf einen Blick",
     description:
       "Trefferquote, Treffer, Siege und mehr – alle Kennzahlen deiner Matches in einer Übersicht, inklusive Aufschlüsselung deiner Trefferarten.",
   },
   {
-    src: "/images/pro-previews/pro-preview-2.webP",
+    src: "/images/pro-previews/pro-preview-2.webp",
     eyebrow: "02",
     title: "Dein Leistungsverlauf",
     description:
       "Verfolge deine Entwicklung über die letzten Matches und sieh, wie sich deine Trefferquote Spiel für Spiel verbessert.",
   },
   {
-    src: "/images/pro-previews/pro-preview-3.webP",
+    src: "/images/pro-previews/pro-preview-3.webp",
     eyebrow: "03",
     title: "Match-Historie mit Details",
     description:
       "Alle abgeschlossenen Matches mit Ergebnis, übrigen Bechern und Detailansicht – jederzeit abrufbar.",
   },
   {
-    src: "/images/pro-previews/pro-preview-4.webP",
+    src: "/images/pro-previews/pro-preview-4.webp",
     eyebrow: "04",
     title: "Weltrangliste",
     description:
       "Vergleiche dich mit deinen Freunden: Siege, Trefferquote und Treffer im direkten Ranking.",
   },
   {
-    src: "/images/pro-previews/pro-preview-5.webP",
+    src: "/images/pro-previews/pro-preview-5.webp",
     eyebrow: "05",
     title: "Treffer nach Becherposition",
     description:

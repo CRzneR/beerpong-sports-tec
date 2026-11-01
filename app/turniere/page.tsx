@@ -14,6 +14,7 @@ export default function TurnierePage() {
   const router = useRouter();
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +37,8 @@ export default function TurnierePage() {
           router.replace("/login?next=/turniere");
           return;
         }
+
+        setUserId(data.user.id);
 
         return getTournaments().then((result) => {
           if (!cancelled) {
@@ -64,6 +67,13 @@ export default function TurnierePage() {
   const handleTournamentDeleted = (tournamentId: string) => {
     setTournaments((current) => current.filter((tournament) => tournament.id !== tournamentId));
   };
+
+  /*
+   * Die Liste enthält auch Turniere, bei denen man nur über den
+   * Beitritts-Link mit einem Team verknüpft ist. Die gehören dem
+   * Veranstalter und lassen sich hier nicht löschen.
+   */
+  const ownedCount = tournaments.filter((tournament) => tournament.userId === userId).length;
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -125,6 +135,7 @@ export default function TurnierePage() {
                 <TournamentRow
                   key={tournament.id}
                   tournament={tournament}
+                  isOwner={tournament.userId === userId}
                   onDeleted={handleTournamentDeleted}
                 />
               ))}
@@ -134,7 +145,7 @@ export default function TurnierePage() {
 
         {/* Konto: dieselbe Löschfunktion wie auf der Spielerseite */}
         <div className="mt-12">
-          <DeleteAccountSection tournamentCount={tournaments.length} />
+          <DeleteAccountSection tournamentCount={ownedCount} />
         </div>
       </div>
     </main>
@@ -154,9 +165,11 @@ export default function TurnierePage() {
 
 function TournamentRow({
   tournament,
+  isOwner,
   onDeleted,
 }: {
   tournament: Tournament;
+  isOwner: boolean;
   onDeleted: (tournamentId: string) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -183,14 +196,26 @@ function TournamentRow({
         <Link href={`/turniere/${tournament.id}`} className="min-w-0 flex-1">
           <div className="truncate text-sm font-black text-white">{tournament.name}</div>
 
-          <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/30">
-            {tournament.teamCount} Teams · {tournament.groupCount}{" "}
-            {tournament.groupCount === 1 ? "Gruppe" : "Gruppen"}
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
+            <span>
+              {tournament.teamCount} Teams · {tournament.groupCount}{" "}
+              {tournament.groupCount === 1 ? "Gruppe" : "Gruppen"}
+            </span>
+
+            {!isOwner && (
+              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-2 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">
+                Beigetreten
+              </span>
+            )}
           </div>
         </Link>
 
         <div className="flex shrink-0 items-center gap-2">
-          {confirming ? (
+          {!isOwner ? (
+            <Link href={`/turniere/${tournament.id}`} className="text-yellow-400">
+              →
+            </Link>
+          ) : confirming ? (
             <>
               <button
                 type="button"

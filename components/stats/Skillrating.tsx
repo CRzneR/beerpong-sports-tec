@@ -16,19 +16,6 @@ import {
  * --------------------------------------------------------------------------
  * | SKILL-RATING
  * --------------------------------------------------------------------------
- *
- * Eine Karte mit dem dynamischen Skill-Score (0 – 1000):
- *   - aktuelles Rating, Veränderung durch das letzte Match ("+24 Punkte")
- *     und Rang unter den registrierten Spielern,
- *   - persönliche Bestleistung,
- *   - Rating-Verlauf der letzten 30 Matches als Diagramm (ein Tipp bzw. Klick
- *     auf einen Punkt zeigt das Match dazu).
- *
- * Die Formel steht in skillRating.ts. Das Rating hängt von Ergebnis,
- * Becherdifferenz und Stärke der Gegner ab - nicht von der Trefferquote -,
- * und wird für neue Spieler erst nach PROVISIONAL_MATCHES Matches als
- * verlässlich gezeigt. Der Zeitraum-Filter wirkt hier nicht (immer Gesamtstand).
- * --------------------------------------------------------------------------
  */
 
 const OUTER = "rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7";

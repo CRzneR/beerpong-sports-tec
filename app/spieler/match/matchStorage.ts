@@ -1,5 +1,7 @@
 import { isNonThrowAction } from "./matchLogic";
 import type { MatchState, Cup, RecordedFormation } from "./matchLogic";
+import { matchCountsForAnyone } from "./matchEligibility";
+import { getRatedOpponentIds, getRegisteredPlayerIds } from "./playerProfiles";
 import { createClient } from "@/lib/supabase/client";
 
 /*
@@ -300,7 +302,46 @@ function foldBonusCupActions(actions: MatchState["actions"]): MatchState["action
  * --------------------------------------------------------------------------
  */
 
+/*
+ * NUR MATCHES SPEICHERN, DIE ZÄHLEN
+ *
+ * Ein Match, das für keinen registrierten Spieler in die Statistik eingeht
+ * (nur Gäste, oder registrierter Spieler gegen Gäste), wird nicht in der
+ * Datenbank abgelegt. Das hält die Datenbank sauber und verhindert Müll.
+ * Die Ergebnisanzeige nach dem Match rechnet mit dem Spielstand im Speicher
+ * und ist davon nicht betroffen.
+ *
+ * Schlägt die Prüfung selbst fehl (z. B. Verbindungsproblem), wird im Zweifel
+ * gespeichert, damit kein zählendes Match verloren geht.
+ */
+
+async function shouldPersistMatch(state: MatchState): Promise<boolean> {
+  try {
+    const [registeredIds, ratedIds] = await Promise.all([
+      getRegisteredPlayerIds(),
+      getRatedOpponentIds(),
+    ]);
+
+    return matchCountsForAnyone(state, registeredIds, ratedIds);
+  } catch (error) {
+    console.error(
+      "Prüfung, ob das Match zählt, fehlgeschlagen - speichere sicherheitshalber:",
+      error,
+    );
+
+    return true;
+  }
+}
+
 export async function saveMatch(state: MatchState): Promise<SavedMatch> {
+  if (!(await shouldPersistMatch(state))) {
+    return {
+      id: `local-${crypto.randomUUID()}`,
+      savedAt: new Date().toISOString(),
+      state,
+    };
+  }
+
   const supabase = createClient();
 
   const { data: match, error: matchError } = await supabase

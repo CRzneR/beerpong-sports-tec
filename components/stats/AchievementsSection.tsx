@@ -15,23 +15,6 @@ import { PanelModal, PanelTitle } from "./PanelCard";
  * --------------------------------------------------------------------------
  * | ACHIEVEMENTS IM PROFIL
  * --------------------------------------------------------------------------
- *
- * AchievementsSection lädt die Daten (und speichert dabei neu erreichte
- * Achievements), AchievementsView zeigt sie nur an.
- *
- * Bewusst ohne Animation im Spiel: Achievements erscheinen ausschließlich
- * hier im Profil, neu erreichte mit einer "Neu"-Markierung. Gesperrte
- * Achievements werden gar nicht angezeigt.
- *
- * Bilder: public/achievements/<key>.webp (siehe badgeSrc).
- * --------------------------------------------------------------------------
- */
-
-/*
- * Rang-Stufe pro Achievement (die Pille unter der Beschreibung).
- * Reine Darstellung - die Stufe wird hier festgelegt, nicht berechnet.
- * Klassen stehen bewusst als vollständige Strings da, damit Tailwind sie
- * beim Build nicht wegoptimiert.
  */
 
 type Tier = "ROOKIE" | "CONTENDER" | "ELITE" | "MASTER" | "LEGEND";

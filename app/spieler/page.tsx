@@ -19,7 +19,8 @@ import { AchievementsSection } from "@/components/stats/AchievementsSection";
 import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { MatchupStats } from "@/components/stats/MatchupStats";
 import { ComebackStats } from "@/components/stats/ComebackStats";
-import { SkillRating } from "@/components/stats/Skillrating";
+import { SkillRating } from "@/components/stats/SkillRating";
+import { TournamentCard } from "@/components/stats/TournamentCard";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 import { StatsRangeFilter } from "@/components/stats/StatsRangeFilter";
 import {
@@ -453,6 +454,13 @@ function SpielerPageInner() {
                       <section className="mt-6 md:mt-8">
                         {/* Für alle angemeldeten Spieler sichtbar (kein Pro nötig). */}
                         <SkillRating />
+                      </section>
+                    )}
+
+                    {layout.isVisible("tournament") && userEmail && (
+                      /* Erscheint nur, wenn man in der Pong League mit einem Team verknüpft ist. */
+                      <section className="mt-6 empty:hidden md:mt-8">
+                        <TournamentCard />
                       </section>
                     )}
 

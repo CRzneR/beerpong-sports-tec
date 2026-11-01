@@ -1,11 +1,18 @@
 import { createClient } from "@/lib/supabase/client";
 
+import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+
 import {
+  buildTournamentSummary,
   distributeTeamsToGroups,
   generateRoundRobinPairs,
+  type JoinPreview,
+  type JoinResult,
+  type MyTournamentSummary,
   type Tournament,
-  type TournamentTeam,
   type TournamentMatch,
+  type TournamentMember,
+  type TournamentTeam,
 } from "./tournamentLogic";
 
 /*
@@ -22,6 +29,7 @@ type TournamentRow = {
   group_count: number;
   status: "setup" | "active" | "finished";
   created_at: string;
+  join_code: string | null;
 };
 
 type TeamRow = {
@@ -52,6 +60,7 @@ function mapTournament(row: TournamentRow): Tournament {
     groupCount: row.group_count,
     status: row.status,
     createdAt: row.created_at,
+    joinCode: row.join_code ?? "",
   };
 }
 
@@ -78,7 +87,8 @@ function mapMatch(row: MatchRow): TournamentMatch {
   };
 }
 
-const TOURNAMENT_COLUMNS = "id, user_id, name, team_count, group_count, status, created_at";
+const TOURNAMENT_COLUMNS =
+  "id, user_id, name, team_count, group_count, status, created_at, join_code";
 const TEAM_COLUMNS = "id, tournament_id, name, group_label";
 const MATCH_COLUMNS =
   "id, tournament_id, group_label, team_a_id, team_b_id, team_a_score, team_b_score, status, finished_at";
@@ -315,4 +325,193 @@ export async function updateMatchResult(
   }
 
   return mapMatch(data as MatchRow);
+}
+
+/*
+|--------------------------------------------------------------------------
+| PROFIL-VERKNÜPFUNG: MITGLIEDER EINES TURNIERS
+|--------------------------------------------------------------------------
+|
+| Welche Spielerprofile sind mit welchem Team verknüpft? Sehen dürfen das
+| der Veranstalter und die verknüpften Spieler selbst (RLS in league-link.sql).
+| Schlägt die Abfrage fehl (z. B. SQL noch nicht ausgeführt), bleibt das
+| Turnier trotzdem benutzbar - dann eben ohne Namen unter den Teams.
+|
+*/
+
+type MemberRow = {
+  team_id: string;
+  player_id: string;
+  players: { name: string } | { name: string }[] | null;
+};
+
+export async function getTournamentMembers(tournamentId: string): Promise<TournamentMember[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("tournament_team_players")
+    .select("team_id, player_id, created_at, players(name)")
+    .eq("tournament_id", tournamentId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Fehler beim Laden der Team-Mitglieder:", error);
+    return [];
+  }
+
+  return ((data ?? []) as unknown as MemberRow[]).map((row) => {
+    const player = Array.isArray(row.players) ? row.players[0] : row.players;
+
+    return {
+      playerId: row.player_id,
+      teamId: row.team_id,
+      name: player?.name ?? "Spieler",
+    };
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
+| BEITRITT PER LINK
+|--------------------------------------------------------------------------
+*/
+
+export async function getTournamentByJoinCode(code: string): Promise<JoinPreview | null> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.rpc("get_tournament_by_join_code", { p_code: code });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as JoinPreview | null) ?? null;
+}
+
+export async function joinTournamentTeam(code: string, teamId: string): Promise<JoinResult> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.rpc("join_tournament_team", {
+    p_code: code,
+    p_team_id: teamId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data as JoinResult;
+}
+
+export async function leaveTournament(tournamentId: string): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase.rpc("leave_tournament_team", {
+    p_tournament_id: tournamentId,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function removeTournamentMember(
+  tournamentId: string,
+  playerId: string,
+): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase.rpc("remove_tournament_member", {
+    p_tournament_id: tournamentId,
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| MEINE TURNIERE FÜR PONG STATS
+|--------------------------------------------------------------------------
+|
+| Alle Turniere, in denen das eigene Profil mit einem Team verknüpft ist,
+| samt Platz in der Gruppe sowie letztem und nächstem Spiel. Laufende
+| Turniere zuerst, beendete danach.
+|
+*/
+
+export async function getMyTournamentSummaries(): Promise<MyTournamentSummary[]> {
+  const supabase = createClient();
+
+  const profile = await getOwnProfile();
+
+  if (!profile) {
+    return [];
+  }
+
+  const { data: links, error: linksError } = await supabase
+    .from("tournament_team_players")
+    .select("tournament_id, team_id")
+    .eq("player_id", profile.id);
+
+  if (linksError) {
+    throw linksError;
+  }
+
+  if (!links || links.length === 0) {
+    return [];
+  }
+
+  const tournamentIds = links.map((link) => link.tournament_id as string);
+
+  const [tournamentsResult, teamsResult, matchesResult] = await Promise.all([
+    supabase.from("tournaments").select(TOURNAMENT_COLUMNS).in("id", tournamentIds),
+    supabase.from("tournament_teams").select(TEAM_COLUMNS).in("tournament_id", tournamentIds),
+    supabase.from("tournament_matches").select(MATCH_COLUMNS).in("tournament_id", tournamentIds),
+  ]);
+
+  if (tournamentsResult.error) throw tournamentsResult.error;
+  if (teamsResult.error) throw teamsResult.error;
+  if (matchesResult.error) throw matchesResult.error;
+
+  const tournaments = (tournamentsResult.data ?? []).map((row) =>
+    mapTournament(row as TournamentRow),
+  );
+  const teams = (teamsResult.data ?? []).map((row) => mapTeam(row as TeamRow));
+  const matches = (matchesResult.data ?? []).map((row) => mapMatch(row as MatchRow));
+
+  const summaries: MyTournamentSummary[] = [];
+
+  for (const link of links) {
+    const tournament = tournaments.find((entry) => entry.id === link.tournament_id);
+
+    if (!tournament) {
+      continue;
+    }
+
+    const summary = buildTournamentSummary(
+      tournament,
+      teams.filter((team) => team.tournamentId === tournament.id),
+      matches.filter((match) => match.tournamentId === tournament.id),
+      link.team_id as string,
+    );
+
+    if (summary) {
+      summaries.push(summary);
+    }
+  }
+
+  const statusOrder = (status: Tournament["status"]) => (status === "finished" ? 1 : 0);
+
+  return summaries.sort((a, b) => {
+    const byStatus = statusOrder(a.tournament.status) - statusOrder(b.tournament.status);
+
+    if (byStatus !== 0) {
+      return byStatus;
+    }
+
+    return b.tournament.createdAt.localeCompare(a.tournament.createdAt);
+  });
 }

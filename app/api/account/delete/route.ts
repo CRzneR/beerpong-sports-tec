@@ -7,26 +7,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * --------------------------------------------------------------------------
  * | KONTO LÖSCHEN
  * --------------------------------------------------------------------------
- *
- * Löscht den Login (auth.users) des aufrufenden Nutzers - und nur seinen
- * eigenen: die ID kommt ausschließlich aus der Session, nie aus dem
- * Request-Body.
- *
- * Matches und Aktionen gehören auch den Mitspielern. Die players-Zeile
- * wird deshalb nicht gelöscht, sondern anonymisiert ("Gelöschter
- * Spieler", ohne Verknüpfung zum Account). So bleiben Historie und
- * Statistiken der anderen vollständig.
- *
- * Reihenfolge (jeder Schritt bricht bei einem Fehler ab, bevor etwas
- * Unumkehrbares passiert):
- *   1. Turniere vom Account lösen (user_id -> null)
- *   2. Käufe vom Account lösen (Beleg bleibt wegen Aufbewahrungspflicht)
- *   3. Achievements löschen, Spielerprofil anonymisieren
- *   4. Login löschen
- *
- * Voraussetzung: account-delete.sql wurde in Supabase ausgeführt
- * (user_id-Spalten müssen null erlauben).
- * --------------------------------------------------------------------------
  */
 
 const DELETED_NAME = "Gelöschter Spieler";
@@ -76,14 +56,6 @@ export async function POST() {
     );
   }
 
-  /*
-   * 3. Achievements löschen und Spielerprofil anonymisieren.
-   *
-   * Achievements gehören zur Person, nicht zu den Matches der anderen -
-   * sie werden mitgelöscht. Ein Fehler hier (z. B. Tabelle existiert
-   * nicht) bricht das Löschen nicht ab.
-   */
-
   const { data: ownProfile } = await admin
     .from("players")
     .select("id")
@@ -98,6 +70,15 @@ export async function POST() {
 
     if (achievementsError) {
       console.error("Konto löschen - Achievements:", achievementsError);
+    }
+
+    const { error: membershipError } = await admin
+      .from("tournament_team_players")
+      .delete()
+      .eq("player_id", ownProfile.id);
+
+    if (membershipError) {
+      console.error("Konto löschen - Turnier-Verknüpfungen:", membershipError);
     }
   }
 
@@ -132,11 +113,6 @@ export async function POST() {
       { status: 500 },
     );
   }
-
-  /*
-   * Die Session-Cookies gehören jetzt zu einem nicht mehr existierenden
-   * Nutzer. Der Client meldet sich direkt danach ab und räumt sie auf.
-   */
 
   return NextResponse.json({ ok: true });
 }

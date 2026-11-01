@@ -200,6 +200,49 @@ function rememberGuestOnDevice(playerId: string): void {
   }
 }
 
+function forgetGuestOnDevice(playerId: string): void {
+  try {
+    const ids = readDeviceGuests().filter((id) => id !== playerId);
+
+    window.localStorage.setItem(DEVICE_GUESTS_KEY, JSON.stringify(ids));
+  } catch {
+    /* Speicher gesperrt: nichts zu tun. */
+  }
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | GAST-PROFIL LÖSCHEN
+ * --------------------------------------------------------------------------
+ *
+ * Läuft über die Datenbankfunktion delete_guest_profile (guest-delete.sql), weil
+ * der Browser players-Zeilen nicht direkt löschen darf.
+ *   "deleted": das Profil ist weg.
+ *   "hidden":  der Gast kommt in einem gespeicherten Match vor und bleibt dort
+ *              sichtbar, steht aber nicht mehr in der eigenen Gästeliste.
+ * --------------------------------------------------------------------------
+ */
+
+export type DeleteGuestResult = "deleted" | "hidden";
+
+export async function deleteGuestProfile(guestId: string): Promise<DeleteGuestResult> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.rpc("delete_guest_profile", { p_guest_id: guestId });
+
+  if (error) {
+    throw error;
+  }
+
+  if (data === "not_allowed") {
+    throw new Error("Dieses Gast-Profil kann nicht gelöscht werden.");
+  }
+
+  forgetGuestOnDevice(guestId);
+
+  return data === "hidden" ? "hidden" : "deleted";
+}
+
 export async function getOwnGuestIds(): Promise<Set<string>> {
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();

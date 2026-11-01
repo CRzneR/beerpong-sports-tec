@@ -3,15 +3,36 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 
-import { deleteTournament, getTournamentDetail, updateMatchResult } from "../tournamentStorage";
 import {
+  deleteTournament,
+  getTournamentDetail,
+  getTournamentMembers,
+  leaveTournament,
+  removeTournamentMember,
+  updateMatchResult,
+} from "../tournamentStorage";
+import {
+  MAX_TEAM_SIZE,
+  buildInviteUrl,
   computeGroupStandings,
   type Tournament,
-  type TournamentTeam,
   type TournamentMatch,
+  type TournamentMember,
+  type TournamentTeam,
 } from "../tournamentLogic";
+import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import { createClient } from "@/lib/supabase/client";
+
+type TabId = "gruppen" | "spielplan" | "teams" | "verwaltung";
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "gruppen", label: "Gruppen" },
+  { id: "spielplan", label: "Spielplan" },
+  { id: "teams", label: "Teams" },
+  { id: "verwaltung", label: "Verwaltung" },
+];
 
 export default function TurnierDetailPage() {
   const params = useParams();
@@ -21,6 +42,18 @@ export default function TurnierDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
+  const [members, setMembers] = useState<TournamentMember[]>([]);
+
+  /*
+   * Wer schaut hier zu? Der Veranstalter darf alles ändern. Spieler, die
+   * ihr Profil über den Beitritts-Link mit einem Team verknüpft haben,
+   * dürfen das Turnier nur ansehen (die Datenbank erzwingt das, die
+   * Oberfläche blendet die Bedienelemente zusätzlich aus).
+   */
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +61,18 @@ export default function TurnierDetailPage() {
   /*
    * MENÜ
    *
-   * "Gruppen" = Team-Übersicht je Gruppe, "Spielplan" = alle Spiele
-   * mit Ergebnis-Eingabe, "Verwaltung" = u. a. Turnier löschen.
+   * "Gruppen" = Tabellen je Gruppe, "Spielplan" = alle Spiele (der
+   * Veranstalter trägt hier Ergebnisse ein), "Teams" = verknüpfte Spieler
+   * und Einladung, "Verwaltung" (nur Veranstalter) = u. a. Turnier löschen.
    */
 
-  const [tab, setTab] = useState<"gruppen" | "spielplan" | "verwaltung">("gruppen");
+  const [tab, setTab] = useState<TabId>("gruppen");
+
+  const [copied, setCopied] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -60,7 +100,14 @@ export default function TurnierDetailPage() {
           return;
         }
 
-        return getTournamentDetail(tournamentId).then((result) => {
+        setCurrentUserId(data.user.id);
+        setOrigin(window.location.origin);
+
+        return Promise.all([
+          getTournamentDetail(tournamentId),
+          getTournamentMembers(tournamentId),
+          getOwnProfile().catch(() => null),
+        ]).then(([result, memberRows, profile]) => {
           if (cancelled) {
             return;
           }
@@ -73,6 +120,8 @@ export default function TurnierDetailPage() {
           setTournament(result.tournament);
           setTeams(result.teams);
           setMatches(result.matches);
+          setMembers(memberRows);
+          setMyPlayerId(profile?.id ?? null);
         });
       })
       .catch((err) => {
@@ -96,6 +145,61 @@ export default function TurnierDetailPage() {
   const teamById = (id: string) => teams.find((team) => team.id === id);
 
   const groupLabels = Array.from(new Set(teams.map((team) => team.groupLabel))).sort();
+
+  const isOwner = tournament !== null && tournament.userId === currentUserId;
+  const myTeamId = members.find((member) => member.playerId === myPlayerId)?.teamId ?? null;
+  const myTeam = myTeamId ? teamById(myTeamId) : undefined;
+
+  const inviteUrl = tournament?.joinCode ? buildInviteUrl(origin, tournament.joinCode) : "";
+
+  const handleCopyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* Zwischenablage gesperrt: der Link steht im Feld und lässt sich markieren. */
+    }
+  };
+
+  const handleRemoveMember = async (playerId: string) => {
+    setMemberBusy(true);
+    setMemberError(null);
+
+    try {
+      await removeTournamentMember(tournamentId, playerId);
+      setMembers((current) => current.filter((member) => member.playerId !== playerId));
+      setConfirmRemoveId(null);
+    } catch (err) {
+      console.error("Fehler beim Entfernen des Spielers:", err);
+      setMemberError("Spieler konnte nicht entfernt werden.");
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    setMemberBusy(true);
+    setMemberError(null);
+
+    try {
+      await leaveTournament(tournamentId);
+
+      /* Ohne Verknüpfung darf ein Teilnehmer das Turnier nicht mehr sehen. */
+      if (!isOwner) {
+        router.push("/turniere");
+        return;
+      }
+
+      setMembers((current) => current.filter((member) => member.playerId !== myPlayerId));
+      setConfirmingLeave(false);
+    } catch (err) {
+      console.error("Fehler beim Lösen der Verknüpfung:", err);
+      setMemberError("Verknüpfung konnte nicht gelöst werden.");
+    } finally {
+      setMemberBusy(false);
+    }
+  };
 
   const handleSaveResult = async (
     matchId: string,
@@ -167,44 +271,29 @@ export default function TurnierDetailPage() {
           {tournament.groupCount === 1 ? "Gruppe" : "Gruppen"}
         </div>
 
+        {myTeam && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">
+            Du spielst für {myTeam.name}
+          </div>
+        )}
+
         {/* MENÜ */}
 
-        <div className="mt-8 flex gap-2 border-b border-white/[0.08]">
-          <button
-            type="button"
-            onClick={() => setTab("gruppen")}
-            className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition ${
-              tab === "gruppen"
-                ? "border-b-2 border-yellow-400 text-yellow-400"
-                : "text-white/30 hover:text-white"
-            }`}
-          >
-            Gruppen
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("spielplan")}
-            className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition ${
-              tab === "spielplan"
-                ? "border-b-2 border-yellow-400 text-yellow-400"
-                : "text-white/30 hover:text-white"
-            }`}
-          >
-            Spielplan
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("verwaltung")}
-            className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition ${
-              tab === "verwaltung"
-                ? "border-b-2 border-yellow-400 text-yellow-400"
-                : "text-white/30 hover:text-white"
-            }`}
-          >
-            Verwaltung
-          </button>
+        <div className="mt-8 flex gap-2 overflow-x-auto border-b border-white/[0.08]">
+          {TABS.filter((entry) => entry.id !== "verwaltung" || isOwner).map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setTab(entry.id)}
+              className={`shrink-0 px-4 py-3 text-xs font-black uppercase tracking-wider transition ${
+                tab === entry.id
+                  ? "border-b-2 border-yellow-400 text-yellow-400"
+                  : "text-white/30 hover:text-white"
+              }`}
+            >
+              {entry.label}
+            </button>
+          ))}
         </div>
 
         {/* GRUPPEN */}
@@ -255,8 +344,19 @@ export default function TurnierDetailPage() {
 
                     <tbody>
                       {standings.map((row) => (
-                        <tr key={row.team.id} className="border-t border-white/[0.06]">
+                        <tr
+                          key={row.team.id}
+                          className={`border-t border-white/[0.06] ${
+                            row.team.id === myTeamId ? "bg-yellow-400/[0.07]" : ""
+                          }`}
+                        >
                           <td className="py-2 pr-2 text-sm font-bold text-white">
+                            {row.team.id === myTeamId && (
+                              <span
+                                className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-yellow-400 align-middle"
+                                aria-label="Dein Team"
+                              />
+                            )}
                             {row.team.name}
                           </td>
                           <td className="py-2 text-center text-sm text-white/50">{row.played}</td>
@@ -313,24 +413,237 @@ export default function TurnierDetailPage() {
                 <div className="mt-3 space-y-2">
                   {matches
                     .filter((match) => match.groupLabel === groupLabel)
-                    .map((match) => (
-                      <MatchRow
-                        key={match.id}
-                        match={match}
-                        teamAName={teamById(match.teamAId)?.name ?? "?"}
-                        teamBName={teamById(match.teamBId)?.name ?? "?"}
-                        onSave={handleSaveResult}
-                      />
-                    ))}
+                    .map((match) =>
+                      isOwner ? (
+                        <MatchRow
+                          key={match.id}
+                          match={match}
+                          teamAName={teamById(match.teamAId)?.name ?? "?"}
+                          teamBName={teamById(match.teamBId)?.name ?? "?"}
+                          onSave={handleSaveResult}
+                        />
+                      ) : (
+                        <MatchRowReadOnly
+                          key={match.id}
+                          match={match}
+                          teamAName={teamById(match.teamAId)?.name ?? "?"}
+                          teamBName={teamById(match.teamBId)?.name ?? "?"}
+                          highlight={match.teamAId === myTeamId || match.teamBId === myTeamId}
+                        />
+                      ),
+                    )}
                 </div>
               </div>
             ))}
           </div>
         )}
 
+        {/* TEAMS */}
+
+        {tab === "teams" && (
+          <div className="mt-6 space-y-6">
+            {isOwner && inviteUrl && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                  Spieler einladen
+                </div>
+
+                <p className="mt-2 text-sm text-white/50">
+                  Jeder Spieler öffnet den Link, meldet sich an und wählt sein Team. Damit verknüpft
+                  er sein eigenes Profil mit dem Teamnamen und kann das Turnier in Pong Stats
+                  verfolgen. Ergebnisse trägst weiterhin du ein.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-5 md:flex-row md:items-center">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex gap-2">
+                      <input
+                        readOnly
+                        value={inviteUrl}
+                        onFocus={(event) => event.currentTarget.select()}
+                        aria-label="Beitritts-Link"
+                        className="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/70 focus:border-yellow-400/40 focus:outline-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleCopyInvite}
+                        className="shrink-0 rounded-full bg-yellow-400 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-yellow-300"
+                      >
+                        {copied ? "Kopiert" : "Kopieren"}
+                      </button>
+                    </div>
+
+                    {!myTeamId && (
+                      <Link
+                        href={`/turniere/beitreten/${tournament.joinCode}`}
+                        className="mt-3 inline-block text-xs font-bold text-yellow-400/80 transition hover:text-yellow-400"
+                      >
+                        Selbst mitspielen? Mich mit einem Team verknüpfen →
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 flex-col items-center gap-2 self-center">
+                    <div className="rounded-xl bg-white p-3">
+                      <QRCodeSVG value={inviteUrl} size={132} />
+                    </div>
+
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
+                      Mit dem Handy scannen
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {memberError && <div className="text-xs font-bold text-red-400/80">{memberError}</div>}
+
+            {groupLabels.map((groupLabel) => (
+              <div key={groupLabel}>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                  Gruppe {groupLabel}
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {teams
+                    .filter((team) => team.groupLabel === groupLabel)
+                    .map((team) => {
+                      const teamMembers = members.filter((member) => member.teamId === team.id);
+                      const isMine = team.id === myTeamId;
+
+                      return (
+                        <div
+                          key={team.id}
+                          className={`rounded-2xl border p-4 ${
+                            isMine
+                              ? "border-yellow-400/40 bg-yellow-400/[0.05]"
+                              : "border-white/10 bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 truncate text-sm font-black text-white">
+                              {team.name}
+                            </div>
+
+                            <div className="shrink-0 text-[9px] font-black uppercase tracking-wider text-white/30">
+                              {teamMembers.length}/{MAX_TEAM_SIZE}
+                            </div>
+                          </div>
+
+                          {teamMembers.length === 0 ? (
+                            <div className="mt-3 text-xs font-bold text-white/25">
+                              Noch kein Spieler verknüpft
+                            </div>
+                          ) : (
+                            <ul className="mt-3 space-y-1.5">
+                              {teamMembers.map((member) => (
+                                <li
+                                  key={member.playerId}
+                                  className="flex items-center justify-between gap-3 text-sm font-bold text-white/70"
+                                >
+                                  <span className="min-w-0 truncate">
+                                    {member.name}
+                                    {member.playerId === myPlayerId && (
+                                      <span className="ml-2 text-[9px] font-black uppercase tracking-wider text-yellow-400">
+                                        Du
+                                      </span>
+                                    )}
+                                  </span>
+
+                                  {isOwner &&
+                                    member.playerId !== myPlayerId &&
+                                    (confirmRemoveId === member.playerId ? (
+                                      <span className="flex shrink-0 gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveMember(member.playerId)}
+                                          disabled={memberBusy}
+                                          className="rounded-full bg-red-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:opacity-60"
+                                        >
+                                          Entfernen
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setConfirmRemoveId(null)}
+                                          disabled={memberBusy}
+                                          className="rounded-full border border-white/[0.08] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:opacity-60"
+                                        >
+                                          Nein
+                                        </button>
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmRemoveId(member.playerId)}
+                                        aria-label={`${member.name} aus dem Turnier entfernen`}
+                                        className="shrink-0 rounded-full border border-white/[0.08] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white/30 transition hover:border-red-400/30 hover:text-red-400"
+                                      >
+                                        Entfernen
+                                      </button>
+                                    ))}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
+
+            {myTeamId && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                  Deine Verknüpfung
+                </div>
+
+                <p className="mt-2 text-sm text-white/50">
+                  Dein Profil ist mit {myTeam?.name ?? "deinem Team"} verknüpft.{" "}
+                  {isOwner
+                    ? "Du kannst die Verknüpfung lösen, das Turnier bleibt dir als Veranstalter erhalten."
+                    : "Wenn du sie löst, siehst du das Turnier nicht mehr, bis du dem Link erneut folgst."}
+                </p>
+
+                {confirmingLeave ? (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleLeave}
+                      disabled={memberBusy}
+                      className="rounded-full bg-red-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {memberBusy ? "Löst …" : "Ja, Verknüpfung lösen"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingLeave(false)}
+                      disabled={memberBusy}
+                      className="rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingLeave(true)}
+                    className="mt-4 rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:border-red-400/30 hover:text-red-400"
+                  >
+                    Verknüpfung lösen
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* VERWALTUNG */}
 
-        {tab === "verwaltung" && (
+        {tab === "verwaltung" && isOwner && (
           <div className="mt-6 space-y-4">
             <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.03] p-5">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">
@@ -492,6 +805,49 @@ function MatchRow({
       {saveError && (
         <div className="mt-1.5 px-1 text-[10px] font-bold text-red-400/70">{saveError}</div>
       )}
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| SPIEL-ZEILE NUR ZUM ANSEHEN (FÜR VERKNÜPFTE SPIELER)
+|--------------------------------------------------------------------------
+*/
+
+function MatchRowReadOnly({
+  match,
+  teamAName,
+  teamBName,
+  highlight,
+}: {
+  match: TournamentMatch;
+  teamAName: string;
+  teamBName: string;
+  highlight: boolean;
+}) {
+  const finished =
+    match.status === "finished" && match.teamAScore !== null && match.teamBScore !== null;
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-2xl border p-4 ${
+        highlight ? "border-yellow-400/40 bg-yellow-400/[0.05]" : "border-white/10 bg-white/[0.02]"
+      }`}
+    >
+      <div className="min-w-0 flex-1 truncate text-sm font-bold text-white">{teamAName}</div>
+
+      <div
+        className={`shrink-0 rounded-lg px-3 py-1.5 text-center text-sm font-black ${
+          finished ? "bg-white/[0.06] text-white" : "text-white/25"
+        }`}
+      >
+        {finished ? `${match.teamAScore} : ${match.teamBScore}` : "– : –"}
+      </div>
+
+      <div className="min-w-0 flex-1 truncate text-right text-sm font-bold text-white">
+        {teamBName}
+      </div>
     </div>
   );
 }
