@@ -8,14 +8,6 @@ import { PanelModal } from "@/components/stats/PanelCard";
  * --------------------------------------------------------------------------
  * | DASHBOARD ANPASSEN: KARTEN EIN- UND AUSBLENDEN
  * --------------------------------------------------------------------------
- *
- * useDashboardLayout merkt sich, welche Karten ausgeblendet sind. Die Wahl
- * liegt im Browser (localStorage) und gilt damit pro Gerät und Browser. Es
- * braucht keine Datenbank und kein SQL. Ist der Speicher nicht verfügbar
- * (privates Fenster, blockiert), funktioniert die Auswahl bis zum Neuladen.
- *
- * DashboardCustomizeButton öffnet das Fenster mit den Schaltern.
- * --------------------------------------------------------------------------
  */
 
 export type DashboardCardId =
@@ -53,6 +45,7 @@ export const DASHBOARD_CARDS: {
     id: "rating",
     label: "Skill-Rating",
     description: "Dein Rating von 0 bis 1000, Rang, Verlauf und Bestleistung",
+    pro: true,
   },
   {
     id: "chart",
@@ -101,6 +94,7 @@ export const DASHBOARD_CARDS: {
     id: "tournament",
     label: "Turnier (Pong League)",
     description: "Dein Platz, Tabelle und nächstes Spiel, wenn du mit einem Team verknüpft bist",
+    pro: true,
   },
 ];
 

@@ -452,8 +452,15 @@ function SpielerPageInner() {
 
                     {layout.isVisible("rating") && userEmail && (
                       <section className="mt-6 md:mt-8">
-                        {/* Für alle angemeldeten Spieler sichtbar (kein Pro nötig). */}
-                        <SkillRating />
+                        {/* Pro-Funktion: ohne Pro unscharf mit "Freischalten". */}
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          <SkillRating />
+                        </ProLock>
                       </section>
                     )}
 
@@ -557,8 +564,8 @@ function SpielerPageInner() {
                       </section>
                     )}
 
-                    {layout.isVisible("tournament") && userEmail && (
-                      /* Erscheint nur, wenn man in der Pong League mit einem Team verknüpft ist. */
+                    {layout.isVisible("tournament") && userEmail && isPro && (
+                      /* Pro-Funktion. Erscheint nur, wenn man in der Pong League mit einem Team verknüpft ist. */
                       <section className="mt-6 empty:hidden md:mt-8">
                         <TournamentCard />
                       </section>

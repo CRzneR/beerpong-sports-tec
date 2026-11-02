@@ -22,6 +22,13 @@ export type TournamentStatus = "setup" | "active" | "finished";
  */
 export type KoMode = "reseed" | "bracket";
 
+/*
+ * Wer kommt in die K.-o.-Phase?
+ *  - group:   die Besten jeder Gruppe (z. B. die zwei Ersten jeder Gruppe)
+ *  - overall: die besten Teams über alle Gruppen, egal aus welcher Gruppe
+ */
+export type KoSelect = "group" | "overall";
+
 export type Tournament = {
   id: string;
   userId: string;
@@ -34,8 +41,12 @@ export type Tournament = {
   joinCode: string;
   /* K.-o.-Phase: null, solange sie nicht gestartet wurde. */
   koMode: KoMode | null;
-  /* Wie viele Teams pro Gruppe in die K.-o.-Phase gekommen sind. */
+  /*
+   * Wie viele Teams in die K.-o.-Phase gekommen sind: bei koSelect "group" pro Gruppe,
+   * bei "overall" insgesamt.
+   */
   koPerGroup: number | null;
+  koSelect: KoSelect | null;
 };
 
 export type TournamentTeam = {
@@ -556,6 +567,71 @@ export function computeKoQualifiers(
   });
 
   return picked.map((entry, index) => ({ ...entry, seed: index + 1 }));
+}
+
+/*
+ * Die besten Teams über alle Gruppen, egal aus welcher Gruppe. Gruppen können
+ * unterschiedlich groß sein, deshalb zählen Durchschnittswerte pro Spiel:
+ * Punkte, Trefferdifferenz, Siege und erzielte Treffer (jeweils pro Spiel), danach
+ * der Gruppenplatz und zuletzt der Name.
+ */
+export function computeKoQualifiersOverall(
+  teams: TournamentTeam[],
+  matches: TournamentMatch[],
+  count: number,
+): KoQualifier[] {
+  const labels = Array.from(new Set(teams.map((team) => team.groupLabel))).sort();
+  const all: { team: TournamentTeam; groupRank: number; standing: GroupStanding }[] = [];
+
+  for (const label of labels) {
+    computeGroupStandings(
+      teams.filter((team) => team.groupLabel === label),
+      matches.filter((match) => match.groupLabel === label),
+    ).forEach((standing, index) => {
+      all.push({ team: standing.team, groupRank: index + 1, standing });
+    });
+  }
+
+  const perGame = (value: number, played: number) => (played > 0 ? value / played : 0);
+
+  all.sort((a, b) => {
+    const sa = a.standing;
+    const sb = b.standing;
+
+    const checks: [number, number][] = [
+      [perGame(sb.points, sb.played), perGame(sa.points, sa.played)],
+      [
+        perGame(sb.scoredTotal - sb.concededTotal, sb.played),
+        perGame(sa.scoredTotal - sa.concededTotal, sa.played),
+      ],
+      [perGame(sb.wins, sb.played), perGame(sa.wins, sa.played)],
+      [perGame(sb.scoredTotal, sb.played), perGame(sa.scoredTotal, sa.played)],
+    ];
+
+    for (const [first, second] of checks) {
+      if (first !== second) {
+        return first - second;
+      }
+    }
+
+    if (a.groupRank !== b.groupRank) return a.groupRank - b.groupRank;
+
+    return a.team.name.localeCompare(b.team.name);
+  });
+
+  return all.slice(0, count).map((entry, index) => ({ ...entry, seed: index + 1 }));
+}
+
+/* Je nach Auswahl: die Besten jeder Gruppe oder die besten Teams insgesamt. */
+export function computeKoQualifiersBy(
+  select: KoSelect,
+  teams: TournamentTeam[],
+  matches: TournamentMatch[],
+  amount: number,
+): KoQualifier[] {
+  return select === "overall"
+    ? computeKoQualifiersOverall(teams, matches, amount)
+    : computeKoQualifiers(teams, matches, amount);
 }
 
 /* Kleinste Zweierpotenz, die mindestens teamCount Teams aufnimmt (2, 4, 8, 16, ...). */

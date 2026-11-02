@@ -5,7 +5,7 @@ import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import {
   buildKoBracket,
   buildTournamentSummary,
-  computeKoQualifiers,
+  computeKoQualifiersBy,
   distributeTeamsToGroups,
   evaluateTournamentOutcome,
   generateRoundRobinPairs,
@@ -17,6 +17,7 @@ import {
   type KoMatch,
   type KoMatchStatus,
   type KoMode,
+  type KoSelect,
   type MyTournamentSummary,
   type Tournament,
   type TournamentMatch,
@@ -42,6 +43,7 @@ type TournamentRow = {
   join_code: string | null;
   ko_mode: KoMode | null;
   ko_per_group: number | null;
+  ko_select: KoSelect | null;
 };
 
 type TeamRow = {
@@ -89,6 +91,7 @@ function mapTournament(row: TournamentRow): Tournament {
     joinCode: row.join_code ?? "",
     koMode: row.ko_mode ?? null,
     koPerGroup: row.ko_per_group ?? null,
+    koSelect: row.ko_select ?? null,
   };
 }
 
@@ -132,7 +135,7 @@ function mapMatch(row: MatchRow): TournamentMatch {
 }
 
 const TOURNAMENT_COLUMNS =
-  "id, user_id, name, team_count, group_count, status, created_at, join_code, ko_mode, ko_per_group";
+  "id, user_id, name, team_count, group_count, status, created_at, join_code, ko_mode, ko_per_group, ko_select";
 const TEAM_COLUMNS = "id, tournament_id, name, group_label, ko_seed";
 const KO_COLUMNS =
   "id, tournament_id, round, slot, team_a_id, team_b_id, team_a_score, team_b_score, status, finished_at";
@@ -604,11 +607,13 @@ export async function startKoPhase(
   teams: TournamentTeam[],
   groupMatches: TournamentMatch[],
   mode: KoMode,
-  perGroup: number,
+  select: KoSelect,
+  amount: number,
 ): Promise<StartKoResult> {
   const supabase = createClient();
 
-  const qualifiers = computeKoQualifiers(teams, groupMatches, perGroup);
+  /* amount = Teams pro Gruppe (select "group") bzw. Teams insgesamt ("overall"). */
+  const qualifiers = computeKoQualifiersBy(select, teams, groupMatches, amount);
 
   if (!koTeamCountAllowed(mode, qualifiers.length)) {
     return "invalid";
@@ -622,7 +627,8 @@ export async function startKoPhase(
   const { data, error } = await supabase.rpc("start_tournament_ko", {
     p_tournament_id: tournament.id,
     p_mode: mode,
-    p_per_group: perGroup,
+    p_per_group: amount,
+    p_select: select,
     p_seeds: qualifiers.map((entry) => ({ teamId: entry.team.id, seed: entry.seed })),
     p_matches: bracket,
   });

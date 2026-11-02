@@ -23,7 +23,7 @@ import {
   buildInviteUrl,
   buildKoBracket,
   computeGroupStandings,
-  computeKoQualifiers,
+  computeKoQualifiersBy,
   isKoMatchEditable,
   koChampionId,
   koRoundLabel,
@@ -33,6 +33,7 @@ import {
   maxQualifiersPerGroup,
   type KoMatch,
   type KoMode,
+  type KoSelect,
   type Tournament,
   type TournamentMatch,
   type TournamentMember,
@@ -64,7 +65,9 @@ export default function TurnierDetailPage() {
   const [koMatches, setKoMatches] = useState<KoMatch[]>([]);
 
   /* K.-o.-Phase starten (nur Veranstalter) */
+  /* "Anzahl": Teams pro Gruppe (koSelectChoice "group") bzw. Teams insgesamt ("overall"). 0 = Vorschlag. */
   const [koPerGroup, setKoPerGroup] = useState(0);
+  const [koSelectChoice, setKoSelectChoice] = useState<KoSelect>("group");
   const [koModeChoice, setKoModeChoice] = useState<KoMode>("reseed");
   const [startingKo, setStartingKo] = useState(false);
   const [koError, setKoError] = useState<string | null>(null);
@@ -231,19 +234,33 @@ export default function TurnierDetailPage() {
   const championTeam = championId ? teamById(championId) : undefined;
   const openGroupMatches = matches.filter((match) => match.status !== "finished").length;
   const maxPerGroup = maxQualifiersPerGroup(teams);
-  /* Vorschlag: so viele pro Gruppe, dass es insgesamt etwa 4 Teams sind (Halbfinale). */
-  const suggestedPerGroup = Math.max(1, Math.ceil(4 / Math.max(1, groupLabels.length)));
-  /* Welche "pro Gruppe"-Werte passen zum gewählten Modus (Teamzahl 2, 4, 8, ... ohne Freilos)? */
-  const allowedPerGroup = Array.from({ length: maxPerGroup }, (_, index) => index + 1).filter(
-    (count) => koTeamCountAllowed(koModeChoice, count * groupLabels.length),
-  );
+  /* Bei nur einer Gruppe führen beide Auswahlen zum selben Ergebnis, bleiben aber wählbar. */
+  const singleGroup = groupLabels.length <= 1;
+  const selectChoice: KoSelect = koSelectChoice;
+  const maxOverall = Math.min(teams.length, MAX_KO_TEAMS);
+
+  /* Mögliche Werte der Auswahl (Teamzahl muss zum Modus passen: 2, 4, 8 ... bzw. gerade). */
+  const amountChoices =
+    selectChoice === "group"
+      ? Array.from({ length: maxPerGroup }, (_, index) => index + 1).filter((count) =>
+          koTeamCountAllowed(koModeChoice, count * groupLabels.length),
+        )
+      : Array.from({ length: Math.max(0, maxOverall - 1) }, (_, index) => index + 2).filter(
+          (count) => koTeamCountAllowed(koModeChoice, count),
+        );
+
+  /* Vorschlag: etwa 4 Teams insgesamt (Halbfinale). */
+  const suggestedAmount =
+    selectChoice === "group" ? Math.max(1, Math.ceil(4 / Math.max(1, groupLabels.length))) : 4;
   const effectivePerGroup =
-    koPerGroup > 0 && allowedPerGroup.includes(koPerGroup)
+    koPerGroup > 0 && amountChoices.includes(koPerGroup)
       ? koPerGroup
-      : allowedPerGroup.includes(suggestedPerGroup)
-        ? suggestedPerGroup
-        : (allowedPerGroup[0] ?? Math.min(koPerGroup || suggestedPerGroup, maxPerGroup));
-  const koQualifiers = computeKoQualifiers(teams, matches, effectivePerGroup);
+      : amountChoices.includes(suggestedAmount)
+        ? suggestedAmount
+        : (amountChoices.find((count) => count >= suggestedAmount) ??
+          amountChoices[amountChoices.length - 1] ??
+          suggestedAmount);
+  const koQualifiers = computeKoQualifiersBy(selectChoice, teams, matches, effectivePerGroup);
   const koTeamCountValid = koTeamCountAllowed(koModeChoice, koQualifiers.length);
   const koDraftAll = koTeamCountValid
     ? buildKoBracket(
@@ -300,6 +317,7 @@ export default function TurnierDetailPage() {
         teams,
         matches,
         koModeChoice,
+        selectChoice,
         effectivePerGroup,
       );
 
@@ -735,7 +753,9 @@ export default function TurnierDetailPage() {
                       ? "Bester gegen Schlechtesten (vor jeder Runde neu gesetzt)"
                       : "Mit Freilos für die Besten"}
                     {" · "}
-                    {tournament.koPerGroup} pro Gruppe
+                    {tournament.koSelect === "overall"
+                      ? `Beste ${tournament.koPerGroup} Teams`
+                      : `${tournament.koPerGroup} pro Gruppe`}
                   </div>
 
                   {isOwner && !confirmingKoBack && (
@@ -895,8 +915,8 @@ export default function TurnierDetailPage() {
                 </div>
 
                 <p className="mt-2 text-sm text-white/50">
-                  Die besten Teams jeder Gruppe spielen im K.-o.-System den Turniersieger aus. Ein
-                  Spiel pro Paarung, ein Unentschieden gibt es nicht.
+                  Die besten Teams spielen im K.-o.-System den Turniersieger aus. Ein Spiel pro
+                  Paarung, ein Unentschieden gibt es nicht.
                 </p>
 
                 {openGroupMatches > 0 ? (
@@ -906,6 +926,56 @@ export default function TurnierDetailPage() {
                   </div>
                 ) : (
                   <>
+                    <div className="mt-5">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                        Wer kommt weiter?
+                      </div>
+
+                      <div className="mt-2 grid gap-3 md:grid-cols-2">
+                        {(
+                          [
+                            {
+                              id: "group",
+                              title: "Beste jeder Gruppe",
+                              text: "Aus jeder Gruppe kommen gleich viele Teams weiter, zum Beispiel die zwei Ersten.",
+                            },
+                            {
+                              id: "overall",
+                              title: "Beste Teams insgesamt",
+                              text: "Die besten Teams über alle Gruppen, egal aus welcher Gruppe sie kommen.",
+                            },
+                          ] as { id: KoSelect; title: string; text: string }[]
+                        ).map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => {
+                              setKoSelectChoice(option.id);
+                              setKoPerGroup(0);
+                            }}
+                            aria-pressed={selectChoice === option.id}
+                            className={`rounded-2xl border p-4 text-left transition ${
+                              selectChoice === option.id
+                                ? "border-yellow-400/60 bg-yellow-400/[0.08]"
+                                : "border-white/10 bg-white/[0.02] hover:border-yellow-400/30"
+                            }`}
+                          >
+                            <div className="text-sm font-black text-white">{option.title}</div>
+                            <div className="mt-1 text-xs font-semibold leading-relaxed text-white/45">
+                              {option.text}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {singleGroup && (
+                        <p className="mt-3 text-xs font-semibold text-white/35">
+                          Dein Turnier hat nur eine Gruppe, beide Auswahlen ergeben dasselbe
+                          Ergebnis.
+                        </p>
+                      )}
+                    </div>
+
                     <div className="mt-5">
                       <label
                         htmlFor="ko-per-group"
@@ -920,21 +990,34 @@ export default function TurnierDetailPage() {
                         onChange={(event) => setKoPerGroup(Number(event.target.value))}
                         className="mt-2 w-full rounded-lg border border-white/[0.08] bg-[#0b0f14] px-3 py-2.5 text-sm font-bold text-white focus:border-yellow-400/40 focus:outline-none md:w-auto md:min-w-[260px]"
                       >
-                        {Array.from({ length: maxPerGroup }, (_, index) => index + 1).map(
-                          (count) => {
-                            const total = count * groupLabels.length;
+                        {selectChoice === "group"
+                          ? Array.from({ length: maxPerGroup }, (_, index) => index + 1).map(
+                              (count) => {
+                                const total = count * groupLabels.length;
 
-                            return (
+                                return (
+                                  <option
+                                    key={count}
+                                    value={count}
+                                    disabled={!koTeamCountAllowed(koModeChoice, total)}
+                                  >
+                                    {count} pro Gruppe ({total} Teams gesamt)
+                                  </option>
+                                );
+                              },
+                            )
+                          : Array.from(
+                              { length: Math.max(0, maxOverall - 1) },
+                              (_, index) => index + 2,
+                            ).map((count) => (
                               <option
                                 key={count}
                                 value={count}
-                                disabled={!koTeamCountAllowed(koModeChoice, total)}
+                                disabled={!koTeamCountAllowed(koModeChoice, count)}
                               >
-                                {count} pro Gruppe ({total} Teams gesamt)
+                                Die besten {count} Teams
                               </option>
-                            );
-                          },
-                        )}
+                            ))}
                       </select>
                     </div>
 
@@ -977,11 +1060,11 @@ export default function TurnierDetailPage() {
                         ))}
                       </div>
 
-                      {allowedPerGroup.length === 0 && (
+                      {amountChoices.length === 0 && (
                         <p className="mt-3 text-xs font-bold text-yellow-400/80">
                           {koModeChoice === "reseed"
-                            ? `Mit ${groupLabels.length} Gruppen ergibt keine Auswahl 2, 4, 8 oder 16 Teams. Wähle dafür „Mit Freilos für die Besten".`
-                            : `Mit ${groupLabels.length} Gruppen ergibt keine Auswahl eine gerade Teamzahl.`}
+                            ? `Mit dieser Auswahl ergibt sich nie 2, 4, 8 oder 16 Teams. Wähle „Beste Teams insgesamt" oder „Mit Freilos für die Besten".`
+                            : "Mit dieser Auswahl ergibt sich keine gerade Teamzahl."}
                         </p>
                       )}
                     </div>
