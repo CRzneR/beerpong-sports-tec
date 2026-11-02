@@ -3,18 +3,36 @@
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
+
 import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import {
   syncAchievements,
   type AchievementKey,
   type AchievementView,
 } from "@/app/spieler/match/achievements";
-import { PanelModal, PanelTitle } from "./PanelCard";
 
 /*
  * --------------------------------------------------------------------------
  * | ACHIEVEMENTS IM PROFIL
  * --------------------------------------------------------------------------
+ *
+ * AchievementsSection lädt die Daten (und speichert dabei neu erreichte
+ * Achievements), AchievementsView zeigt sie nur an.
+ *
+ * Bewusst ohne Animation im Spiel: Achievements erscheinen ausschließlich
+ * hier im Profil, neu erreichte mit einer "Neu"-Markierung. Gesperrte
+ * Achievements werden gar nicht angezeigt.
+ *
+ * Bilder: public/achievements/<key>.webp (siehe badgeSrc).
+ * --------------------------------------------------------------------------
+ */
+
+/*
+ * Rang-Stufe pro Achievement (die Pille unter der Beschreibung).
+ * Reine Darstellung - die Stufe wird hier festgelegt, nicht berechnet.
+ * Klassen stehen bewusst als vollständige Strings da, damit Tailwind sie
+ * beim Build nicht wegoptimiert.
  */
 
 type Tier = "ROOKIE" | "CONTENDER" | "ELITE" | "MASTER" | "LEGEND";
@@ -28,6 +46,7 @@ const TIER_BY_KEY: Record<AchievementKey, Tier> = {
   lastShot: "MASTER",
   chosenOne: "LEGEND",
   undefeatedChampion: "LEGEND",
+  tournamentWinner: "MASTER",
   anomaly: "LEGEND",
 };
 

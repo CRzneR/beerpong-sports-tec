@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/client";
 import { isNonThrowAction } from "./matchLogic";
 import { getSavedMatches, type SavedMatch } from "./matchStorage";
 import { getRegisteredPlayerIds } from "./playerProfiles";
+import {
+  getMyTournamentOutcomes,
+  type MyTournamentOutcome,
+} from "@/app/turniere/tournamentStorage";
 
 /*
  * --------------------------------------------------------------------------
@@ -54,6 +58,10 @@ export const THRESHOLDS = {
 
   anomalyThrows: 30,
   anomalyMinHits: 24, // 80 % von 30
+
+  /* Undefeated Champion: Turnier gewonnen, ohne ein Spiel zu verlieren, ab dieser Größe. */
+  undefeatedMinTeams: 8,
+  undefeatedMinPlayers: 16,
 };
 
 export type AchievementKey =
@@ -65,6 +73,7 @@ export type AchievementKey =
   | "lastShot"
   | "chosenOne"
   | "undefeatedChampion"
+  | "tournamentWinner"
   | "anomaly";
 
 export type AchievementDefinition = {
@@ -125,9 +134,15 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   {
     key: "undefeatedChampion",
     title: "Undefeated Champion",
-    description: "Gewinne ein Turnier mit mindestens 16 Teilnehmern oder 8 Teams ohne Niederlage.",
-    available: false,
-    unavailableHint: "Kommt mit der K.-o.-Phase von Pong League",
+    description: `Gewinne ein Turnier mit mindestens ${THRESHOLDS.undefeatedMinPlayers} Teilnehmern oder ${THRESHOLDS.undefeatedMinTeams} Teams ohne Niederlage.`,
+    available: true,
+  },
+  {
+    key: "tournamentWinner",
+    title: "Turniersieger",
+    description:
+      "Gewinne ein Turnier in der Pong League. Dein Profil muss dafür mit deinem Team verknüpft sein.",
+    available: true,
   },
   {
     key: "anomaly",
@@ -440,6 +455,61 @@ export function evaluateAchievements(
 
 /*
  * --------------------------------------------------------------------------
+ * | TURNIER-ACHIEVEMENTS (Pong League)
+ * --------------------------------------------------------------------------
+ *
+ * Diese Achievements hängen nicht an einzelnen Matches, sondern an Turnieren,
+ * in denen das eigene Profil über den Beitritts-Link mit einem Team
+ * verknüpft ist:
+ *   - Turniersieger: das eigene Team hat das Finale der K.-o.-Phase gewonnen.
+ *   - Undefeated Champion: Turniersieg ohne Niederlage (Gruppe und K.-o.),
+ *     in einem Turnier ab undefeatedMinTeams Teams bzw. undefeatedMinPlayers
+ *     verknüpften Spielern.
+ * Freigeschaltet wird beim nächsten Öffnen des Profils.
+ * --------------------------------------------------------------------------
+ */
+
+export function applyTournamentAchievements(
+  evaluation: AchievementEvaluation[],
+  outcomes: MyTournamentOutcome[],
+): AchievementEvaluation[] {
+  const earliest = (list: MyTournamentOutcome[]) =>
+    list
+      .map((item) => item.decidedAt)
+      .filter((value): value is string => Boolean(value))
+      .sort()[0] ?? null;
+
+  const won = outcomes.filter((item) => item.wonTournament);
+  const undefeated = outcomes.filter(
+    (item) =>
+      item.wonUndefeated &&
+      (item.teamCount >= THRESHOLDS.undefeatedMinTeams ||
+        item.linkedPlayers >= THRESHOLDS.undefeatedMinPlayers),
+  );
+
+  const unlock = (key: AchievementKey, list: MyTournamentOutcome[]) => ({
+    key,
+    unlocked: list.length > 0,
+    unlockedAt: earliest(list),
+    matchId: null,
+    progress: null,
+  });
+
+  return evaluation.map((item) => {
+    if (item.key === "tournamentWinner") {
+      return unlock("tournamentWinner", won);
+    }
+
+    if (item.key === "undefeatedChampion") {
+      return unlock("undefeatedChampion", undefeated);
+    }
+
+    return item;
+  });
+}
+
+/*
+ * --------------------------------------------------------------------------
  * | SPEICHERN UND LADEN (Tabelle `achievements`)
  * --------------------------------------------------------------------------
  */
@@ -461,13 +531,24 @@ type StoredAchievement = {
 export async function syncAchievements(playerId: string): Promise<AchievementView[]> {
   const supabase = createClient();
 
-  const [matches, registeredIds] = await Promise.all([getSavedMatches(), getRegisteredPlayerIds()]);
+  const [matches, registeredIds, tournamentOutcomes] = await Promise.all([
+    getSavedMatches(),
+    getRegisteredPlayerIds(),
+    /* Turnier-Daten sind eine Zugabe: Fehlt z. B. noch das SQL, läuft der Rest trotzdem. */
+    getMyTournamentOutcomes(playerId).catch((err) => {
+      console.error("Turnier-Ergebnisse für Achievements konnten nicht geladen werden:", err);
+      return [] as MyTournamentOutcome[];
+    }),
+  ]);
 
   /*
    * Bewusst ALLE Matches, auch vor einem Statistik-Reset: Achievements
    * sind eine Errungenschaft und hängen nicht an der Reset-Funktion.
    */
-  const evaluation = evaluateAchievements(matches, playerId, registeredIds);
+  const evaluation = applyTournamentAchievements(
+    evaluateAchievements(matches, playerId, registeredIds),
+    tournamentOutcomes,
+  );
 
   const { data: storedRows, error: loadError } = await supabase
     .from("achievements")

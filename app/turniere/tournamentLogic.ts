@@ -11,6 +11,17 @@
 
 export type TournamentStatus = "setup" | "active" | "finished";
 
+/*
+ * K.-o.-Modi:
+ *  - reseed:  "Bester gegen Schlechtesten" - vor jeder Runde wird neu gesetzt (bester
+ *             gegen schlechtesten, zweitbester gegen zweitschlechtesten, ...). Ohne
+ *             Freilose, die Teamzahl muss also 2, 4, 8, 16 oder 32 sein.
+ *  - bracket: "Mit Freilos" - fester Turnierbaum mit gerader Teamzahl (links und rechts
+ *             gleich viele Teams); passt sie nicht auf eine Zweierpotenz (z. B. 6), haben
+ *             die besten Teams in Runde 1 frei (bei 6 Teams die beiden besten).
+ */
+export type KoMode = "reseed" | "bracket";
+
 export type Tournament = {
   id: string;
   userId: string;
@@ -21,6 +32,10 @@ export type Tournament = {
   createdAt: string;
   /* Code für den Beitritts-Link (/turniere/beitreten/<code>). */
   joinCode: string;
+  /* K.-o.-Phase: null, solange sie nicht gestartet wurde. */
+  koMode: KoMode | null;
+  /* Wie viele Teams pro Gruppe in die K.-o.-Phase gekommen sind. */
+  koPerGroup: number | null;
 };
 
 export type TournamentTeam = {
@@ -28,6 +43,8 @@ export type TournamentTeam = {
   tournamentId: string;
   name: string;
   groupLabel: string;
+  /* Setzplatz in der K.-o.-Phase (1 = beste Setzung), null = nicht qualifiziert. */
+  koSeed: number | null;
 };
 
 export type MatchStatus = "pending" | "finished";
@@ -332,6 +349,8 @@ export type MyTournamentSummary = {
   lastMatch: (SummaryMatch & { result: MatchResultLetter }) | null;
   openMatches: number;
   totalMatches: number;
+  /* K.-o.-Phase aus Sicht des Teams; null, solange sie nicht gestartet ist. */
+  ko: MyKoStatus | null;
 };
 
 function toSummaryMatch(
@@ -359,6 +378,7 @@ export function buildTournamentSummary(
   teams: TournamentTeam[],
   matches: TournamentMatch[],
   myTeamId: string,
+  koMatches: KoMatch[] = [],
 ): MyTournamentSummary | null {
   const team = teams.find((entry) => entry.id === myTeamId);
 
@@ -415,5 +435,527 @@ export function buildTournamentSummary(
     lastMatch,
     openMatches: pending.length,
     totalMatches: ownMatches.length,
+    ko: buildMyKoStatus(tournament, team, teams, koMatches),
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| K.-O.-PHASE
+|--------------------------------------------------------------------------
+|
+| Ablauf: Nach der Gruppenphase kommen pro Gruppe die besten N Teams weiter.
+| Sie werden gesetzt (Seed 1 = beste Setzung), danach wird ein
+| Einfach-K.-o.-Baum gespielt, ein Spiel pro Paarung, kein Unentschieden.
+|
+| Modus "bracket": Passt die Teamzahl nicht auf eine Zweierpotenz (z. B. 6),
+| bekommen die besten Gesetzten in Runde 1 ein Freilos ("bye") und steigen
+| erst in Runde 2 ein. Bei 6 Teams: Seed 1 und 2 haben frei, 3 spielt gegen
+| 6 und 4 gegen 5.
+| Modus "reseed": keine Freilose, jedes Team spielt in jeder Runde. Deshalb
+| nur mit 2, 4, 8, 16 oder 32 Teams.
+|
+| Die Modi unterscheiden sich in den Runden danach:
+|  - bracket: feste Paarungen. Die Sieger rücken im Baum nach (1 gegen 8 und
+|    4 gegen 5 treffen im Halbfinale aufeinander).
+|  - reseed:  vor jeder Runde wird neu gesetzt. Der beste verbliebene Seed
+|    spielt gegen den schlechtesten, der zweitbeste gegen den zweitschlechtesten.
+|
+*/
+
+export type KoMatchStatus = "pending" | "finished" | "bye";
+
+export type KoMatch = {
+  id: string;
+  tournamentId: string;
+  /* 1 = erste Runde, die höchste Runde ist das Finale. */
+  round: number;
+  /* Position innerhalb der Runde (0-basiert). */
+  slot: number;
+  teamAId: string | null;
+  teamBId: string | null;
+  teamAScore: number | null;
+  teamBScore: number | null;
+  status: KoMatchStatus;
+  finishedAt: string | null;
+};
+
+/* Ein Spiel, wie es beim Auslosen entsteht (noch ohne Ergebnis und ohne ID). */
+export type KoDraftMatch = {
+  round: number;
+  slot: number;
+  teamAId: string | null;
+  teamBId: string | null;
+  status: KoMatchStatus;
+};
+
+export type KoQualifier = {
+  team: TournamentTeam;
+  /* 1 = beste Setzung. */
+  seed: number;
+  groupRank: number;
+  standing: GroupStanding;
+};
+
+export const MIN_KO_TEAMS = 2;
+
+/*
+ * Wie viele Teams pro Gruppe höchstens weiterkommen können: so viele, wie die
+ * kleinste Gruppe hat. Sonst gäbe es Gruppen, aus denen niemand mehr übrig ist.
+ */
+export function maxQualifiersPerGroup(teams: TournamentTeam[]): number {
+  const sizes = new Map<string, number>();
+
+  for (const team of teams) {
+    sizes.set(team.groupLabel, (sizes.get(team.groupLabel) ?? 0) + 1);
+  }
+
+  return sizes.size === 0 ? 0 : Math.min(...sizes.values());
+}
+
+/*
+ * Die Teams, die in die K.-o.-Phase kommen, in Setzreihenfolge.
+ *
+ * Erst zählt der Gruppenplatz (alle Gruppensieger vor allen Zweiten usw.),
+ * bei gleichem Platz entscheiden Punkte, Trefferdifferenz, Siege und
+ * erzielte Treffer, zuletzt der Name.
+ */
+export function computeKoQualifiers(
+  teams: TournamentTeam[],
+  matches: TournamentMatch[],
+  perGroup: number,
+): KoQualifier[] {
+  const labels = Array.from(new Set(teams.map((team) => team.groupLabel))).sort();
+  const picked: { team: TournamentTeam; groupRank: number; standing: GroupStanding }[] = [];
+
+  for (const label of labels) {
+    const standings = computeGroupStandings(
+      teams.filter((team) => team.groupLabel === label),
+      matches.filter((match) => match.groupLabel === label),
+    );
+
+    standings.slice(0, perGroup).forEach((standing, index) => {
+      picked.push({ team: standing.team, groupRank: index + 1, standing });
+    });
+  }
+
+  picked.sort((a, b) => {
+    if (a.groupRank !== b.groupRank) return a.groupRank - b.groupRank;
+    if (b.standing.points !== a.standing.points) return b.standing.points - a.standing.points;
+
+    const diffA = a.standing.scoredTotal - a.standing.concededTotal;
+    const diffB = b.standing.scoredTotal - b.standing.concededTotal;
+
+    if (diffB !== diffA) return diffB - diffA;
+    if (b.standing.wins !== a.standing.wins) return b.standing.wins - a.standing.wins;
+    if (b.standing.scoredTotal !== a.standing.scoredTotal) {
+      return b.standing.scoredTotal - a.standing.scoredTotal;
+    }
+
+    return a.team.name.localeCompare(b.team.name);
+  });
+
+  return picked.map((entry, index) => ({ ...entry, seed: index + 1 }));
+}
+
+/* Kleinste Zweierpotenz, die mindestens teamCount Teams aufnimmt (2, 4, 8, 16, ...). */
+export function koBracketSize(teamCount: number): number {
+  let size = 2;
+
+  while (size < teamCount) {
+    size *= 2;
+  }
+
+  return size;
+}
+
+/*
+ * Darf der Modus mit dieser Teamzahl gestartet werden? "Bester gegen Schlechtesten"
+ * kommt ohne Freilose aus und braucht deshalb eine Zweierpotenz. Der Modus mit
+ * Freilos nimmt jede gerade Teamzahl (2, 4, 6, 8, 10, 12, ...).
+ */
+export function koTeamCountAllowed(mode: KoMode, teamCount: number): boolean {
+  if (teamCount < MIN_KO_TEAMS || teamCount > MAX_KO_TEAMS) {
+    return false;
+  }
+
+  /*
+   * Mit Freilos: nur gerade Teamzahlen, damit im Baum links und rechts gleich viele
+   * Teams stehen (bei gerader Zahl geht die Setzung immer genau auf).
+   */
+  if (mode === "bracket") {
+    return teamCount % 2 === 0;
+  }
+
+  return koBracketSize(teamCount) === teamCount;
+}
+
+export function koRoundCount(teamCount: number): number {
+  return Math.round(Math.log2(koBracketSize(teamCount)));
+}
+
+/*
+ * Reihenfolge der Seeds im festen Turnierbaum. Für 8: 1, 8, 4, 5, 2, 7, 3, 6,
+ * also spielen 1-8, 4-5, 2-7 und 3-6, und 1 und 2 treffen sich erst im Finale.
+ */
+export function bracketSeedOrder(size: number): number[] {
+  let order = [1];
+
+  while (order.length < size) {
+    const total = order.length * 2;
+
+    order = order.flatMap((seed) => [seed, total + 1 - seed]);
+  }
+
+  return order;
+}
+
+/* Wer hat das Spiel gewonnen? null, solange offen (oder ohne Teams). */
+export function koWinnerId(
+  match: Pick<KoMatch, "teamAId" | "teamBId" | "teamAScore" | "teamBScore" | "status">,
+): string | null {
+  if (match.status === "bye") {
+    return match.teamAId ?? match.teamBId;
+  }
+
+  if (
+    match.status !== "finished" ||
+    match.teamAScore === null ||
+    match.teamBScore === null ||
+    match.teamAScore === match.teamBScore
+  ) {
+    return null;
+  }
+
+  return match.teamAScore > match.teamBScore ? match.teamAId : match.teamBId;
+}
+
+type KoSlotMatch = Pick<
+  KoMatch,
+  "round" | "slot" | "teamAId" | "teamBId" | "teamAScore" | "teamBScore" | "status"
+>;
+
+/*
+ * Füllt die Teams der Runden ab Runde 2 anhand der Ergebnisse. Rechnet jedes
+ * Mal komplett neu aus den Ergebnissen, ist also auch nach Korrekturen stimmig.
+ * Runde 1 bleibt unverändert.
+ */
+export function resolveKoMatches<T extends KoSlotMatch>(
+  mode: KoMode,
+  seeds: Map<string, number>,
+  matches: T[],
+): T[] {
+  const rounds = matches.reduce((max, match) => Math.max(max, match.round), 0);
+  const result = matches.map((match) => ({ ...match }));
+
+  const inRound = (round: number) =>
+    result.filter((match) => match.round === round).sort((a, b) => a.slot - b.slot);
+
+  for (let round = 2; round <= rounds; round += 1) {
+    const previous = inRound(round - 1);
+    const current = inRound(round);
+    const winners = previous.map((match) => koWinnerId(match));
+
+    if (mode === "bracket") {
+      for (const match of current) {
+        match.teamAId = winners[match.slot * 2] ?? null;
+        match.teamBId = winners[match.slot * 2 + 1] ?? null;
+      }
+
+      continue;
+    }
+
+    /* reseed: erst wenn die ganze Vorrunde entschieden ist, wird neu gesetzt. */
+    const complete = winners.length > 0 && winners.every((winner) => winner !== null);
+
+    const ordered = complete
+      ? (winners as string[]).sort((a, b) => (seeds.get(a) ?? 999) - (seeds.get(b) ?? 999))
+      : [];
+
+    for (const match of current) {
+      match.teamAId = complete ? (ordered[match.slot] ?? null) : null;
+      match.teamBId = complete ? (ordered[ordered.length - 1 - match.slot] ?? null) : null;
+    }
+  }
+
+  return result;
+}
+
+/*
+ * Der komplette Baum für die Setzliste (Index 0 = Seed 1): Runde 1 mit
+ * Freilosen, dazu alle Folgerunden mit leeren Plätzen, soweit schon bekannt
+ * (Freilos-Teams stehen direkt in Runde 2 bzw. sind dort schon eingesetzt).
+ */
+export function buildKoBracket(mode: KoMode, teamIdsBySeed: string[]): KoDraftMatch[] {
+  const count = teamIdsBySeed.length;
+
+  if (count < MIN_KO_TEAMS) {
+    return [];
+  }
+
+  const size = koBracketSize(count);
+  const rounds = Math.round(Math.log2(size));
+  const byes = size - count;
+
+  /* "Bester gegen Schlechtesten" kennt keine Freilose: nur 2, 4, 8, 16, 32 Teams. */
+  if (mode === "reseed" && byes > 0) {
+    return [];
+  }
+
+  const seeds = new Map(teamIdsBySeed.map((id, index) => [id, index + 1]));
+  const draft: KoDraftMatch[] = [];
+
+  if (mode === "bracket") {
+    const order = bracketSeedOrder(size);
+
+    for (let slot = 0; slot < size / 2; slot += 1) {
+      const a = order[slot * 2];
+      const b = order[slot * 2 + 1];
+      const teamA = a <= count ? teamIdsBySeed[a - 1] : null;
+      const teamB = b <= count ? teamIdsBySeed[b - 1] : null;
+      const isBye = teamA === null || teamB === null;
+
+      draft.push({
+        round: 1,
+        slot,
+        teamAId: teamA ?? teamB,
+        teamBId: isBye ? null : teamB,
+        status: isBye ? "bye" : "pending",
+      });
+    }
+  } else {
+    /* Bester gegen Schlechtesten: ohne Freilose, jeder spielt in Runde 1. */
+    for (let index = 0; index < count / 2; index += 1) {
+      draft.push({
+        round: 1,
+        slot: index,
+        teamAId: teamIdsBySeed[index],
+        teamBId: teamIdsBySeed[count - 1 - index],
+        status: "pending",
+      });
+    }
+  }
+
+  for (let round = 2; round <= rounds; round += 1) {
+    for (let slot = 0; slot < size / 2 ** round; slot += 1) {
+      draft.push({ round, slot, teamAId: null, teamBId: null, status: "pending" });
+    }
+  }
+
+  return resolveKoMatches(
+    mode,
+    seeds,
+    draft.map((match) => ({ ...match, teamAScore: null, teamBScore: null })),
+  ).map(({ round, slot, teamAId, teamBId, status }) => ({ round, slot, teamAId, teamBId, status }));
+}
+
+/*
+ * Ein Ergebnis darf nur geändert werden, solange in einer späteren Runde noch
+ * nichts gespielt wurde. Sonst würden bereits gespielte Spiele plötzlich
+ * andere Gegner haben.
+ */
+export function isKoMatchEditable(match: KoMatch, all: KoMatch[]): boolean {
+  return !all.some((other) => other.round > match.round && other.status === "finished");
+}
+
+export function koRoundLabel(round: number, totalRounds: number): string {
+  const fromEnd = totalRounds - round;
+
+  if (fromEnd === 0) return "Finale";
+  if (fromEnd === 1) return "Halbfinale";
+  if (fromEnd === 2) return "Viertelfinale";
+  if (fromEnd === 3) return "Achtelfinale";
+
+  return `Runde ${round}`;
+}
+
+export function koTotalRounds(matches: KoMatch[]): number {
+  return matches.reduce((max, match) => Math.max(max, match.round), 0);
+}
+
+/* Das Team, das das Finale gewonnen hat. null, solange das Turnier läuft. */
+export function koChampionId(matches: KoMatch[]): string | null {
+  const total = koTotalRounds(matches);
+
+  if (total === 0) {
+    return null;
+  }
+
+  const final = matches.find((match) => match.round === total && match.slot === 0);
+
+  return final ? koWinnerId(final) : null;
+}
+
+/*
+ * Maximalzahl von Teams, damit ein einzelnes Spiel pro Paarung noch sinnvoll
+ * bleibt. Mehr als 32 Teams in der K.-o.-Phase erlaubt die Oberfläche nicht.
+ */
+export const MAX_KO_TEAMS = 32;
+
+/*
+|--------------------------------------------------------------------------
+| K.-O.-STATUS EINES TEAMS (FÜR DIE CARD IN PONG STATS)
+|--------------------------------------------------------------------------
+*/
+
+export type MyKoStatus = {
+  stage: "not_qualified" | "waiting" | "next" | "eliminated" | "champion";
+  seed: number | null;
+  /* Name der aktuellen bzw. nächsten Runde, z. B. "Halbfinale". */
+  roundLabel: string | null;
+  opponent: TournamentTeam | null;
+  /* Bei "eliminated": das verlorene Spiel aus Sicht des Teams. */
+  lostScore: { own: number; opponent: number } | null;
+};
+
+export function buildMyKoStatus(
+  tournament: Tournament,
+  team: TournamentTeam,
+  teams: TournamentTeam[],
+  koMatches: KoMatch[],
+): MyKoStatus | null {
+  if (!tournament.koMode) {
+    return null;
+  }
+
+  if (team.koSeed === null) {
+    return {
+      stage: "not_qualified",
+      seed: null,
+      roundLabel: null,
+      opponent: null,
+      lostScore: null,
+    };
+  }
+
+  const total = koTotalRounds(koMatches);
+  const own = koMatches
+    .filter((match) => match.teamAId === team.id || match.teamBId === team.id)
+    .sort((a, b) => a.round - b.round);
+
+  if (koChampionId(koMatches) === team.id) {
+    return {
+      stage: "champion",
+      seed: team.koSeed,
+      roundLabel: "Finale",
+      opponent: null,
+      lostScore: null,
+    };
+  }
+
+  const lost = own.find((match) => {
+    const winner = koWinnerId(match);
+
+    return winner !== null && winner !== team.id;
+  });
+
+  if (lost) {
+    const isA = lost.teamAId === team.id;
+    const opponentId = isA ? lost.teamBId : lost.teamAId;
+
+    return {
+      stage: "eliminated",
+      seed: team.koSeed,
+      roundLabel: koRoundLabel(lost.round, total),
+      opponent: teams.find((entry) => entry.id === opponentId) ?? null,
+      lostScore:
+        lost.teamAScore !== null && lost.teamBScore !== null
+          ? {
+              own: isA ? lost.teamAScore : lost.teamBScore,
+              opponent: isA ? lost.teamBScore : lost.teamAScore,
+            }
+          : null,
+    };
+  }
+
+  const open = own.find((match) => match.status === "pending");
+
+  if (open && open.teamAId && open.teamBId) {
+    const opponentId = open.teamAId === team.id ? open.teamBId : open.teamAId;
+
+    return {
+      stage: "next",
+      seed: team.koSeed,
+      roundLabel: koRoundLabel(open.round, total),
+      opponent: teams.find((entry) => entry.id === opponentId) ?? null,
+      lostScore: null,
+    };
+  }
+
+  /* Weiter, aber der Gegner steht noch nicht fest (Freilos oder andere Spiele laufen). */
+  const reached = own.length > 0 ? own[own.length - 1].round : 1;
+  const nextRound = Math.min(
+    total,
+    reached +
+      (own.some((match) => match.round === reached && koWinnerId(match) === team.id) ? 1 : 0),
+  );
+
+  return {
+    stage: "waiting",
+    seed: team.koSeed,
+    roundLabel: koRoundLabel(nextRound, total),
+    opponent: null,
+    lostScore: null,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| TURNIER-ERGEBNIS (FÜR ACHIEVEMENTS)
+|--------------------------------------------------------------------------
+*/
+
+export type TournamentOutcome = {
+  championTeamId: string | null;
+  /* Hat der Sieger im ganzen Turnier (Gruppe + K.-o.) kein Spiel verloren? */
+  championUndefeated: boolean;
+  /* Zeitpunkt des Finales. */
+  decidedAt: string | null;
+};
+
+export function evaluateTournamentOutcome(
+  groupMatches: TournamentMatch[],
+  koMatches: KoMatch[],
+): TournamentOutcome {
+  const championTeamId = koChampionId(koMatches);
+
+  if (!championTeamId) {
+    return { championTeamId: null, championUndefeated: false, decidedAt: null };
+  }
+
+  let lostSomething = false;
+
+  for (const match of groupMatches) {
+    if (
+      match.status === "finished" &&
+      match.teamAScore !== null &&
+      match.teamBScore !== null &&
+      match.teamAScore !== match.teamBScore
+    ) {
+      const winner = match.teamAScore > match.teamBScore ? match.teamAId : match.teamBId;
+      const involved = match.teamAId === championTeamId || match.teamBId === championTeamId;
+
+      if (involved && winner !== championTeamId) {
+        lostSomething = true;
+      }
+    }
+  }
+
+  for (const match of koMatches) {
+    const involved = match.teamAId === championTeamId || match.teamBId === championTeamId;
+    const winner = koWinnerId(match);
+
+    if (involved && winner !== null && winner !== championTeamId) {
+      lostSomething = true;
+    }
+  }
+
+  const total = koTotalRounds(koMatches);
+  const final = koMatches.find((match) => match.round === total && match.slot === 0);
+
+  return {
+    championTeamId,
+    championUndefeated: !lostSomething,
+    decidedAt: final?.finishedAt ?? null,
   };
 }

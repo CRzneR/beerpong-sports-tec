@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { getMyTournamentSummaries } from "@/app/turniere/tournamentStorage";
-import type { MatchResultLetter, MyTournamentSummary } from "@/app/turniere/tournamentLogic";
+import type {
+  MatchResultLetter,
+  MyKoStatus,
+  MyTournamentSummary,
+} from "@/app/turniere/tournamentLogic";
 
 /*
  * --------------------------------------------------------------------------
@@ -57,6 +61,74 @@ function FormBadges({ form }: { form: MatchResultLetter[] }) {
   );
 }
 
+function KoBox({ ko }: { ko: MyKoStatus }) {
+  if (ko.stage === "champion") {
+    return (
+      <div className="rounded-xl border border-yellow-400/50 bg-yellow-400/[0.1] px-3.5 py-3">
+        <div className="text-[9px] font-black uppercase tracking-wider text-yellow-400">
+          K.-o.-Phase
+        </div>
+        <div className="mt-1 text-sm font-black text-yellow-300">Turniersieger!</div>
+        <div className="mt-0.5 text-[11px] font-semibold text-white/45">
+          Dein Team hat das Finale gewonnen.
+        </div>
+      </div>
+    );
+  }
+
+  if (ko.stage === "next") {
+    return (
+      <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/[0.04] px-3.5 py-3">
+        <div className="text-[9px] font-black uppercase tracking-wider text-yellow-400">
+          K.-o. · {ko.roundLabel}
+        </div>
+        <div className="mt-1 truncate text-sm font-black text-white">
+          gegen {ko.opponent?.name ?? "?"}
+        </div>
+        <div className="mt-0.5 text-[11px] font-semibold text-white/35">
+          Gesetzt auf Platz {ko.seed}
+        </div>
+      </div>
+    );
+  }
+
+  if (ko.stage === "waiting") {
+    return (
+      <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/[0.04] px-3.5 py-3">
+        <div className="text-[9px] font-black uppercase tracking-wider text-yellow-400">
+          K.-o.-Phase
+        </div>
+        <div className="mt-1 text-sm font-black text-white">Du bist weiter</div>
+        <div className="mt-0.5 text-[11px] font-semibold text-white/35">
+          Nächste Runde: {ko.roundLabel}. Der Gegner steht noch nicht fest.
+        </div>
+      </div>
+    );
+  }
+
+  if (ko.stage === "eliminated") {
+    return (
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-3">
+        <div className="text-[9px] font-black uppercase tracking-wider text-white/35">
+          K.-o.-Phase
+        </div>
+        <div className="mt-1 text-sm font-black text-white">Ausgeschieden im {ko.roundLabel}</div>
+        {ko.lostScore && (
+          <div className="mt-0.5 truncate text-[11px] font-semibold text-white/40">
+            {ko.lostScore.own}:{ko.lostScore.opponent} gegen {ko.opponent?.name ?? "?"}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-3 text-xs font-bold text-white/50">
+      Dein Team ist nicht für die K.-o.-Phase qualifiziert.
+    </div>
+  );
+}
+
 function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
@@ -89,10 +161,16 @@ function TournamentEntry({ summary }: { summary: MyTournamentSummary }) {
           </div>
         </div>
 
-        {rank !== null && (
-          <span className="shrink-0 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-yellow-400">
-            {allPlayed ? "Endstand" : "Aktuell"} Platz {rank} von {groupSize}
+        {summary.ko?.stage === "champion" ? (
+          <span className="shrink-0 rounded-full border border-yellow-400/60 bg-yellow-400/20 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-yellow-300">
+            Turniersieger
           </span>
+        ) : (
+          rank !== null && (
+            <span className="shrink-0 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-yellow-400">
+              {allPlayed ? "Endstand" : "Aktuell"} Platz {rank} von {groupSize}
+            </span>
+          )
         )}
       </div>
 
@@ -117,7 +195,9 @@ function TournamentEntry({ summary }: { summary: MyTournamentSummary }) {
           )}
 
           <div className="mt-4 space-y-2">
-            {nextMatch ? (
+            {summary.ko ? (
+              <KoBox ko={summary.ko} />
+            ) : nextMatch ? (
               <div className="rounded-xl border border-yellow-400/20 bg-yellow-400/[0.04] px-3.5 py-3">
                 <div className="text-[9px] font-black uppercase tracking-wider text-yellow-400">
                   Nächstes Spiel

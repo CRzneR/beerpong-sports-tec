@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 
-const PRO_PRICE_CENTS = 399;
+/*
+ * PREIS HIER ANPASSEN (in Cent). 499 = 4,99 €.
+ */
+
+const PRO_PRICE_CENTS = 499;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,6 +20,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
   }
 
+  /*
+   * Wer schon Pro hat, muss nicht nochmal bezahlen können.
+   */
+
   const { data: profile } = await supabase
     .from("players")
     .select("is_pro")
@@ -27,6 +35,27 @@ export async function POST(request: Request) {
   }
 
   const origin = new URL(request.url).origin;
+
+  /*
+   * Optional: Rückkehr zu einem Pong-League-Turnier (Pro-Hinweis in der K.-o.-Phase).
+   * Nur Pfade der Form /turniere/<id> sind erlaubt, alles andere führt wie bisher
+   * zur Profilseite (kein Open Redirect).
+   */
+
+  let returnTo: string | null = null;
+
+  try {
+    const body = (await request.json()) as { returnTo?: unknown };
+
+    if (
+      typeof body.returnTo === "string" &&
+      /^\/turniere\/[A-Za-z0-9-]{1,64}$/.test(body.returnTo)
+    ) {
+      returnTo = body.returnTo;
+    }
+  } catch {
+    /* Kein oder kein gültiger Body: Standard-Rückkehr zur Profilseite. */
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -41,15 +70,17 @@ export async function POST(request: Request) {
             product_data: {
               name: "Pong Stats Pro",
               description:
-                "Dauerhafter Zugriff auf deine Statistiken, Match-Historie und die Rangliste.",
+                "Dauerhafter Zugriff auf deine Statistiken, Match-Historie, die Rangliste und die K.-o.-Phase in Pong League.",
             },
             unit_amount: PRO_PRICE_CENTS,
           },
           quantity: 1,
         },
       ],
-      success_url: `${origin}/spieler?pro=success`,
-      cancel_url: `${origin}/spieler?pro=cancelled`,
+      success_url: returnTo ? `${origin}${returnTo}?pro=success` : `${origin}/spieler?pro=success`,
+      cancel_url: returnTo
+        ? `${origin}${returnTo}?pro=cancelled`
+        : `${origin}/spieler?pro=cancelled`,
     });
 
     if (!session.url) {

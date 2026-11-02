@@ -11,25 +11,43 @@ import {
   getTournamentMembers,
   leaveTournament,
   removeTournamentMember,
+  resetKoPhase,
+  saveKoResult,
+  startKoPhase,
   updateMatchResult,
 } from "../tournamentStorage";
 import {
+  MAX_KO_TEAMS,
   MAX_TEAM_SIZE,
+  MIN_KO_TEAMS,
   buildInviteUrl,
+  buildKoBracket,
   computeGroupStandings,
+  computeKoQualifiers,
+  isKoMatchEditable,
+  koChampionId,
+  koRoundLabel,
+  koTeamCountAllowed,
+  koTotalRounds,
+  koWinnerId,
+  maxQualifiersPerGroup,
+  type KoMatch,
+  type KoMode,
   type Tournament,
   type TournamentMatch,
   type TournamentMember,
   type TournamentTeam,
 } from "../tournamentLogic";
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { KoBracket, type KoBracketMatch } from "../KoBracket";
+import { getOwnProStatus, getOwnProfile } from "@/app/spieler/match/playerProfiles";
 import { createClient } from "@/lib/supabase/client";
 
-type TabId = "gruppen" | "spielplan" | "teams" | "verwaltung";
+type TabId = "gruppen" | "spielplan" | "ko" | "teams" | "verwaltung";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "gruppen", label: "Gruppen" },
   { id: "spielplan", label: "Spielplan" },
+  { id: "ko", label: "K.-o." },
   { id: "teams", label: "Teams" },
   { id: "verwaltung", label: "Verwaltung" },
 ];
@@ -43,6 +61,24 @@ export default function TurnierDetailPage() {
   const [teams, setTeams] = useState<TournamentTeam[]>([]);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [members, setMembers] = useState<TournamentMember[]>([]);
+  const [koMatches, setKoMatches] = useState<KoMatch[]>([]);
+
+  /* K.-o.-Phase starten (nur Veranstalter) */
+  const [koPerGroup, setKoPerGroup] = useState(0);
+  const [koModeChoice, setKoModeChoice] = useState<KoMode>("reseed");
+  const [startingKo, setStartingKo] = useState(false);
+  const [koError, setKoError] = useState<string | null>(null);
+  const [confirmingKoReset, setConfirmingKoReset] = useState(false);
+  const [resettingKo, setResettingKo] = useState(false);
+  const [confirmingKoBack, setConfirmingKoBack] = useState(false);
+  /* Die K.-o.-Phase ist eine Pro-Funktion. null = Status wird noch geladen. */
+  const [isPro, setIsPro] = useState<boolean | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  /* Rückkehr von Stripe (?pro=success bzw. ?pro=cancelled). */
+  const [proReturn, setProReturn] = useState<string | null>(null);
+  /* Spiel, dessen Ergebnis der Veranstalter gerade im Baum einträgt. */
+  const [koDialogMatchId, setKoDialogMatchId] = useState<string | null>(null);
 
   /*
    * Wer schaut hier zu? Der Veranstalter darf alles ändern. Spieler, die
@@ -107,7 +143,8 @@ export default function TurnierDetailPage() {
           getTournamentDetail(tournamentId),
           getTournamentMembers(tournamentId),
           getOwnProfile().catch(() => null),
-        ]).then(([result, memberRows, profile]) => {
+          getOwnProStatus().catch(() => false),
+        ]).then(([result, memberRows, profile, pro]) => {
           if (cancelled) {
             return;
           }
@@ -120,8 +157,10 @@ export default function TurnierDetailPage() {
           setTournament(result.tournament);
           setTeams(result.teams);
           setMatches(result.matches);
+          setKoMatches(result.koMatches);
           setMembers(memberRows);
           setMyPlayerId(profile?.id ?? null);
+          setIsPro(pro);
         });
       })
       .catch((err) => {
@@ -142,6 +181,40 @@ export default function TurnierDetailPage() {
     };
   }, [tournamentId, router]);
 
+  useEffect(() => {
+    setProReturn(new URLSearchParams(window.location.search).get("pro"));
+  }, []);
+
+  /*
+   * Direkt nach der Zahlung schaltet der Stripe-Webhook Pro erst nach ein paar
+   * Sekunden frei. Deshalb kurz nachfragen, statt den Hinweis stehen zu lassen.
+   */
+  useEffect(() => {
+    if (proReturn !== "success" || isPro !== false) {
+      return;
+    }
+
+    let attempts = 0;
+
+    const timer = window.setInterval(() => {
+      attempts += 1;
+
+      getOwnProStatus()
+        .then((pro) => {
+          if (pro) {
+            setIsPro(true);
+          }
+        })
+        .catch(() => undefined);
+
+      if (attempts >= 8) {
+        window.clearInterval(timer);
+      }
+    }, 2500);
+
+    return () => window.clearInterval(timer);
+  }, [proReturn, isPro]);
+
   const teamById = (id: string) => teams.find((team) => team.id === id);
 
   const groupLabels = Array.from(new Set(teams.map((team) => team.groupLabel))).sort();
@@ -150,7 +223,207 @@ export default function TurnierDetailPage() {
   const myTeamId = members.find((member) => member.playerId === myPlayerId)?.teamId ?? null;
   const myTeam = myTeamId ? teamById(myTeamId) : undefined;
 
+  /* K.-o.-Phase */
+
+  const koStarted = tournament !== null && tournament.koMode !== null;
+  const koTotal = koTotalRounds(koMatches);
+  const championId = koChampionId(koMatches);
+  const championTeam = championId ? teamById(championId) : undefined;
+  const openGroupMatches = matches.filter((match) => match.status !== "finished").length;
+  const maxPerGroup = maxQualifiersPerGroup(teams);
+  /* Vorschlag: so viele pro Gruppe, dass es insgesamt etwa 4 Teams sind (Halbfinale). */
+  const suggestedPerGroup = Math.max(1, Math.ceil(4 / Math.max(1, groupLabels.length)));
+  /* Welche "pro Gruppe"-Werte passen zum gewählten Modus (Teamzahl 2, 4, 8, ... ohne Freilos)? */
+  const allowedPerGroup = Array.from({ length: maxPerGroup }, (_, index) => index + 1).filter(
+    (count) => koTeamCountAllowed(koModeChoice, count * groupLabels.length),
+  );
+  const effectivePerGroup =
+    koPerGroup > 0 && allowedPerGroup.includes(koPerGroup)
+      ? koPerGroup
+      : allowedPerGroup.includes(suggestedPerGroup)
+        ? suggestedPerGroup
+        : (allowedPerGroup[0] ?? Math.min(koPerGroup || suggestedPerGroup, maxPerGroup));
+  const koQualifiers = computeKoQualifiers(teams, matches, effectivePerGroup);
+  const koTeamCountValid = koTeamCountAllowed(koModeChoice, koQualifiers.length);
+  const koDraftAll = koTeamCountValid
+    ? buildKoBracket(
+        koModeChoice,
+        koQualifiers.map((entry) => entry.team.id),
+      )
+    : [];
+  const koPreview = koDraftAll.filter((match) => match.round === 1);
+  /* Der Entwurf als Baum-Vorschau (ohne echte IDs, nur zum Zeichnen). */
+  const koDraftTreeMatches: KoBracketMatch[] = koDraftAll.map((match) => ({
+    id: `draft-${match.round}-${match.slot}`,
+    round: match.round,
+    slot: match.slot,
+    teamAId: match.teamAId,
+    teamBId: match.teamBId,
+    teamAScore: null,
+    teamBScore: null,
+    status: match.status,
+  }));
+  const koPreviewSeedById = new Map(koQualifiers.map((entry) => [entry.team.id, entry.seed]));
+
+  /* Gruppenplatz jedes Teams ("1. Gruppe A" im Turnierbaum). */
+  const groupRankById = new Map<string, number>();
+
+  for (const label of groupLabels) {
+    computeGroupStandings(
+      teams.filter((team) => team.groupLabel === label),
+      matches.filter((match) => match.groupLabel === label),
+    ).forEach((standing, index) => groupRankById.set(standing.team.id, index + 1));
+  }
+
+  const koTagOf = (teamId: string): string | null => {
+    const team = teamById(teamId);
+    const rank = groupRankById.get(teamId);
+
+    return team && rank ? `${rank}. Gruppe ${team.groupLabel}` : null;
+  };
+
+  const koDialogMatch = koDialogMatchId
+    ? koMatches.find((match) => match.id === koDialogMatchId)
+    : undefined;
+
+  const handleStartKo = async () => {
+    if (!tournament) {
+      return;
+    }
+
+    setStartingKo(true);
+    setKoError(null);
+
+    try {
+      const result = await startKoPhase(
+        tournament,
+        teams,
+        matches,
+        koModeChoice,
+        effectivePerGroup,
+      );
+
+      if (result !== "started") {
+        setKoError(
+          result === "group_open"
+            ? "Es sind noch nicht alle Gruppenspiele eingetragen."
+            : result === "already_started"
+              ? "Die K.-o.-Phase läuft bereits. Lade die Seite neu."
+              : result === "not_allowed"
+                ? "Nur der Veranstalter darf die K.-o.-Phase starten."
+                : result === "pro_required"
+                  ? "Die K.-o.-Phase gibt es nur mit Pro."
+                  : "Diese Auswahl ist nicht gültig (Teamzahl oder Modus). Wähle sie neu.",
+        );
+
+        if (result === "pro_required") {
+          setIsPro(false);
+        }
+
+        return;
+      }
+
+      const fresh = await getTournamentDetail(tournamentId);
+
+      if (fresh) {
+        setTournament(fresh.tournament);
+        setTeams(fresh.teams);
+        setMatches(fresh.matches);
+        setKoMatches(fresh.koMatches);
+      }
+    } catch (err) {
+      console.error("Fehler beim Starten der K.-o.-Phase:", err);
+
+      /* Supabase-Fehler sind keine Error-Objekte, deshalb Code und Text einzeln lesen. */
+      const code = (err as { code?: string } | null)?.code ?? "";
+      const message = (err as { message?: string } | null)?.message ?? "";
+
+      setKoError(
+        code === "PGRST202" || code === "42883" || /could not find the function/i.test(message)
+          ? "Die Datenbank-Funktion fehlt. Führe ko-phase.sql im Supabase-SQL-Editor aus."
+          : `K.-o.-Phase konnte nicht gestartet werden.${message ? ` (${code ? `${code}: ` : ""}${message})` : ""}`,
+      );
+    } finally {
+      setStartingKo(false);
+    }
+  };
+
+  const handleResetKo = async () => {
+    setResettingKo(true);
+    setKoError(null);
+
+    try {
+      await resetKoPhase(tournamentId);
+
+      const fresh = await getTournamentDetail(tournamentId);
+
+      if (fresh) {
+        setTournament(fresh.tournament);
+        setTeams(fresh.teams);
+        setMatches(fresh.matches);
+        setKoMatches(fresh.koMatches);
+      }
+
+      setConfirmingKoReset(false);
+      setConfirmingKoBack(false);
+      setTab("ko");
+    } catch (err) {
+      console.error("Fehler beim Zurücksetzen der K.-o.-Phase:", err);
+      setKoError("K.-o.-Phase konnte nicht zurückgesetzt werden.");
+    } finally {
+      setResettingKo(false);
+    }
+  };
+
+  const handleSaveKoResult = async (matchId: string, teamAScore: number, teamBScore: number) => {
+    /* Fehler fängt KoMatchCard selbst ab und zeigt sie an der betroffenen Karte. */
+    if (!tournament) {
+      return;
+    }
+
+    const updated = await saveKoResult(
+      tournament,
+      teams,
+      koMatches,
+      matchId,
+      teamAScore,
+      teamBScore,
+    );
+
+    setKoMatches(updated);
+    setTournament({ ...tournament, status: koChampionId(updated) ? "finished" : "active" });
+  };
+
   const inviteUrl = tournament?.joinCode ? buildInviteUrl(origin, tournament.joinCode) : "";
+
+  /* Pro freischalten: Stripe-Checkout, danach zurück zu diesem Turnier. */
+  const handleUpgrade = async () => {
+    if (upgrading) {
+      return;
+    }
+
+    setUpgrading(true);
+    setUpgradeError(null);
+
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnTo: `/turniere/${tournamentId}` }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "Checkout fehlgeschlagen.");
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Fehler beim Starten des Checkouts:", err);
+      setUpgradeError("Checkout konnte nicht gestartet werden.");
+      setUpgrading(false);
+    }
+  };
 
   const handleCopyInvite = async () => {
     try {
@@ -271,6 +544,12 @@ export default function TurnierDetailPage() {
           {tournament.groupCount === 1 ? "Gruppe" : "Gruppen"}
         </div>
 
+        {championTeam && (
+          <div className="mr-2 mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-400/[0.12] px-4 py-2 text-[11px] font-black uppercase tracking-wider text-yellow-300">
+            Turniersieger: {championTeam.name}
+          </div>
+        )}
+
         {myTeam && (
           <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">
             Du spielst für {myTeam.name}
@@ -292,6 +571,12 @@ export default function TurnierDetailPage() {
               }`}
             >
               {entry.label}
+
+              {entry.id === "ko" && isOwner && isPro === false && !koStarted && (
+                <span className="ml-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-1.5 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">
+                  PRO
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -435,6 +720,367 @@ export default function TurnierDetailPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* K.-O. */}
+
+        {tab === "ko" && (
+          <div className="mt-6 space-y-6">
+            {koStarted ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-xs font-bold text-white/30">
+                    {tournament.koMode === "reseed"
+                      ? "Bester gegen Schlechtesten (vor jeder Runde neu gesetzt)"
+                      : "Mit Freilos für die Besten"}
+                    {" · "}
+                    {tournament.koPerGroup} pro Gruppe
+                  </div>
+
+                  {isOwner && !confirmingKoBack && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKoError(null);
+
+                        /* Ohne eingetragene Ergebnisse geht nichts verloren: direkt zurück. */
+                        if (koMatches.some((match) => match.status === "finished")) {
+                          setConfirmingKoBack(true);
+                        } else {
+                          void handleResetKo();
+                        }
+                      }}
+                      disabled={resettingKo}
+                      className="rounded-full border border-white/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:border-yellow-400/40 hover:text-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      ← Zurück zur Auswahl
+                    </button>
+                  )}
+                </div>
+
+                {isOwner && confirmingKoBack && (
+                  <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.03] p-4">
+                    <p className="text-sm text-white/60">
+                      Zurück zur Auswahl? Die K.-o.-Phase wird zurückgesetzt und alle eingetragenen
+                      K.-o.-Ergebnisse gehen verloren. Die Gruppenphase bleibt unverändert.
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={handleResetKo}
+                        disabled={resettingKo}
+                        className="rounded-full bg-red-400 px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {resettingKo ? "Setzt zurück …" : "Ja, zurück zur Auswahl"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingKoBack(false)}
+                        disabled={resettingKo}
+                        className="rounded-full border border-white/[0.08] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+
+                    {koError && (
+                      <div className="mt-3 text-xs font-bold text-red-400/80">{koError}</div>
+                    )}
+                  </div>
+                )}
+
+                {tournament.koMode === "bracket" && (
+                  <div className="hidden md:block">
+                    <KoBracket
+                      matches={koMatches}
+                      teamById={teamById}
+                      tagOf={koTagOf}
+                      seedOf={(teamId) => teamById(teamId)?.koSeed ?? null}
+                      myTeamId={myTeamId}
+                      championId={championId}
+                      onSelectMatch={isOwner ? setKoDialogMatchId : undefined}
+                    />
+                  </div>
+                )}
+
+                <div
+                  className={
+                    tournament.koMode === "bracket"
+                      ? "flex flex-col gap-6 md:hidden"
+                      : "flex flex-col gap-6 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2"
+                  }
+                >
+                  {Array.from({ length: koTotal }, (_, index) => index + 1).map((round) => (
+                    <div key={round} className="flex flex-col md:min-w-[230px] md:flex-1">
+                      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                        {koRoundLabel(round, koTotal)}
+                      </div>
+
+                      <div className="mt-3 flex flex-1 flex-col gap-3 md:justify-around">
+                        {koMatches
+                          .filter((match) => match.round === round)
+                          .sort((a, b) => a.slot - b.slot)
+                          .map((match) => (
+                            <KoMatchCard
+                              key={match.id}
+                              match={match}
+                              teamById={teamById}
+                              isOwner={isOwner}
+                              editable={isKoMatchEditable(match, koMatches)}
+                              myTeamId={myTeamId}
+                              onSave={handleSaveKoResult}
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {isOwner && koDialogMatch && (
+                  <KoResultDialog
+                    key={koDialogMatch.id}
+                    match={koDialogMatch}
+                    teamById={teamById}
+                    editable={isKoMatchEditable(koDialogMatch, koMatches)}
+                    onSave={handleSaveKoResult}
+                    onClose={() => setKoDialogMatchId(null)}
+                  />
+                )}
+              </>
+            ) : isOwner && isPro === null ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">
+                Lädt …
+              </div>
+            ) : isOwner && !isPro ? (
+              <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.03] p-6 text-center md:p-8">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                  🔒 Pro-Funktion
+                </div>
+
+                <div className="mt-2 text-lg font-black text-white">K.-o.-Phase mit Pro</div>
+
+                <p className="mx-auto mt-2 max-w-md text-sm text-white/50">
+                  Mit Pro startest du nach der Gruppenphase die K.-o.-Phase: Wähle, wie viele Teams
+                  weiterkommen, und spiele den Turniersieger im Turnierbaum aus. Pro ist eine
+                  einmalige Zahlung und schaltet auch die Statistiken in Pong Stats frei.
+                </p>
+
+                {proReturn === "success" && (
+                  <div className="mx-auto mt-4 max-w-md rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] px-4 py-3 text-xs font-bold text-yellow-300">
+                    Danke für deinen Kauf! Pro wird in der Regel innerhalb weniger Sekunden
+                    freigeschaltet. Falls es noch nicht angezeigt wird, lade die Seite kurz neu.
+                  </div>
+                )}
+
+                {upgradeError && (
+                  <div className="mt-3 text-xs font-bold text-red-400/80">{upgradeError}</div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleUpgrade}
+                  disabled={upgrading}
+                  className="mt-5 rounded-full bg-yellow-400 px-6 py-3 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_25px_rgba(250,204,21,0.18)] transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {upgrading ? "Lädt …" : "Pro freischalten"}
+                </button>
+              </div>
+            ) : isOwner ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                  K.-o.-Phase starten
+                </div>
+
+                <p className="mt-2 text-sm text-white/50">
+                  Die besten Teams jeder Gruppe spielen im K.-o.-System den Turniersieger aus. Ein
+                  Spiel pro Paarung, ein Unentschieden gibt es nicht.
+                </p>
+
+                {openGroupMatches > 0 ? (
+                  <div className="mt-4 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-bold text-white/50">
+                    Trag zuerst alle Gruppenspiele ein. Noch {openGroupMatches}{" "}
+                    {openGroupMatches === 1 ? "Spiel" : "Spiele"} offen.
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-5">
+                      <label
+                        htmlFor="ko-per-group"
+                        className="text-[10px] font-black uppercase tracking-wider text-white/40"
+                      >
+                        Wie viele Teams kommen weiter?
+                      </label>
+
+                      <select
+                        id="ko-per-group"
+                        value={effectivePerGroup}
+                        onChange={(event) => setKoPerGroup(Number(event.target.value))}
+                        className="mt-2 w-full rounded-lg border border-white/[0.08] bg-[#0b0f14] px-3 py-2.5 text-sm font-bold text-white focus:border-yellow-400/40 focus:outline-none md:w-auto md:min-w-[260px]"
+                      >
+                        {Array.from({ length: maxPerGroup }, (_, index) => index + 1).map(
+                          (count) => {
+                            const total = count * groupLabels.length;
+
+                            return (
+                              <option
+                                key={count}
+                                value={count}
+                                disabled={!koTeamCountAllowed(koModeChoice, total)}
+                              >
+                                {count} pro Gruppe ({total} Teams gesamt)
+                              </option>
+                            );
+                          },
+                        )}
+                      </select>
+                    </div>
+
+                    <div className="mt-5">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                        Modus
+                      </div>
+
+                      <div className="mt-2 grid gap-3 md:grid-cols-2">
+                        {(
+                          [
+                            {
+                              id: "reseed",
+                              title: "Bester gegen Schlechtesten",
+                              text: "Der beste Platz spielt gegen den schlechtesten, der zweitbeste gegen den zweitschlechtesten und so weiter, in jeder Runde neu. Keine Freilose, die Teamzahl muss 2, 4, 8 oder 16 sein.",
+                            },
+                            {
+                              id: "bracket",
+                              title: "Mit Freilos für die Besten",
+                              text: "Passt die Teamzahl nicht auf 2, 4, 8 oder 16 (zum Beispiel 6), haben die besten Teams in Runde 1 frei, bei 6 Teams die beiden besten. Links und rechts im Baum stehen gleich viele Teams, deshalb nur gerade Teamzahlen.",
+                            },
+                          ] as { id: KoMode; title: string; text: string }[]
+                        ).map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setKoModeChoice(option.id)}
+                            aria-pressed={koModeChoice === option.id}
+                            className={`rounded-2xl border p-4 text-left transition ${
+                              koModeChoice === option.id
+                                ? "border-yellow-400/60 bg-yellow-400/[0.08]"
+                                : "border-white/10 bg-white/[0.02] hover:border-yellow-400/30"
+                            }`}
+                          >
+                            <div className="text-sm font-black text-white">{option.title}</div>
+                            <div className="mt-1 text-xs font-semibold leading-relaxed text-white/45">
+                              {option.text}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {allowedPerGroup.length === 0 && (
+                        <p className="mt-3 text-xs font-bold text-yellow-400/80">
+                          {koModeChoice === "reseed"
+                            ? `Mit ${groupLabels.length} Gruppen ergibt keine Auswahl 2, 4, 8 oder 16 Teams. Wähle dafür „Mit Freilos für die Besten".`
+                            : `Mit ${groupLabels.length} Gruppen ergibt keine Auswahl eine gerade Teamzahl.`}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                        {koModeChoice === "bracket" ? "Vorschau Turnierbaum" : "Vorschau Runde 1"} (
+                        {koQualifiers.length} Teams)
+                      </div>
+
+                      {koTeamCountValid && koModeChoice === "bracket" && (
+                        <div className="mt-3 hidden md:block">
+                          <KoBracket
+                            matches={koDraftTreeMatches}
+                            teamById={teamById}
+                            tagOf={koTagOf}
+                            seedOf={(teamId) => koPreviewSeedById.get(teamId) ?? null}
+                            myTeamId={null}
+                            championId={null}
+                          />
+                        </div>
+                      )}
+
+                      {koTeamCountValid ? (
+                        <ul
+                          className={
+                            koModeChoice === "bracket"
+                              ? "mt-3 space-y-1.5 md:hidden"
+                              : "mt-3 space-y-1.5"
+                          }
+                        >
+                          {koPreview.map((match) => {
+                            const a = teamById(match.teamAId ?? "");
+                            const b = teamById(match.teamBId ?? "");
+
+                            return (
+                              <li
+                                key={match.slot}
+                                className="flex items-center gap-2 text-sm font-bold text-white/70"
+                              >
+                                <span className="min-w-0 truncate">
+                                  <span className="mr-1.5 text-[10px] font-black text-white/30">
+                                    #{koQualifiers.find((entry) => entry.team.id === a?.id)?.seed}
+                                  </span>
+                                  {a?.name}
+                                </span>
+
+                                {match.status === "bye" ? (
+                                  <span className="shrink-0 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400">
+                                    Freilos
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span className="shrink-0 text-white/25">gegen</span>
+                                    <span className="min-w-0 truncate">
+                                      <span className="mr-1.5 text-[10px] font-black text-white/30">
+                                        #
+                                        {
+                                          koQualifiers.find((entry) => entry.team.id === b?.id)
+                                            ?.seed
+                                        }
+                                      </span>
+                                      {b?.name}
+                                    </span>
+                                  </>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <div className="mt-3 text-xs font-bold text-red-400/80">
+                          {koModeChoice === "reseed"
+                            ? "Ohne Freilose geht das nur mit 2, 4, 8, 16 oder 32 Teams. Wähle eine passende Anzahl oder den Modus mit Freilos."
+                            : `Wähle eine gerade Teamzahl zwischen ${MIN_KO_TEAMS} und ${MAX_KO_TEAMS}, damit links und rechts im Baum gleich viele Teams stehen.`}
+                        </div>
+                      )}
+                    </div>
+
+                    {koError && (
+                      <div className="mt-4 text-xs font-bold text-red-400/80">{koError}</div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleStartKo}
+                      disabled={startingKo || !koTeamCountValid}
+                      className="mt-5 w-full rounded-full bg-yellow-400 px-5 py-3.5 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_25px_rgba(250,204,21,0.18)] transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-40 md:w-auto md:px-8"
+                    >
+                      {startingKo ? "Startet …" : "K.-o.-Phase starten"}
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">
+                Die K.-o.-Phase wurde noch nicht gestartet.
+              </div>
+            )}
           </div>
         )}
 
@@ -645,6 +1291,52 @@ export default function TurnierDetailPage() {
 
         {tab === "verwaltung" && isOwner && (
           <div className="mt-6 space-y-4">
+            {koStarted && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                  K.-o.-Phase
+                </div>
+
+                <p className="mt-2 text-sm text-white/50">
+                  Setzt die K.-o.-Phase zurück und löscht alle K.-o.-Ergebnisse. Die Gruppenphase
+                  bleibt unverändert, du kannst danach neu starten (zum Beispiel mit einer anderen
+                  Teamzahl oder einem anderen Modus).
+                </p>
+
+                {koError && <div className="mt-3 text-xs font-bold text-red-400/80">{koError}</div>}
+
+                {confirmingKoReset ? (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleResetKo}
+                      disabled={resettingKo}
+                      className="rounded-full bg-red-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {resettingKo ? "Setzt zurück …" : "Ja, zurücksetzen"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingKoReset(false)}
+                      disabled={resettingKo}
+                      className="rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingKoReset(true)}
+                    className="mt-4 rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:border-red-400/30 hover:text-red-400"
+                  >
+                    K.-o.-Phase zurücksetzen
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.03] p-5">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">
                 Gefahrenzone
@@ -847,6 +1539,331 @@ function MatchRowReadOnly({
 
       <div className="min-w-0 flex-1 truncate text-right text-sm font-bold text-white">
         {teamBName}
+      </div>
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| K.-O.-SPIELKARTE
+|--------------------------------------------------------------------------
+|
+| Zwei Zeilen (Team A und Team B) mit Setzplatz und Ergebnis. Der
+| Veranstalter trägt das Ergebnis ein, alle anderen sehen es nur. Ein
+| Freilos wird als solches angezeigt. Ein Unentschieden gibt es nicht.
+|
+*/
+
+function KoMatchCard({
+  match,
+  teamById,
+  isOwner,
+  editable,
+  myTeamId,
+  onSave,
+}: {
+  match: KoMatch;
+  teamById: (id: string) => TournamentTeam | undefined;
+  isOwner: boolean;
+  editable: boolean;
+  myTeamId: string | null;
+  onSave: (matchId: string, teamAScore: number, teamBScore: number) => Promise<void>;
+}) {
+  const teamA = match.teamAId ? teamById(match.teamAId) : undefined;
+  const teamB = match.teamBId ? teamById(match.teamBId) : undefined;
+
+  const [scoreA, setScoreA] = useState(match.teamAScore?.toString() ?? "");
+  const [scoreB, setScoreB] = useState(match.teamBScore?.toString() ?? "");
+  const [editing, setEditing] = useState(match.status !== "finished");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const winnerId = koWinnerId(match);
+  const isBye = match.status === "bye";
+  const ready = Boolean(teamA && teamB);
+  const mine = Boolean(myTeamId && (match.teamAId === myTeamId || match.teamBId === myTeamId));
+  const showInputs = isOwner && ready && !isBye && editing;
+
+  const handleSave = async () => {
+    const a = Number(scoreA);
+    const b = Number(scoreB);
+
+    if (scoreA.trim() === "" || scoreB.trim() === "" || Number.isNaN(a) || Number.isNaN(b)) {
+      return;
+    }
+
+    if (a === b) {
+      setError("Unentschieden ist im K.-o. nicht möglich.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await onSave(match.id, a, b);
+      setEditing(false);
+    } catch (err) {
+      console.error("Fehler beim Speichern des K.-o.-Ergebnisses:", err);
+      setError("Konnte nicht gespeichert werden.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const row = (team: TournamentTeam | undefined, isA: boolean) => {
+    const isWinner = Boolean(team && winnerId === team.id);
+    const score = isA ? match.teamAScore : match.teamBScore;
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className="w-6 shrink-0 text-[10px] font-black text-white/30">
+          {team?.koSeed ? `#${team.koSeed}` : ""}
+        </span>
+
+        <span
+          className={`min-w-0 flex-1 truncate text-sm ${
+            team
+              ? isWinner
+                ? "font-black text-white"
+                : winnerId
+                  ? "font-bold text-white/40"
+                  : "font-bold text-white"
+              : "font-bold text-white/20"
+          }`}
+        >
+          {team ? team.name : isBye ? "–" : "Offen"}
+        </span>
+
+        {showInputs ? (
+          <input
+            type="number"
+            min={0}
+            value={isA ? scoreA : scoreB}
+            onChange={(event) =>
+              isA ? setScoreA(event.target.value) : setScoreB(event.target.value)
+            }
+            aria-label={`Treffer ${team?.name ?? ""}`}
+            className="w-14 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-1.5 text-center text-sm font-black text-white focus:border-yellow-400/40 focus:outline-none"
+          />
+        ) : (
+          <span
+            className={`w-8 shrink-0 text-center text-sm font-black ${
+              isWinner ? "text-yellow-400" : "text-white/40"
+            }`}
+          >
+            {match.status === "finished" && score !== null ? score : ""}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div
+        className={`rounded-2xl border p-3.5 ${
+          mine ? "border-yellow-400/40 bg-yellow-400/[0.05]" : "border-white/10 bg-white/[0.02]"
+        }`}
+      >
+        <div className="space-y-2">
+          {row(teamA, true)}
+          {isBye ? (
+            <div className="pl-8 text-[9px] font-black uppercase tracking-wider text-yellow-400/80">
+              Freilos
+            </div>
+          ) : (
+            row(teamB, false)
+          )}
+        </div>
+
+        {isOwner && ready && !isBye && (
+          <div className="mt-3 flex items-center justify-between gap-2">
+            {showInputs ? (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="rounded-full bg-yellow-400 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? "Speichert …" : "Speichern"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(true);
+                  setError(null);
+                }}
+                disabled={!editable}
+                title={editable ? undefined : "In einer späteren Runde wurde schon gespielt."}
+                className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/30 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-white/30"
+              >
+                Bearbeiten
+              </button>
+            )}
+
+            {!showInputs && !editable && (
+              <span className="text-[9px] font-bold text-white/25">Gesperrt</span>
+            )}
+          </div>
+        )}
+
+        {!ready && !isBye && (
+          <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-white/25">
+            Wartet auf die Vorrunde
+          </div>
+        )}
+      </div>
+
+      {error && <div className="mt-1.5 px-1 text-[10px] font-bold text-red-400/70">{error}</div>}
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| K.-O.-ERGEBNIS-DIALOG
+|--------------------------------------------------------------------------
+|
+| Öffnet sich, wenn der Veranstalter im Turnierbaum auf ein Spiel klickt.
+| Ein Unentschieden gibt es im K.-o. nicht. Ist in einer späteren Runde
+| schon gespielt worden, ist das Ergebnis gesperrt.
+|
+*/
+
+function KoResultDialog({
+  match,
+  teamById,
+  editable,
+  onSave,
+  onClose,
+}: {
+  match: KoMatch;
+  teamById: (id: string) => TournamentTeam | undefined;
+  editable: boolean;
+  onSave: (matchId: string, teamAScore: number, teamBScore: number) => Promise<void>;
+  onClose: () => void;
+}) {
+  const teamA = match.teamAId ? teamById(match.teamAId) : undefined;
+  const teamB = match.teamBId ? teamById(match.teamBId) : undefined;
+
+  const [scoreA, setScoreA] = useState(match.teamAScore?.toString() ?? "");
+  const [scoreB, setScoreB] = useState(match.teamBScore?.toString() ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const handleSave = async () => {
+    const a = Number(scoreA);
+    const b = Number(scoreB);
+
+    if (scoreA.trim() === "" || scoreB.trim() === "" || Number.isNaN(a) || Number.isNaN(b)) {
+      setError("Trag für beide Teams die Treffer ein.");
+      return;
+    }
+
+    if (a === b) {
+      setError("Unentschieden ist im K.-o. nicht möglich.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await onSave(match.id, a, b);
+      onClose();
+    } catch (err) {
+      console.error("Fehler beim Speichern des K.-o.-Ergebnisses:", err);
+      setError("Konnte nicht gespeichert werden.");
+      setSaving(false);
+    }
+  };
+
+  const field = (
+    team: TournamentTeam | undefined,
+    value: string,
+    setValue: (v: string) => void,
+  ) => (
+    <label className="flex items-center gap-3">
+      <span className="min-w-0 flex-1 truncate text-sm font-black text-white">
+        {team?.name ?? "Offen"}
+      </span>
+
+      <input
+        type="number"
+        min={0}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        disabled={!editable}
+        aria-label={`Treffer ${team?.name ?? ""}`}
+        className="w-16 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-2 text-center text-sm font-black text-white focus:border-yellow-400/40 focus:outline-none disabled:opacity-50"
+      />
+    </label>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="K.-o.-Ergebnis eintragen"
+        className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0b0f14] p-5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+          Ergebnis eintragen
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {field(teamA, scoreA, setScoreA)}
+          {field(teamB, scoreB, setScoreB)}
+        </div>
+
+        {!editable && (
+          <div className="mt-4 text-xs font-bold text-white/40">
+            Gesperrt: In einer späteren Runde wurde schon gespielt.
+          </div>
+        )}
+
+        {error && <div className="mt-4 text-xs font-bold text-red-400/80">{error}</div>}
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:text-white"
+          >
+            Schließen
+          </button>
+
+          {editable && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-full bg-yellow-400 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? "Speichert …" : "Speichern"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
