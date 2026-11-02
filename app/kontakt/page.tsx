@@ -16,11 +16,11 @@ import FaqList from "@/components/kontakt/FaqList";
 import { Navbar } from "@/components/landing/Navbar";
 
 // TODO: Durch die echte Domain ersetzen
-const SITE_URL = "https://beerpong-sportstec.de";
+const SITE_URL = "https://beerpongsportstec.de";
 const BRAND = "BeerPong Sports Tec";
 
 // TODO: Echte Kontaktdaten eintragen (werden auch für die strukturierten Daten genutzt)
-const EMAIL = "kontakt@beerpong-sportstec.de";
+const EMAIL = "kontakt@beerpongsportstec.de";
 const PHONE = "+49 151 23456789";
 const PHONE_HREF = `tel:${PHONE.replace(/\s/g, "")}`;
 
