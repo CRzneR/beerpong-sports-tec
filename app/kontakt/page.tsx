@@ -100,12 +100,7 @@ const contactItems = [
     value: EMAIL,
     href: `mailto:${EMAIL}`,
   },
-  {
-    icon: Phone,
-    label: "Telefon",
-    value: PHONE,
-    href: PHONE_HREF,
-  },
+
   {
     icon: MapPin,
     label: "Standort",
