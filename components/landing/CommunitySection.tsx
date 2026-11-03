@@ -12,19 +12,11 @@ export function CommunitySection() {
 
       <div className="absolute inset-0">
         <Image
-          src="/images/landing/community-photo.jpg"
+          src="/images/landing/community-photo.webp"
           alt=""
           fill
           className="object-cover object-center"
         />
-
-        {/*
-          Kräftiger, gleichmäßiger Verlauf - anders als bei Hero.tsx, wo
-          der Text links sitzt und rechts Platz für das Foto bleibt, ist
-          hier der Text zentriert und füllt die ganze Breite. Deshalb
-          rundum abdunkeln statt nur von einer Seite, sonst wird der Text
-          über der ganzen Breite schwer lesbar.
-        */}
 
         <div className="absolute inset-0 bg-[#050708]/80" />
 

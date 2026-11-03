@@ -12,24 +12,17 @@ export function Hero() {
       <div className="absolute inset-0">
         {/* Foto */}
         <Image
-          src="/images/landing/hero-background.jpg"
+          src="/images/landing/hero-background.webp"
           alt=""
           fill
           priority
           className="object-cover object-center"
         />
 
-        {/*
-          Dunkler Verlauf von links (wo der Text sitzt, fast deckend)
-          nach rechts (Foto bleibt sichtbar) - sorgt für Lesbarkeit,
-          ohne das Foto komplett zu verdecken.
-        */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#050708] via-[#050708]/85 to-transparent" />
 
-        {/* Sanfter Verlauf oben/unten, für einen weichen Übergang zu Navbar und nächster Sektion */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#050708]/50 via-transparent to-[#050708]" />
 
-        {/* Markenfarbiger Glow, dezent übers Foto gelegt */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_45%,rgba(52,211,153,0.12),transparent_35%)]" />
       </div>
 
