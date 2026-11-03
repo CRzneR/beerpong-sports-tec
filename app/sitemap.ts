@@ -1,44 +1,58 @@
 import type { MetadataRoute } from "next";
 
+import { routing } from "@/i18n/routing";
+import { absoluteUrl, languageUrls } from "@/lib/seo";
+
 /*
  * --------------------------------------------------------------------------
  * | SITEMAP  (wird automatisch unter /sitemap.xml ausgeliefert)
  * --------------------------------------------------------------------------
  *
- * Datei: app/sitemap.ts
+ * Datei: app/sitemap.ts  (bleibt direkt unter app/, NICHT in [locale])
  *
  * Nur öffentliche Seiten, die in Google (und KI-Suchen wie ChatGPT, Perplexity,
  * Gemini, Claude) auftauchen sollen. NICHT enthalten, weil ohne Suchwert oder
- * hinter Login: /login, /registrieren, /turniere/neu, /spieler/match/..., /api/...
+ * hinter Login: /login, /turniere/neu, /spieler/match/..., /api/...
+ *
+ * Zwei Listen:
+ *
+ *  - BILINGUAL: Seiten, die es auf Deutsch UND Englisch gibt. Jede Sprache
+ *    bekommt einen Eintrag, beide verweisen per hreflang aufeinander.
+ *  - GERMAN_ONLY: Seiten, die noch nicht übersetzt sind. Sobald eine Seite
+ *    englischen Text hat, wandert ihr Eintrag von GERMAN_ONLY nach BILINGUAL
+ *    (und die Seite setzt pageAlternates(...) in ihren Metadaten).
  *
  * Bewusst ohne lastModified, priority und changeFrequency: Google ignoriert
  * priority/changeFrequency, und ein lastModified, das bei jedem Build auf
- * "jetzt" steht, wird als unzuverlässig eingestuft. Wenn du ein echtes
- * Änderungsdatum pro Seite pflegen willst, ergänze lastModified: "2026-10-27".
+ * "jetzt" steht, wird als unzuverlässig eingestuft.
  *
- * Neue öffentliche Seite? Einfach in PAGES eintragen.
+ * Nicht eingetragen, weil es die Seiten (noch) nicht gibt und sie 404
+ * liefern würden: /community, /agb, /faq. Sobald angelegt, hier ergänzen.
  * --------------------------------------------------------------------------
  */
 
-/* Kanonische Adresse. Muss exakt der Domain entsprechen, die Google als
- * "Property" in der Search Console führt (hier mit www). */
-export const SITE_URL = "https://www.beerpongsportstec.de";
+type BilingualPath = Parameters<typeof languageUrls>[0];
 
-const PAGES = [
-  "/",
+const BILINGUAL: BilingualPath[] = ["/", "/regeln", "/about", "/kontakt"];
+
+const GERMAN_ONLY: BilingualPath[] = [
   "/spieler", // Pong Stats
   "/turniere", // Pong League
-  "/community",
-  "/about",
-  "/kontakt",
-  "/regeln",
   "/impressum",
   "/datenschutz",
-  "/agb",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return PAGES.map((path) => ({
-    url: path === "/" ? SITE_URL : `${SITE_URL}${path}`,
+  const bilingual = BILINGUAL.flatMap((path) =>
+    routing.locales.map((locale) => ({
+      url: absoluteUrl(locale, path),
+      alternates: { languages: languageUrls(path) },
+    })),
+  );
+
+  const germanOnly = GERMAN_ONLY.map((path) => ({
+    url: absoluteUrl(routing.defaultLocale, path),
   }));
+
+  return [...bilingual, ...germanOnly];
 }

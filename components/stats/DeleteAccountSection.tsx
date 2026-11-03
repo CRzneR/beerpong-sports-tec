@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { createClient } from "@/lib/supabase/client";
-import { getOwnProfile, resetPlayerStats } from "@/app/spieler/match/playerProfiles";
+import { getOwnProfile, resetPlayerStats } from "@/app/[locale]/spieler/match/playerProfiles";
 
 /*
  * --------------------------------------------------------------------------

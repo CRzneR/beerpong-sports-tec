@@ -2,13 +2,13 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import {
   getPlayerMatchupStats,
   type MatchupRecord,
   type PlayerMatchupStats,
   type StatsRange,
-} from "@/app/spieler/match/playerStats";
+} from "@/app/[locale]/spieler/match/playerStats";
 import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
 
 /*

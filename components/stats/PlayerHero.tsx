@@ -3,8 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 
-import { getOwnProfile, type PlayerProfile } from "@/app/spieler/match/playerProfiles";
-import { getPlayerRank } from "@/app/spieler/match/playerStats";
+import { getOwnProfile, type PlayerProfile } from "@/app/[locale]/spieler/match/playerProfiles";
+import { getPlayerRank } from "@/app/[locale]/spieler/match/playerStats";
 
 /*
  * --------------------------------------------------------------------------

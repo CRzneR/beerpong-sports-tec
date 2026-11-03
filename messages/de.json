@@ -1,0 +1,386 @@
+{
+  "Meta": {
+    "siteName": "BeerPongSportsTec",
+    "homeTitle": "BeerPongSportsTec - Beer Pong Statistiken & Turniere",
+    "homeDescription": "Beer-Pong-Matches live erfassen, Statistiken verfolgen und Turniere mit Gruppenphase und Tabellen organisieren - alles an einem Ort.",
+    "rulesTitle": "Beer Pong Regeln – BeerPong Sports Tec",
+    "rulesDescription": "Alle wichtigen Beer-Pong-Regeln auf einen Blick: Aufstellung, Ellenbogenregel, Aufsetzer, Mehrfachtreffer, Abwehren und Spielende. Für faire Matches und ein einheitliches Spielverständnis.",
+    "aboutTitle": "Über uns – BeerPong Sports Tec",
+    "aboutDescription": "BeerPong Sports Tec verbindet echtes Spiel, Wettbewerb und Daten in einer digitalen Plattform: Matches erfassen, Leistungen sichtbar machen und Spieler vergleichen.",
+    "contactTitle": "Kontakt | BeerPong Sports Tec"
+  },
+  "Common": {
+    "backHome": "Zurück zur Startseite",
+    "back": "Zurück"
+  },
+  "Nav": {
+    "home": "Startseite",
+    "playerStats": "Spieler & Stats",
+    "community": "Community",
+    "contact": "Kontakt",
+    "about": "Über uns",
+    "login": "Login",
+    "logoAlt": "Logo",
+    "mainNavigation": "Hauptnavigation"
+  },
+  "LanguageSwitcher": {
+    "label": "Sprache",
+    "de": "Deutsch",
+    "en": "English",
+    "switchTo": "Sprache wechseln zu {language}"
+  },
+  "Hero": {
+    "eyebrow": "Play. Compete. Connect.",
+    "headline1": "Beerpong",
+    "headline2": "wird zum",
+    "headline3": "Sport.",
+    "description1": "Digitale Tools. Echte Community.",
+    "description2": "Für alle, die mehr aus Beerpong machen wollen.",
+    "discover": "Jetzt entdecken",
+    "watchVideo": "Video ansehen",
+    "featureTournamentsTitle": "Turniere",
+    "featureTournamentsSubtitle": "Organisieren",
+    "featureStatsTitle": "Statistiken",
+    "featureStatsSubtitle": "Verfolgen",
+    "featureCommunityTitle": "Community",
+    "featureCommunitySubtitle": "Zusammen spielen",
+    "badgeTop": "Same Game.",
+    "badgeBottom": "Higher Standards."
+  },
+  "Platform": {
+    "eyebrow": "The BeerPong Platform",
+    "title1": "Zwei Bereiche.",
+    "title2": "Ein Sport.",
+    "description": "Organisiere deine Wettkämpfe mit Pong League und behalte deine persönliche Performance mit Pong Stats immer im Blick.",
+    "leagueSubtitle": "Tournament Platform",
+    "leagueTitle1": "Compete.",
+    "leagueTitle2": "Connect. Win.",
+    "leagueDescription": "Erstelle Turniere, verwalte Teams und bringe deine Matches auf das nächste Level.",
+    "leagueFeatures": [
+      "Turniere erstellen",
+      "Teams & Spieler verwalten",
+      "Spielplan & Ergebnisse"
+    ],
+    "leagueCta": "Pong League entdecken",
+    "statsSubtitle": "Player Performance",
+    "statsTitle1": "Track.",
+    "statsTitle2": "Improve. Repeat.",
+    "statsDescription": "Erstelle dein Spielerprofil, verfolge deine Performance und entdecke deine Entwicklung.",
+    "statsFeatures": [
+      "Persönliches Spielerprofil",
+      "Match-Historie & Statistiken",
+      "Rankings & Achievements"
+    ],
+    "statsCta": "Pong Stats entdecken",
+    "logoAlt": "{name} Logo",
+    "previewLevel": "Player Level 12",
+    "previewMatches": "Matches",
+    "previewWinrate": "Winrate",
+    "previewWinrateValue": "72,7%",
+    "previewCupsValue": "1.842",
+    "previewCups": "Cups"
+  },
+  "CommunityCta": {
+    "eyebrow": "Join the Game",
+    "headline1": "Bereit für",
+    "headline2": "die nächste",
+    "headline3": "Runde?",
+    "description": "Erstelle dein Spielerprofil, entdecke deine Statistiken und werde Teil einer Community, die Beerpong als Sport versteht.",
+    "createProfile": "Profil erstellen",
+    "discoverStats": "Pong Stats entdecken",
+    "statement": "Good Players. Better People."
+  },
+  "Footer": {
+    "description": "Wir bauen die digitale Infrastruktur für Beerpong. Von Turnieren bis zu persönlichen Spielerstatistiken.",
+    "tagline": "Play. Compete. Connect.",
+    "products": "Produkte",
+    "company": "Unternehmen",
+    "about": "Über uns",
+    "contact": "Kontakt",
+    "community": "Community",
+    "imprint": "Impressum",
+    "privacy": "Datenschutz",
+    "terms": "AGB",
+    "rights": "© {year} Beerpong Sports Tec. All rights reserved."
+  },
+  "About": {
+    "eyebrow": "Mehr als ein Spiel",
+    "title1": "BeerPong.",
+    "title2": "Aber ernst.",
+    "intro": "BeerPong Sports Tec verbindet echtes Spiel, Wettbewerb und Daten in einer digitalen Plattform. Matches werden erfasst, Leistungen sichtbar gemacht und Spieler können sich langfristig vergleichen.",
+    "play": "Spiele Matches digital und erfasse Treffer direkt am Tisch.",
+    "track": "Jeder Wurf wird zur Statistik. Treffer, Misses und Match-Verläufe bleiben nachvollziehbar.",
+    "compete": "Vergleiche Leistungen, entwickle dich weiter und mach aus BeerPong einen Sport mit echten Daten.",
+    "ideaEyebrow": "Unsere Idee",
+    "ideaTitle1": "Good players.",
+    "ideaTitle2": "Better people.",
+    "ideaText1": "Wir glauben, dass BeerPong mehr sein kann als eine einzelne Runde mit Freunden: mehr Wettbewerb, mehr Fairness und mehr Möglichkeiten, sich mit anderen Spielern zu messen.",
+    "ideaText2": "Deshalb entwickeln wir digitale Werkzeuge, die das Spiel professioneller machen, ohne das Wichtigste zu verlieren: Menschen zusammenzubringen und gemeinsam Spaß zu haben.",
+    "ctaEyebrow": "BeerPong Sports Tec",
+    "ctaTitle": "Same game. Higher standards.",
+    "ctaText": "Eine Plattform für Spieler, Teams und Communities, die BeerPong nicht nur spielen, sondern gemeinsam weiterentwickeln wollen.",
+    "ctaButton": "Zum Spiel →",
+    "footerLeft": "© BeerPong Sports Tec",
+    "footerRight": "Good players. Better people."
+  },
+  "Rules": {
+    "eyebrow": "Spielregeln",
+    "title1": "Beer Pong",
+    "title2": "Regeln",
+    "intro": "Alle wichtigen Regeln auf einen Blick. Für faire Matches, mehr Spaß und ein einheitliches Spielverständnis.",
+    "sections": {
+      "general": {
+        "title": "Allgemeine Regeln",
+        "items": [
+          "2 gegen 2",
+          "2 Bälle, 2 Würfe pro Team",
+          "1 gegen 1: Du wirfst beide Bälle (2 Würfe pro Runde)",
+          "Ellbogen hinter die Tischkante",
+          "Erst trinken, dann werfen!",
+          "Formation immer Dreieck"
+        ]
+      },
+      "start": {
+        "title": "Spielbeginn",
+        "paragraphs": [
+          {
+            "text": "Der Anwurf wird per Schere, Stein, Papier entschieden."
+          },
+          {
+            "text": "Der Gewinner fängt an."
+          }
+        ]
+      },
+      "elbow": {
+        "title": "Ellenbogenregel",
+        "paragraphs": [
+          {
+            "text": "Der Ellenbogen des werfenden Spielers darf das Ende des Tisches nicht überschreiten."
+          },
+          {
+            "text": "Bei wiederholtem Verstoß wird der Wurf für ungültig erklärt."
+          }
+        ]
+      },
+      "setup": {
+        "title": "Aufstellung",
+        "paragraphs": [
+          {
+            "text": "Pro Team werden 10 Becher verwendet. Die Aufstellung erfolgt immer in Dreiecksform."
+          },
+          {
+            "text": "Der letzte Becher wird immer mittig am Ende platziert."
+          }
+        ]
+      },
+      "distraction": {
+        "title": "Ablenkung",
+        "paragraphs": [
+          {
+            "text": "Ablenkung ist grundsätzlich erlaubt."
+          },
+          {
+            "label": "Erlaubt:",
+            "text": "Reden, Jubeln, Bewegungen hinter dem Tisch."
+          },
+          {
+            "label": "Nicht erlaubt:",
+            "text": "Verdecken des Bechers, Berühren des Tischs, Stehen neben dem Tisch."
+          }
+        ]
+      },
+      "direct": {
+        "title": "Direktwurf",
+        "paragraphs": [
+          {
+            "text": "Trifft der Ball direkt in einen Becher, zählt 1 Becher."
+          },
+          {
+            "text": "Sobald der Ball einen Becher berührt hat, darf er abgewehrt werden."
+          }
+        ]
+      },
+      "bounce": {
+        "title": "Aufsetzer",
+        "paragraphs": [
+          {
+            "text": "Wird der Ball gewollt auf den Tisch geworfen und landet danach in einem Becher, zählen 2 Becher."
+          },
+          {
+            "text": "Nach dem Kontakt mit dem Tisch darf der Ball sofort abgewehrt werden."
+          }
+        ]
+      },
+      "recover": {
+        "title": "Recover & Trickshot",
+        "paragraphs": [
+          {
+            "text": "Kommt ein geworfener Ball über die Tischhälfte zurück, kann dieser vom werfenden Team zurückgeholt werden („Recover“). Das Gegnerteam darf abwehren! Der Ball darf nicht den Boden berühren!"
+          },
+          {
+            "text": "Ein besonderer Wurf (erschwerte Bedingungen) kann – nach Absprache mit dem Schiedsrichter – als Trickshot gewertet werden."
+          }
+        ]
+      },
+      "multi": {
+        "title": "Mehrfachtreffer",
+        "paragraphs": [
+          {
+            "text": "Treffen beide Spieler eines Teams in derselben Runde, erhält das Team 2 zusätzliche Würfe."
+          },
+          {
+            "text": "Treffen beide Spieler denselben Becher, muss 1 zusätzlicher Becher nach Wahl des werfenden Teams getrunken werden."
+          }
+        ]
+      },
+      "defend": {
+        "title": "Abwehren",
+        "paragraphs": [
+          {
+            "text": "Nach Kontakt mit Tisch oder Becher darf abgewehrt werden."
+          },
+          {
+            "text": "Zu frühes Abwehren = Strafbecher."
+          },
+          {
+            "text": "Ein Ball darf aus dem Becher abgewehrt werden, wenn er sich sichtbar im Becher dreht. Ein Becher zählt nur als getroffen, wenn der Ball im Becher bleibt."
+          },
+          {
+            "text": "Wird ein Becher angeworfen, in dem bereits ein Ball liegt, darf der Ball nicht abgewehrt werden."
+          }
+        ]
+      },
+      "end": {
+        "title": "Spielende (Verlängerung)",
+        "paragraphs": [
+          {
+            "text": "Hat ein Team alle Becher verloren, erhält das gegnerische Team die Möglichkeit zum Nachwerfen."
+          },
+          {
+            "label": "Bei 3 oder mehr Bechern:",
+            "text": "Beide Spieler dürfen werfen."
+          },
+          {
+            "label": "Bei 2 oder weniger Bechern:",
+            "text": "Nur ein Spieler darf werfen."
+          },
+          {
+            "text": "Wird getroffen, darf weitergeworfen werden, bis kein Treffer mehr erzielt wird. Trifft das Team alle Becher, werden 3 neue Becher pro Team aufgestellt. Es geht weiter."
+          }
+        ]
+      }
+    },
+    "fairplayTitle": "Fairplay",
+    "fairplay": [
+      "Respektvoller Umgang ist Pflicht.",
+      "Diskussionen werden durch einen Schiedsrichter entschieden.",
+      "Unsportliches Verhalten kann mit Strafbechern oder Wurfverlust bestraft werden."
+    ],
+    "motto1": "Good players.",
+    "motto2": "Better people.",
+    "linkLabel": "Regeln",
+    "linkAria": "Regeln"
+  },
+  "NotFound": {
+    "title": "Seite nicht gefunden",
+    "text": "Diese Seite gibt es nicht (mehr). Vielleicht hat sich die Adresse geändert.",
+    "home": "Zur Startseite"
+  },
+  "Contact": {
+    "metaTitle": "Kontakt | {brand}",
+    "metaDescription": "Kontaktiere BeerPong Sports Tec aus München: Support, Kooperationen oder Feedback – per Formular, E-Mail oder Telefon. Wir melden uns schnellstmöglich.",
+    "backHome": "Zurück zur Startseite",
+    "eyebrow": "Kontakt",
+    "title1": "Lass uns",
+    "title2": "ins Gespräch",
+    "title3": "kommen.",
+    "intro": "Du hast Fragen, Feedback oder eine Idee? Wir freuen uns, von dir zu hören. Egal ob Support, Kooperation oder einfach nur ein Austausch – wir sind für dich da.",
+    "highlightFast": "Schnelle Antworten",
+    "highlightDirect": "Direkter Kontakt",
+    "highlightIdeas": "Offen für neue Ideen",
+    "detailsEyebrow": "Unsere Kontaktdaten",
+    "detailsTitle1": "Direkt. Persönlich.",
+    "detailsTitle2": "Unkompliziert.",
+    "detailsText": "Du erreichst uns auf verschiedenen Wegen. Wir melden uns so schnell wie möglich bei dir.",
+    "itemEmail": "E-Mail",
+    "itemLocation": "Standort",
+    "itemLocationValue": "München, Deutschland",
+    "formEyebrow": "Nachricht senden",
+    "formTitle": "Schreib uns eine Nachricht.",
+    "formText": "Fülle einfach das Formular aus und wir melden uns schnellstmöglich bei dir.",
+    "locationEyebrow": "Unser Standort",
+    "locationTitle": "Hier findest du uns.",
+    "locationText": "Auch wenn wir digital für dich da sind – unsere Wurzeln liegen in München. Komm gerne vorbei oder vereinbare einen Termin.",
+    "route": "Route anzeigen",
+    "mapAria": "Kartenausschnitt München",
+    "mapCity": "München",
+    "loungeAlt": "Lounge von {brand}",
+    "faqEyebrow": "Häufige Fragen",
+    "faqTitle": "Schnelle Antworten.",
+    "faqText": "Vielleicht findest du hier schon die richtige Antwort. Falls nicht – schreib uns einfach!",
+    "faqAll": "Alle Fragen ansehen"
+  },
+  "ContactForm": {
+    "honeypot": "Firma",
+    "firstName": "Vorname",
+    "firstNamePlaceholder": "Max",
+    "lastName": "Nachname",
+    "lastNamePlaceholder": "Mustermann",
+    "email": "E-Mail",
+    "emailPlaceholder": "max@beispiel.de",
+    "subject": "Betreff",
+    "subjectPlaceholder": "Bitte auswählen",
+    "subjectGeneral": "Allgemeine Anfrage",
+    "subjectSupport": "Support",
+    "subjectCooperation": "Kooperation",
+    "subjectFeedback": "Feedback / Idee",
+    "subjectOther": "Sonstiges",
+    "message": "Nachricht",
+    "messagePlaceholder": "Deine Nachricht …",
+    "consent": "Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert werden. Weitere Informationen findest du in unserer <privacy>Datenschutzerklärung</privacy>.",
+    "sending": "Wird gesendet …",
+    "submit": "Nachricht senden",
+    "success": "Danke für deine Nachricht! Wir melden uns so schnell wie möglich.",
+    "error": "Das hat leider nicht geklappt. Bitte versuche es später erneut oder schreib uns direkt per E-Mail."
+  },
+  "Faq": {
+    "items": [
+      {
+        "question": "Wie schnell erhalte ich eine Antwort?",
+        "answer": "In der Regel melden wir uns innerhalb von 1–2 Werktagen bei dir."
+      },
+      {
+        "question": "Kann ich eine Kooperation anfragen?",
+        "answer": "Ja, gerne! Wähle im Kontaktformular den Betreff „Kooperation“ und beschreibe kurz deine Idee."
+      },
+      {
+        "question": "Gibt es Support für die Apps?",
+        "answer": "Ja. Schreib uns über das Formular mit dem Betreff „Support“ und beschreibe dein Problem möglichst genau."
+      },
+      {
+        "question": "Wo finde ich technische Dokumentationen?",
+        "answer": "Die technischen Dokumentationen findest du im Bereich „Features“. Bei offenen Fragen helfen wir dir direkt weiter."
+      }
+    ]
+  },
+  "CommunityStats": {
+    "eyebrow": "Die Community",
+    "title1": "Mehr als nur",
+    "title2": "ein Spiel.",
+    "intro": "Beerpong Sports Tec verbindet Spieler, Matches und Turniere an einem Ort. Jede Partie wird Teil deiner persönlichen Geschichte.",
+    "playersLabel": "Spieler",
+    "playersDescription": "registrierte Spieler",
+    "tournamentsLabel": "Turniere",
+    "tournamentsDescription": "ausgetragen",
+    "matchesLabel": "Matches",
+    "matchesDescription": "gespielte Matches",
+    "cupsLabel": "Cups",
+    "cupsDescription": "getroffene Becher",
+    "feature1Title": "Spielen",
+    "feature1Text": "Starte Matches und tritt gegen andere Spieler an.",
+    "feature2Title": "Messen",
+    "feature2Text": "Tracke deine Leistung und sieh, wie du dich entwickelst.",
+    "feature3Title": "Verbinden",
+    "feature3Text": "Finde Spieler, Teams und eine Community, die genauso denkt wie du."
+  }
+}

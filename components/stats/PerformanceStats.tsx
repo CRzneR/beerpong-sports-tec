@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { PanelTitle } from "@/components/stats/PanelCard";
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
-import { getPlayerOverallStats, type StatsRange } from "@/app/spieler/match/playerStats";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
+import { getPlayerOverallStats, type StatsRange } from "@/app/[locale]/spieler/match/playerStats";
 
 type Summary = {
   matches: number;

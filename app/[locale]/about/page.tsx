@@ -1,6 +1,42 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { hasLocale } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { notFound } from "next/navigation";
 
-export default function AboutPage() {
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Link } from "@/i18n/navigation";
+import { routing, type Locale } from "@/i18n/routing";
+import { absoluteUrl, pageAlternates } from "@/lib/seo";
+
+export async function generateMetadata({ params }: PageProps<"/[locale]/about">): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale, namespace: "Meta" });
+
+  return {
+    title: { absolute: t("aboutTitle") },
+    description: t("aboutDescription"),
+    alternates: pageAlternates(locale as Locale, "/about"),
+    openGraph: { url: absoluteUrl(locale as Locale, "/about") },
+  };
+}
+
+export default async function AboutPage({ params }: PageProps<"/[locale]/about">) {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "About" });
+  const common = await getTranslations({ locale, namespace: "Common" });
+
   return (
     <main className="min-h-screen bg-[#050708] text-white">
       <header className="border-b border-white/[0.08]">
@@ -8,12 +44,15 @@ export default function AboutPage() {
           <Link href="/" className="font-black tracking-[0.08em]">
             BEERPONG <span className="text-emerald-400">SPORTS TEC</span>
           </Link>
-          <Link
-            href="/"
-            className="rounded-full border border-white/15 px-5 py-2.5 text-xs font-semibold text-white/70 hover:border-emerald-400/60 hover:text-white"
-          >
-            ← Zurück
-          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <Link
+              href="/"
+              className="rounded-full border border-white/15 px-5 py-2.5 text-xs font-semibold text-white/70 hover:border-emerald-400/60 hover:text-white"
+            >
+              ← {common("back")}
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -21,17 +60,15 @@ export default function AboutPage() {
         <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[120px]" />
         <div className="relative mx-auto max-w-4xl px-5 py-20 text-center sm:py-28">
           <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-400">
-            Mehr als ein Spiel
+            {t("eyebrow")}
           </p>
           <h1 className="text-4xl font-black uppercase tracking-tight sm:text-6xl">
-            BeerPong.
+            {t("title1")}
             <br />
-            <span className="text-emerald-400">Aber ernst.</span>
+            <span className="text-emerald-400">{t("title2")}</span>
           </h1>
           <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-white/55 sm:text-lg">
-            BeerPong Sports Tec verbindet echtes Spiel, Wettbewerb und Daten in einer digitalen
-            Plattform. Matches werden erfasst, Leistungen sichtbar gemacht und Spieler können sich
-            langfristig vergleichen.
+            {t("intro")}
           </p>
         </div>
       </section>
@@ -39,15 +76,13 @@ export default function AboutPage() {
       <section className="mx-auto max-w-5xl px-5 pb-20">
         <div className="grid gap-5 md:grid-cols-3">
           <Card number="01" title="PLAY">
-            Spiele Matches digital und erfasse Treffer direkt am Tisch.
+            {t("play")}
           </Card>
           <Card number="02" title="TRACK">
-            Jeder Wurf wird zur Statistik. Treffer, Misses und Match-Verläufe bleiben
-            nachvollziehbar.
+            {t("track")}
           </Card>
           <Card number="03" title="COMPETE">
-            Vergleiche Leistungen, entwickle dich weiter und mach aus BeerPong einen Sport mit
-            echten Daten.
+            {t("compete")}
           </Card>
         </div>
 
@@ -55,53 +90,40 @@ export default function AboutPage() {
           <div className="grid gap-8 md:grid-cols-[1fr_1.4fr] md:items-center">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">
-                Unsere Idee
+                {t("ideaEyebrow")}
               </p>
               <h2 className="mt-3 text-3xl font-black uppercase sm:text-4xl">
-                Good players.
+                {t("ideaTitle1")}
                 <br />
-                <span className="text-white/40">Better people.</span>
+                <span className="text-white/40">{t("ideaTitle2")}</span>
               </h2>
             </div>
             <div className="space-y-4 text-sm leading-7 text-white/55">
-              <p>
-                Wir glauben, dass BeerPong mehr sein kann als eine einzelne Runde mit Freunden: mehr
-                Wettbewerb, mehr Fairness und mehr Möglichkeiten, sich mit anderen Spielern zu
-                messen.
-              </p>
-              <p>
-                Deshalb entwickeln wir digitale Werkzeuge, die das Spiel professioneller machen,
-                ohne das Wichtigste zu verlieren: Menschen zusammenzubringen und gemeinsam Spaß zu
-                haben.
-              </p>
+              <p>{t("ideaText1")}</p>
+              <p>{t("ideaText2")}</p>
             </div>
           </div>
         </div>
 
         <div className="mt-5 rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.035] p-7 text-center sm:p-10">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">
-            BeerPong Sports Tec
+            {t("ctaEyebrow")}
           </p>
-          <h2 className="mt-3 text-2xl font-black uppercase sm:text-3xl">
-            Same game. Higher standards.
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/50">
-            Eine Plattform für Spieler, Teams und Communities, die BeerPong nicht nur spielen,
-            sondern gemeinsam weiterentwickeln wollen.
-          </p>
+          <h2 className="mt-3 text-2xl font-black uppercase sm:text-3xl">{t("ctaTitle")}</h2>
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/50">{t("ctaText")}</p>
           <Link
             href="/"
             className="mt-7 inline-flex rounded-full bg-emerald-400 px-6 py-3 text-sm font-bold text-black hover:bg-emerald-300"
           >
-            Zum Spiel →
+            {t("ctaButton")}
           </Link>
         </div>
       </section>
 
       <footer className="border-t border-white/[0.08] py-7">
         <div className="mx-auto flex max-w-5xl justify-between px-5 text-xs text-white/35">
-          <span>© BeerPong Sports Tec</span>
-          <span>Good players. Better people.</span>
+          <span>{t("footerLeft")}</span>
+          <span>{t("footerRight")}</span>
         </div>
       </footer>
     </main>

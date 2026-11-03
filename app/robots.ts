@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
-import { SITE_URL } from "./sitemap";
+import { routing } from "@/i18n/routing";
+import { SITE_URL, localizedPath } from "@/lib/seo";
 
 /*
  * --------------------------------------------------------------------------
@@ -12,8 +13,9 @@ import { SITE_URL } from "./sitemap";
  * - Suchmaschinen und KI-Crawler dürfen alle öffentlichen Seiten lesen
  *   (wichtig für GEO: Nur was gecrawlt werden darf, kann in ChatGPT,
  *   Perplexity, Gemini, Claude usw. zitiert werden).
- * - Gesperrt sind Bereiche ohne Suchwert: API, Login, Registrierung,
- *   Turnier-Anlegen und die Live-Match-Seiten.
+ * - Gesperrt sind Bereiche ohne Suchwert: API, Login, Turnier-Anlegen und
+ *   die Live-Match-Seiten - in jeder Sprache (die englischen Adressen
+ *   werden aus routing.ts berechnet).
  * - Wichtig: Ein eigener Block für einen Bot ersetzt den "*"-Block komplett,
  *   deshalb gelten die Sperren unten in JEDEM Block.
  * - Möchtest du einen KI-Bot aussperren, nimm seinen Namen aus AI_BOTS
@@ -21,7 +23,20 @@ import { SITE_URL } from "./sitemap";
  * --------------------------------------------------------------------------
  */
 
-const DISALLOW = ["/api/", "/login", "/registrieren", "/turniere/neu", "/spieler/match/"];
+const PRIVATE_AREAS = ["/login", "/turniere/neu", "/spieler/match"] as const;
+
+const DISALLOW = [
+  "/api/",
+  "/auth/",
+  ...routing.locales.flatMap((locale) =>
+    PRIVATE_AREAS.map((path) => {
+      const localized = localizedPath(locale, path);
+
+      /* Ordner-Pfade mit "/" am Ende, damit auch alle Unterseiten (Match-IDs) gesperrt sind. */
+      return path === "/spieler/match" ? `${localized}/` : localized;
+    }),
+  ),
+];
 
 /* Suche und Antworten von KI-Systemen (Zitate mit Quelle) */
 const AI_SEARCH_BOTS = [

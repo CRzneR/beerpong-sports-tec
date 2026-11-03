@@ -1,13 +1,25 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import Link from "next/link";
 import emailjs from "@emailjs/browser";
 import { ArrowRight, ChevronDown } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+
+import { Link } from "@/i18n/navigation";
 
 type Status = "idle" | "sending" | "success" | "error";
 
-const subjects = ["Allgemeine Anfrage", "Support", "Kooperation", "Feedback / Idee", "Sonstiges"];
+/*
+ * value = deutsche Bezeichnung (landet so in deiner E-Mail, egal in welcher Sprache das Formular
+ * ausgefüllt wurde), key = Schlüssel für die Beschriftung in messages/*.json.
+ */
+const subjects = [
+  { value: "Allgemeine Anfrage", key: "subjectGeneral" },
+  { value: "Support", key: "subjectSupport" },
+  { value: "Kooperation", key: "subjectCooperation" },
+  { value: "Feedback / Idee", key: "subjectFeedback" },
+  { value: "Sonstiges", key: "subjectOther" },
+] as const;
 
 const SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
@@ -26,6 +38,8 @@ function Required() {
 }
 
 export default function ContactForm() {
+  const t = useTranslations("ContactForm");
+  const locale = useLocale();
   const [status, setStatus] = useState<Status>("idle");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -61,6 +75,8 @@ export default function ContactForm() {
           reply_to: String(data.get("email") ?? "").trim(),
           subject: String(data.get("subject") ?? ""),
           message: String(data.get("message") ?? "").trim(),
+          /* In welcher Sprache das Formular ausgefüllt wurde (im EmailJS-Template optional nutzbar). */
+          language: locale,
         },
         { publicKey: PUBLIC_KEY },
       );
@@ -79,13 +95,13 @@ export default function ContactForm() {
         aria-hidden="true"
         className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden"
       >
-        <label htmlFor="company">Firma</label>
+        <label htmlFor="company">{t("honeypot")}</label>
         <input id="company" name="company" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
       <div>
         <label htmlFor="firstName" className="mb-2 block text-sm text-white/80">
-          Vorname
+          {t("firstName")}
           <Required />
         </label>
         <input
@@ -94,14 +110,14 @@ export default function ContactForm() {
           type="text"
           required
           autoComplete="given-name"
-          placeholder="Max"
+          placeholder={t("firstNamePlaceholder")}
           className={inputClass}
         />
       </div>
 
       <div>
         <label htmlFor="lastName" className="mb-2 block text-sm text-white/80">
-          Nachname
+          {t("lastName")}
           <Required />
         </label>
         <input
@@ -110,14 +126,14 @@ export default function ContactForm() {
           type="text"
           required
           autoComplete="family-name"
-          placeholder="Mustermann"
+          placeholder={t("lastNamePlaceholder")}
           className={inputClass}
         />
       </div>
 
       <div>
         <label htmlFor="email" className="mb-2 block text-sm text-white/80">
-          E-Mail
+          {t("email")}
           <Required />
         </label>
         <input
@@ -126,14 +142,14 @@ export default function ContactForm() {
           type="email"
           required
           autoComplete="email"
-          placeholder="max@beispiel.de"
+          placeholder={t("emailPlaceholder")}
           className={inputClass}
         />
       </div>
 
       <div>
         <label htmlFor="subject" className="mb-2 block text-sm text-white/80">
-          Betreff
+          {t("subject")}
           <Required />
         </label>
         <div className="relative">
@@ -145,11 +161,11 @@ export default function ContactForm() {
             className={`${inputClass} appearance-none pr-10 invalid:text-white/30`}
           >
             <option value="" disabled>
-              Bitte auswählen
+              {t("subjectPlaceholder")}
             </option>
             {subjects.map((subject) => (
-              <option key={subject} value={subject} className="bg-[#0d1a18] text-white">
-                {subject}
+              <option key={subject.value} value={subject.value} className="bg-[#0d1a18] text-white">
+                {t(subject.key)}
               </option>
             ))}
           </select>
@@ -162,7 +178,7 @@ export default function ContactForm() {
 
       <div className="md:col-span-2">
         <label htmlFor="message" className="mb-2 block text-sm text-white/80">
-          Nachricht
+          {t("message")}
           <Required />
         </label>
         <textarea
@@ -170,7 +186,7 @@ export default function ContactForm() {
           name="message"
           required
           rows={5}
-          placeholder="Deine Nachricht …"
+          placeholder={t("messagePlaceholder")}
           className={`${inputClass} resize-y`}
         />
       </div>
@@ -184,12 +200,13 @@ export default function ContactForm() {
             className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-white/20 bg-[#0d1a18] accent-[#2EF2B0]"
           />
           <span>
-            Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert werden.
-            Weitere Informationen findest du in unserer{" "}
-            <Link href="/datenschutz" className="text-[#2EF2B0] underline underline-offset-2">
-              Datenschutzerklärung
-            </Link>
-            .
+            {t.rich("consent", {
+              privacy: (chunks) => (
+                <Link href="/datenschutz" className="text-[#2EF2B0] underline underline-offset-2">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </span>
         </label>
 
@@ -198,7 +215,7 @@ export default function ContactForm() {
           disabled={status === "sending"}
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#2EF2B0] px-6 py-3 text-sm font-semibold text-[#04120e] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status === "sending" ? "Wird gesendet …" : "Nachricht senden"}
+          {status === "sending" ? t("sending") : t("submit")}
           <ArrowRight className="size-4" aria-hidden="true" />
         </button>
       </div>
@@ -206,13 +223,12 @@ export default function ContactForm() {
       <div className="md:col-span-2" aria-live="polite">
         {status === "success" && (
           <p className="text-sm text-[#2EF2B0]">
-            Danke für deine Nachricht! Wir melden uns so schnell wie möglich.
+            {t("success")}
           </p>
         )}
         {status === "error" && (
           <p className="text-sm text-red-400">
-            Das hat leider nicht geklappt. Bitte versuche es später erneut oder schreib uns direkt
-            per E-Mail.
+            {t("error")}
           </p>
         )}
       </div>

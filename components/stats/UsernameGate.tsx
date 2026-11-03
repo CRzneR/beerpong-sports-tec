@@ -7,7 +7,7 @@ import {
   getUsernameStatus,
   saveOwnUsername,
   validateUsername,
-} from "@/app/spieler/match/playerProfiles";
+} from "@/app/[locale]/spieler/match/playerProfiles";
 
 /*
  * --------------------------------------------------------------------------

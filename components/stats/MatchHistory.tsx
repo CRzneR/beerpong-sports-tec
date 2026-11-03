@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { getSavedMatches } from "@/app/spieler/match/matchStorage";
-import type { SavedMatch } from "@/app/spieler/match/matchStorage";
-import { getOwnProfile, getRegisteredPlayerIds } from "@/app/spieler/match/playerProfiles";
+import { getSavedMatches } from "@/app/[locale]/spieler/match/matchStorage";
+import type { SavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
+import { getOwnProfile, getRegisteredPlayerIds } from "@/app/[locale]/spieler/match/playerProfiles";
 import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
 
 interface MatchHistoryProps {

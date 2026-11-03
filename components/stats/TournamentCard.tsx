@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { getMyTournamentSummaries } from "@/app/turniere/tournamentStorage";
+import { getMyTournamentSummaries } from "@/app/[locale]/turniere/tournamentStorage";
 import type {
   MatchResultLetter,
   MyKoStatus,
   MyTournamentSummary,
-} from "@/app/turniere/tournamentLogic";
+} from "@/app/[locale]/turniere/tournamentLogic";
 
 /*
  * --------------------------------------------------------------------------

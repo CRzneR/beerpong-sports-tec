@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { createMatchLobby, type MatchLobby } from "@/app/spieler/match/matchLobby";
+import { createMatchLobby, type MatchLobby } from "@/app/[locale]/spieler/match/matchLobby";
 
 /*
  * --------------------------------------------------------------------------

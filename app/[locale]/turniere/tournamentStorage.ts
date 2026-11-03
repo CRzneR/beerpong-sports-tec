@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 
 import {
   buildKoBracket,

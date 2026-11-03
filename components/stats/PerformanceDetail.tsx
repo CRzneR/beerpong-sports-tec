@@ -2,12 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import {
   getPlayerDetailStats,
   type PlayerDetailStats,
   type StatsRange,
-} from "@/app/spieler/match/playerStats";
+} from "@/app/[locale]/spieler/match/playerStats";
 
 /*
  * --------------------------------------------------------------------------

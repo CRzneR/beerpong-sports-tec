@@ -6,7 +6,7 @@ import { getRegisteredPlayerIds } from "./playerProfiles";
 import {
   getMyTournamentOutcomes,
   type MyTournamentOutcome,
-} from "@/app/turniere/tournamentStorage";
+} from "@/app/[locale]/turniere/tournamentStorage";
 
 /*
  * --------------------------------------------------------------------------

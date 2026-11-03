@@ -1,6 +1,6 @@
 "use client";
 
-import type { SavedMatch } from "@/app/spieler/match/matchStorage";
+import type { SavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
 
 interface MatchHistoryDetailProps {
   match: SavedMatch;

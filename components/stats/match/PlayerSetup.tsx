@@ -13,7 +13,7 @@ import {
   getOwnProfile,
   getRegisteredPlayerIds,
   type PlayerProfile,
-} from "@/app/spieler/match/playerProfiles";
+} from "@/app/[locale]/spieler/match/playerProfiles";
 
 import {
   getMatchLobby,
@@ -23,7 +23,7 @@ import {
   startMatchLobby,
   subscribeMatchLobby,
   type MatchLobby,
-} from "@/app/spieler/match/matchLobby";
+} from "@/app/[locale]/spieler/match/matchLobby";
 
 import { createClient } from "@/lib/supabase/client";
 

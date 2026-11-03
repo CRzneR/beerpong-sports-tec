@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import type { MatchStats, PlayerStats, TeamStats } from "@/app/spieler/match/matchStats";
-import { createMatchLobby } from "@/app/spieler/match/matchLobby";
+import type { MatchStats, PlayerStats, TeamStats } from "@/app/[locale]/spieler/match/matchStats";
+import { createMatchLobby } from "@/app/[locale]/spieler/match/matchLobby";
 
 interface MatchResultProps {
   stats: MatchStats;

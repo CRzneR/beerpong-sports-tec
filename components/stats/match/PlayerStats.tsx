@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAllPlayerOverallStats, type PlayerOverallStats } from "@/app/spieler/match/playerStats";
+import { getAllPlayerOverallStats, type PlayerOverallStats } from "@/app/[locale]/spieler/match/playerStats";
 
 interface PlayerStatsProps {
   playerId?: string;

@@ -40,7 +40,7 @@ import {
   type TournamentTeam,
 } from "../tournamentLogic";
 import { KoBracket, type KoBracketMatch } from "../KoBracket";
-import { getOwnProStatus, getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { getOwnProStatus, getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import { createClient } from "@/lib/supabase/client";
 
 type TabId = "gruppen" | "spielplan" | "ko" | "teams" | "verwaltung";

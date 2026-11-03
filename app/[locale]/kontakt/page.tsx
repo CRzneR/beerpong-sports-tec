@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { hasLocale } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
-import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -8,106 +10,62 @@ import {
   Mail,
   MapPin,
   MessageSquare,
-  Phone,
   Users,
 } from "lucide-react";
+
 import ContactForm from "@/components/kontakt/ContactForm";
 import FaqList from "@/components/kontakt/FaqList";
 import { Navbar } from "@/components/landing/Navbar";
+import { Link } from "@/i18n/navigation";
+import { routing, type Locale } from "@/i18n/routing";
+import { OG_LOCALE, SITE_URL, absoluteUrl, pageAlternates } from "@/lib/seo";
 
-// TODO: Durch die echte Domain ersetzen
-const SITE_URL = "https://beerpongsportstec.de";
+/*
+ * Route: /kontakt (Deutsch) und /en/contact (Englisch)
+ * Datei: app/[locale]/kontakt/page.tsx
+ *
+ * Texte: messages/de.json und messages/en.json, Bereich "Contact".
+ * SITE_URL kommt jetzt aus lib/seo.ts (mit www, wie in der Search Console).
+ */
+
 const BRAND = "BeerPong Sports Tec";
 
 // TODO: Echte Kontaktdaten eintragen (werden auch für die strukturierten Daten genutzt)
 const EMAIL = "kontakt@beerpongsportstec.de";
 const PHONE = "+49 151 23456789";
-const PHONE_HREF = `tel:${PHONE.replace(/\s/g, "")}`;
 
-const PAGE_TITLE = `Kontakt | ${BRAND}`;
-const PAGE_DESCRIPTION =
-  "Kontaktiere BeerPong Sports Tec aus München: Support, Kooperationen oder Feedback – per Formular, E-Mail oder Telefon. Wir melden uns schnellstmöglich.";
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/kontakt">): Promise<Metadata> {
+  const { locale } = await params;
 
-export const metadata: Metadata = {
-  // "absolute" verhindert, dass ein Titel-Template aus dem Layout die Marke doppelt anhängt
-  title: { absolute: PAGE_TITLE },
-  description: PAGE_DESCRIPTION,
-  alternates: {
-    canonical: "/kontakt",
-  },
-  openGraph: {
-    type: "website",
-    locale: "de_DE",
-    siteName: BRAND,
-    url: "/kontakt",
-    title: PAGE_TITLE,
-    description: PAGE_DESCRIPTION,
-  },
-};
+  if (!hasLocale(routing.locales, locale)) {
+    return {};
+  }
 
-// Strukturierte Daten (JSON-LD): Organisation + Kontaktseite
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Organization",
-      "@id": `${SITE_URL}/#organization`,
-      name: BRAND,
-      url: SITE_URL,
-      email: EMAIL,
-      telephone: PHONE,
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: "München",
-        addressRegion: "Bayern",
-        addressCountry: "DE",
-      },
-      contactPoint: {
-        "@type": "ContactPoint",
-        contactType: "customer support",
-        email: EMAIL,
-        telephone: PHONE,
-        areaServed: "DE",
-        availableLanguage: "de",
-      },
+  const t = await getTranslations({ locale, namespace: "Contact" });
+  const url = absoluteUrl(locale as Locale, "/kontakt");
+
+  return {
+    // "absolute" verhindert, dass ein Titel-Template aus dem Layout die Marke doppelt anhängt
+    title: { absolute: t("metaTitle", { brand: BRAND }) },
+    description: t("metaDescription"),
+    alternates: pageAlternates(locale as Locale, "/kontakt"),
+    openGraph: {
+      type: "website",
+      locale: OG_LOCALE[locale as Locale],
+      siteName: BRAND,
+      url,
+      title: t("metaTitle", { brand: BRAND }),
+      description: t("metaDescription"),
+      images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     },
-    {
-      "@type": "ContactPage",
-      "@id": `${SITE_URL}/kontakt#webpage`,
-      url: `${SITE_URL}/kontakt`,
-      name: PAGE_TITLE,
-      description: PAGE_DESCRIPTION,
-      inLanguage: "de-DE",
-      about: { "@id": `${SITE_URL}/#organization` },
-    },
-  ],
-};
+  };
+}
 
 // TODO: Durch die echte Adresse ersetzen, z. B. "Musterstraße 1, 80331 München"
 const MAPS_TARGET = "Marienplatz, München";
 const MAPS_QUERY = encodeURIComponent(MAPS_TARGET);
-
-const highlights = [
-  { icon: MessageSquare, label: "Schnelle Antworten" },
-  { icon: Users, label: "Direkter Kontakt" },
-  { icon: Lightbulb, label: "Offen für neue Ideen" },
-];
-
-const contactItems = [
-  {
-    icon: Mail,
-    label: "E-Mail",
-    value: EMAIL,
-    href: `mailto:${EMAIL}`,
-  },
-
-  {
-    icon: MapPin,
-    label: "Standort",
-    value: "München, Deutschland",
-    href: `https://www.google.com/maps/search/?api=1&query=${MAPS_QUERY}`,
-  },
-];
 
 const mapLabels = [
   { text: "Schwabing", className: "left-[8%] top-[16%]" },
@@ -118,7 +76,77 @@ const mapLabels = [
   { text: "Thalkirchen", className: "left-[4%] bottom-[6%]" },
 ];
 
-export default function KontaktPage() {
+export default async function KontaktPage({ params }: PageProps<"/[locale]/kontakt">) {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "Contact" });
+  const pageUrl = absoluteUrl(locale as Locale, "/kontakt");
+
+  const highlights = [
+    { icon: MessageSquare, label: t("highlightFast") },
+    { icon: Users, label: t("highlightDirect") },
+    { icon: Lightbulb, label: t("highlightIdeas") },
+  ];
+
+  const contactItems = [
+    {
+      icon: Mail,
+      label: t("itemEmail"),
+      value: EMAIL,
+      href: `mailto:${EMAIL}`,
+    },
+    {
+      icon: MapPin,
+      label: t("itemLocation"),
+      value: t("itemLocationValue"),
+      href: `https://www.google.com/maps/search/?api=1&query=${MAPS_QUERY}`,
+    },
+  ];
+
+  // Strukturierte Daten (JSON-LD): Organisation + Kontaktseite
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: BRAND,
+        url: SITE_URL,
+        email: EMAIL,
+        telephone: PHONE,
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "München",
+          addressRegion: "Bayern",
+          addressCountry: "DE",
+        },
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: EMAIL,
+          telephone: PHONE,
+          areaServed: "DE",
+          availableLanguage: ["de", "en"],
+        },
+      },
+      {
+        "@type": "ContactPage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: t("metaTitle", { brand: BRAND }),
+        description: t("metaDescription"),
+        inLanguage: locale === "de" ? "de-DE" : "en",
+        about: { "@id": `${SITE_URL}/#organization` },
+      },
+    ],
+  };
+
   return (
     <div className="bg-[#050b0a] text-white">
       <script
@@ -138,7 +166,7 @@ export default function KontaktPage() {
           <span aria-hidden="true" className="transition-transform group-hover:-translate-x-1">
             ←
           </span>
-          Zurück zur Startseite
+          {t("backHome")}
         </Link>
 
         {/* ───────── Hero ───────── */}
@@ -165,18 +193,17 @@ export default function KontaktPage() {
           <div className="relative px-5 py-14 md:px-[6.5vw] md:py-20 lg:py-24">
             <div className="max-w-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2EF2B0]">
-                Kontakt
+                {t("eyebrow")}
               </p>
               <h1 className="mt-4 text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl">
-                Lass uns
+                {t("title1")}
                 <br />
-                ins Gespräch
+                {t("title2")}
                 <br />
-                <span className="text-[#2EF2B0]">kommen.</span>
+                <span className="text-[#2EF2B0]">{t("title3")}</span>
               </h1>
               <p className="mt-6 max-w-md text-base leading-relaxed text-white/70 md:text-lg">
-                Du hast Fragen, Feedback oder eine Idee? Wir freuen uns, von dir zu hören. Egal ob
-                Support, Kooperation oder einfach nur ein Austausch – wir sind für dich da.
+                {t("intro")}
               </p>
 
               <ul className="mt-8 flex flex-wrap gap-x-8 gap-y-4">
@@ -196,16 +223,15 @@ export default function KontaktPage() {
           <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)]">
             <div className="rounded-2xl border border-white/10 bg-[#0a1312] p-6 md:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2EF2B0]">
-                Unsere Kontaktdaten
+                {t("detailsEyebrow")}
               </p>
               <h2 className="mt-4 text-2xl font-bold leading-tight md:text-3xl">
-                Direkt. Persönlich.
+                {t("detailsTitle1")}
                 <br />
-                Unkompliziert.
+                {t("detailsTitle2")}
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-white/60">
-                Du erreichst uns auf verschiedenen Wegen. Wir melden uns so schnell wie möglich bei
-                dir.
+                {t("detailsText")}
               </p>
 
               <ul className="mt-8 flex flex-col gap-3">
@@ -238,13 +264,13 @@ export default function KontaktPage() {
 
             <div className="rounded-2xl border border-white/10 bg-[#0a1312] p-6 md:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2EF2B0]">
-                Nachricht senden
+                {t("formEyebrow")}
               </p>
               <h2 className="mt-4 text-2xl font-bold leading-tight md:text-3xl">
-                Schreib uns eine Nachricht.
+                {t("formTitle")}
               </h2>
               <p className="mt-3 text-sm text-white/60">
-                Fülle einfach das Formular aus und wir melden uns schnellstmöglich bei dir.
+                {t("formText")}
               </p>
               <ContactForm />
             </div>
@@ -255,12 +281,11 @@ export default function KontaktPage() {
             <div className="grid md:grid-cols-3">
               <div className="flex flex-col items-start justify-center p-6 md:p-8">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2EF2B0]">
-                  Unser Standort
+                  {t("locationEyebrow")}
                 </p>
-                <h2 className="mt-4 text-2xl font-bold md:text-3xl">Hier findest du uns.</h2>
+                <h2 className="mt-4 text-2xl font-bold md:text-3xl">{t("locationTitle")}</h2>
                 <p className="mt-4 text-sm leading-relaxed text-white/60">
-                  Auch wenn wir digital für dich da sind – unsere Wurzeln liegen in München. Komm
-                  gerne vorbei oder vereinbare einen Termin.
+                  {t("locationText")}
                 </p>
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${MAPS_QUERY}`}
@@ -268,7 +293,7 @@ export default function KontaktPage() {
                   rel="noopener noreferrer"
                   className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#2EF2B0] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2EF2B0] hover:text-[#04120e]"
                 >
-                  Route anzeigen
+                  {t("route")}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </a>
               </div>
@@ -282,7 +307,7 @@ export default function KontaktPage() {
                   backgroundSize: "32px 32px",
                 }}
                 role="img"
-                aria-label="Kartenausschnitt München"
+                aria-label={t("mapAria")}
               >
                 {mapLabels.map((label) => (
                   <span
@@ -294,14 +319,14 @@ export default function KontaktPage() {
                 ))}
                 <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
                   <MapPin className="size-8 text-[#2EF2B0]" aria-hidden="true" />
-                  <span className="text-lg font-semibold">München</span>
+                  <span className="text-lg font-semibold">{t("mapCity")}</span>
                 </div>
               </div>
 
               <div className="relative min-h-[220px] md:min-h-[280px]">
                 <Image
                   src="/images/landing/.jpg"
-                  alt="Lounge von BeerPong Sports Tec"
+                  alt={t("loungeAlt", { brand: BRAND })}
                   fill
                   sizes="(min-width: 768px) 33vw, 100vw"
                   className="object-cover"
@@ -318,18 +343,17 @@ export default function KontaktPage() {
           <section className="grid gap-8 py-6 md:grid-cols-2 md:gap-12 md:py-10">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2EF2B0]">
-                Häufige Fragen
+                {t("faqEyebrow")}
               </p>
-              <h2 className="mt-4 text-2xl font-bold md:text-3xl">Schnelle Antworten.</h2>
+              <h2 className="mt-4 text-2xl font-bold md:text-3xl">{t("faqTitle")}</h2>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
-                Vielleicht findest du hier schon die richtige Antwort. Falls nicht – schreib uns
-                einfach!
+                {t("faqText")}
               </p>
               <Link
                 href="/faq"
                 className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#2EF2B0] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2EF2B0] hover:text-[#04120e]"
               >
-                Alle Fragen ansehen
+                {t("faqAll")}
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </div>

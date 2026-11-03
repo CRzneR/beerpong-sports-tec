@@ -1,0 +1,386 @@
+{
+  "Meta": {
+    "siteName": "BeerPongSportsTec",
+    "homeTitle": "BeerPongSportsTec - Beer Pong Stats Tracker & Tournament App",
+    "homeDescription": "Track beer pong matches live, follow your stats and skill rating, and organize beer pong tournaments with group stage, standings and knockout bracket - all in one place.",
+    "rulesTitle": "Beer Pong Rules – BeerPong Sports Tec",
+    "rulesDescription": "All the important beer pong rules at a glance: cup setup, elbow rule, bounce shots, multiple hits, swatting and rebuttal. For fair matches and a shared understanding of the game.",
+    "aboutTitle": "About us – BeerPong Sports Tec",
+    "aboutDescription": "BeerPong Sports Tec brings real play, competition and data together on one digital platform: track matches, make performance visible and compare players.",
+    "contactTitle": "Contact | BeerPong Sports Tec"
+  },
+  "Common": {
+    "backHome": "Back to home page",
+    "back": "Back"
+  },
+  "Nav": {
+    "home": "Home",
+    "playerStats": "Players & Stats",
+    "community": "Community",
+    "contact": "Contact",
+    "about": "About us",
+    "login": "Log in",
+    "logoAlt": "Logo",
+    "mainNavigation": "Main navigation"
+  },
+  "LanguageSwitcher": {
+    "label": "Language",
+    "de": "Deutsch",
+    "en": "English",
+    "switchTo": "Switch language to {language}"
+  },
+  "Hero": {
+    "eyebrow": "Play. Compete. Connect.",
+    "headline1": "Beer pong",
+    "headline2": "becomes a",
+    "headline3": "sport.",
+    "description1": "Digital tools. A real community.",
+    "description2": "For everyone who wants more out of beer pong.",
+    "discover": "Discover now",
+    "watchVideo": "Watch video",
+    "featureTournamentsTitle": "Tournaments",
+    "featureTournamentsSubtitle": "Organize",
+    "featureStatsTitle": "Statistics",
+    "featureStatsSubtitle": "Track",
+    "featureCommunityTitle": "Community",
+    "featureCommunitySubtitle": "Play together",
+    "badgeTop": "Same Game.",
+    "badgeBottom": "Higher Standards."
+  },
+  "Platform": {
+    "eyebrow": "The BeerPong Platform",
+    "title1": "Two areas.",
+    "title2": "One sport.",
+    "description": "Organize your competitions with Pong League and keep an eye on your personal performance with Pong Stats.",
+    "leagueSubtitle": "Tournament Platform",
+    "leagueTitle1": "Compete.",
+    "leagueTitle2": "Connect. Win.",
+    "leagueDescription": "Create beer pong tournaments, manage teams and take your matches to the next level.",
+    "leagueFeatures": [
+      "Create tournaments",
+      "Manage teams & players",
+      "Schedule & results"
+    ],
+    "leagueCta": "Discover Pong League",
+    "statsSubtitle": "Player Performance",
+    "statsTitle1": "Track.",
+    "statsTitle2": "Improve. Repeat.",
+    "statsDescription": "Create your player profile, track your beer pong performance and see how you improve over time.",
+    "statsFeatures": [
+      "Personal player profile",
+      "Match history & statistics",
+      "Rankings & achievements"
+    ],
+    "statsCta": "Discover Pong Stats",
+    "logoAlt": "{name} logo",
+    "previewLevel": "Player Level 12",
+    "previewMatches": "Matches",
+    "previewWinrate": "Win rate",
+    "previewWinrateValue": "72.7%",
+    "previewCupsValue": "1,842",
+    "previewCups": "Cups"
+  },
+  "CommunityCta": {
+    "eyebrow": "Join the Game",
+    "headline1": "Ready for",
+    "headline2": "the next",
+    "headline3": "round?",
+    "description": "Create your player profile, explore your stats and become part of a community that treats beer pong as a sport.",
+    "createProfile": "Create profile",
+    "discoverStats": "Discover Pong Stats",
+    "statement": "Good Players. Better People."
+  },
+  "Footer": {
+    "description": "We are building the digital infrastructure for beer pong. From tournaments to personal player statistics.",
+    "tagline": "Play. Compete. Connect.",
+    "products": "Products",
+    "company": "Company",
+    "about": "About us",
+    "contact": "Contact",
+    "community": "Community",
+    "imprint": "Legal notice",
+    "privacy": "Privacy policy",
+    "terms": "Terms",
+    "rights": "© {year} Beerpong Sports Tec. All rights reserved."
+  },
+  "About": {
+    "eyebrow": "More than a game",
+    "title1": "Beer pong.",
+    "title2": "But serious.",
+    "intro": "BeerPong Sports Tec brings real play, competition and data together on one digital platform. Matches are tracked, performance becomes visible and players can compare themselves over the long run.",
+    "play": "Play matches digitally and record every hit right at the table.",
+    "track": "Every throw becomes a statistic. Hits, misses and match progress stay easy to follow.",
+    "compete": "Compare performances, keep improving and turn beer pong into a sport with real data.",
+    "ideaEyebrow": "Our idea",
+    "ideaTitle1": "Good players.",
+    "ideaTitle2": "Better people.",
+    "ideaText1": "We believe beer pong can be more than a single round with friends: more competition, more fairness and more ways to measure yourself against other players.",
+    "ideaText2": "That is why we build digital tools that make the game more professional without losing what matters most: bringing people together and having fun.",
+    "ctaEyebrow": "BeerPong Sports Tec",
+    "ctaTitle": "Same game. Higher standards.",
+    "ctaText": "A platform for players, teams and communities who don't just play beer pong, but want to develop it together.",
+    "ctaButton": "To the game →",
+    "footerLeft": "© BeerPong Sports Tec",
+    "footerRight": "Good players. Better people."
+  },
+  "Rules": {
+    "eyebrow": "Game rules",
+    "title1": "Beer Pong",
+    "title2": "Rules",
+    "intro": "All the important rules at a glance. For fair matches, more fun and a shared understanding of the game.",
+    "sections": {
+      "general": {
+        "title": "General rules",
+        "items": [
+          "2 vs 2",
+          "2 balls, 2 throws per team",
+          "1 vs 1: you throw both balls (2 throws per turn)",
+          "Elbows behind the table edge",
+          "Drink first, then throw!",
+          "Always a triangle formation"
+        ]
+      },
+      "start": {
+        "title": "Starting the game",
+        "paragraphs": [
+          {
+            "text": "The first throw is decided by rock, paper, scissors."
+          },
+          {
+            "text": "The winner starts."
+          }
+        ]
+      },
+      "elbow": {
+        "title": "Elbow rule",
+        "paragraphs": [
+          {
+            "text": "The throwing player's elbow must not cross the end of the table."
+          },
+          {
+            "text": "After repeated violations, the throw is declared invalid."
+          }
+        ]
+      },
+      "setup": {
+        "title": "Cup setup",
+        "paragraphs": [
+          {
+            "text": "Each team uses 10 cups. The cups are always set up in a triangle."
+          },
+          {
+            "text": "The last cup is always placed in the middle at the back."
+          }
+        ]
+      },
+      "distraction": {
+        "title": "Distraction",
+        "paragraphs": [
+          {
+            "text": "Distraction is generally allowed."
+          },
+          {
+            "label": "Allowed:",
+            "text": "Talking, cheering, moving behind the table."
+          },
+          {
+            "label": "Not allowed:",
+            "text": "Covering the cup, touching the table, standing next to the table."
+          }
+        ]
+      },
+      "direct": {
+        "title": "Direct throw",
+        "paragraphs": [
+          {
+            "text": "If the ball lands directly in a cup, it counts as 1 cup."
+          },
+          {
+            "text": "Once the ball has touched a cup, it may be swatted away."
+          }
+        ]
+      },
+      "bounce": {
+        "title": "Bounce shot",
+        "paragraphs": [
+          {
+            "text": "If the ball is deliberately bounced off the table and then lands in a cup, it counts as 2 cups."
+          },
+          {
+            "text": "After the ball has touched the table, it may be swatted away immediately."
+          }
+        ]
+      },
+      "recover": {
+        "title": "Recover & trick shot",
+        "paragraphs": [
+          {
+            "text": "If a thrown ball comes back over your half of the table, the throwing team can get it back (a “recover”). The opposing team may swat it away! The ball must not touch the floor!"
+          },
+          {
+            "text": "A special throw (under difficult conditions) can be counted as a trick shot – after agreeing with the referee."
+          }
+        ]
+      },
+      "multi": {
+        "title": "Multiple hits",
+        "paragraphs": [
+          {
+            "text": "If both players of a team score in the same turn, the team gets 2 additional throws."
+          },
+          {
+            "text": "If both players hit the same cup, 1 additional cup of the throwing team's choice has to be drunk."
+          }
+        ]
+      },
+      "defend": {
+        "title": "Swatting",
+        "paragraphs": [
+          {
+            "text": "After the ball has touched the table or a cup, it may be swatted away."
+          },
+          {
+            "text": "Swatting too early = penalty cup."
+          },
+          {
+            "text": "A ball may be swatted out of a cup if it is visibly spinning inside the cup. A cup only counts as hit if the ball stays in the cup."
+          },
+          {
+            "text": "If a ball is thrown at a cup that already contains a ball, that ball may not be swatted away."
+          }
+        ]
+      },
+      "end": {
+        "title": "Game end (rebuttal)",
+        "paragraphs": [
+          {
+            "text": "Once a team has lost all its cups, the opposing team gets the chance to throw again (rebuttal)."
+          },
+          {
+            "label": "With 3 or more cups:",
+            "text": "Both players may throw."
+          },
+          {
+            "label": "With 2 or fewer cups:",
+            "text": "Only one player may throw."
+          },
+          {
+            "text": "After a hit, the team may keep throwing until a throw misses. If the team hits all cups, 3 new cups per team are set up. The game continues."
+          }
+        ]
+      }
+    },
+    "fairplayTitle": "Fair play",
+    "fairplay": [
+      "Respectful behavior is mandatory.",
+      "Disputes are settled by a referee.",
+      "Unsportsmanlike behavior can be punished with penalty cups or loss of throws."
+    ],
+    "motto1": "Good players.",
+    "motto2": "Better people.",
+    "linkLabel": "Rules",
+    "linkAria": "Rules"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "text": "This page doesn't exist (any more). The address may have changed.",
+    "home": "Back to home page"
+  },
+  "Contact": {
+    "metaTitle": "Contact | {brand}",
+    "metaDescription": "Get in touch with BeerPong Sports Tec from Munich: support, partnerships or feedback – by form, email or phone. We'll get back to you as soon as possible.",
+    "backHome": "Back to home page",
+    "eyebrow": "Contact",
+    "title1": "Let's",
+    "title2": "get in",
+    "title3": "touch.",
+    "intro": "Do you have questions, feedback or an idea? We'd love to hear from you. Whether it's support, a partnership or just a chat – we're here for you.",
+    "highlightFast": "Quick replies",
+    "highlightDirect": "Direct contact",
+    "highlightIdeas": "Open to new ideas",
+    "detailsEyebrow": "Our contact details",
+    "detailsTitle1": "Direct. Personal.",
+    "detailsTitle2": "Uncomplicated.",
+    "detailsText": "You can reach us in several ways. We'll get back to you as soon as we can.",
+    "itemEmail": "Email",
+    "itemLocation": "Location",
+    "itemLocationValue": "Munich, Germany",
+    "formEyebrow": "Send a message",
+    "formTitle": "Write us a message.",
+    "formText": "Just fill in the form and we'll get back to you as soon as possible.",
+    "locationEyebrow": "Our location",
+    "locationTitle": "This is where to find us.",
+    "locationText": "Even though we're here for you digitally, our roots are in Munich. Feel free to drop by or arrange a meeting.",
+    "route": "Show route",
+    "mapAria": "Map section of Munich",
+    "mapCity": "Munich",
+    "loungeAlt": "{brand} lounge",
+    "faqEyebrow": "Frequently asked questions",
+    "faqTitle": "Quick answers.",
+    "faqText": "You may find the answer right here. If not, just write to us!",
+    "faqAll": "View all questions"
+  },
+  "ContactForm": {
+    "honeypot": "Company",
+    "firstName": "First name",
+    "firstNamePlaceholder": "John",
+    "lastName": "Last name",
+    "lastNamePlaceholder": "Doe",
+    "email": "Email",
+    "emailPlaceholder": "john@example.com",
+    "subject": "Subject",
+    "subjectPlaceholder": "Please select",
+    "subjectGeneral": "General inquiry",
+    "subjectSupport": "Support",
+    "subjectCooperation": "Partnership",
+    "subjectFeedback": "Feedback / idea",
+    "subjectOther": "Other",
+    "message": "Message",
+    "messagePlaceholder": "Your message …",
+    "consent": "I agree that my details will be stored to process my request. You can find more information in our <privacy>privacy policy</privacy>.",
+    "sending": "Sending …",
+    "submit": "Send message",
+    "success": "Thanks for your message! We'll get back to you as soon as possible.",
+    "error": "Sorry, that didn't work. Please try again later or write to us directly by email."
+  },
+  "Faq": {
+    "items": [
+      {
+        "question": "How quickly will I get a reply?",
+        "answer": "We usually get back to you within 1–2 working days."
+      },
+      {
+        "question": "Can I propose a partnership?",
+        "answer": "Yes, please do! Choose the subject “Partnership” in the contact form and briefly describe your idea."
+      },
+      {
+        "question": "Is there support for the apps?",
+        "answer": "Yes. Write to us using the form with the subject “Support” and describe your problem as precisely as you can."
+      },
+      {
+        "question": "Where can I find technical documentation?",
+        "answer": "You'll find the technical documentation in the “Features” section. If you have open questions, we'll help you directly."
+      }
+    ]
+  },
+  "CommunityStats": {
+    "eyebrow": "The community",
+    "title1": "More than",
+    "title2": "just a game.",
+    "intro": "Beerpong Sports Tec brings players, matches and tournaments together in one place. Every game becomes part of your personal story.",
+    "playersLabel": "Players",
+    "playersDescription": "registered players",
+    "tournamentsLabel": "Tournaments",
+    "tournamentsDescription": "played",
+    "matchesLabel": "Matches",
+    "matchesDescription": "matches played",
+    "cupsLabel": "Cups",
+    "cupsDescription": "cups hit",
+    "feature1Title": "Play",
+    "feature1Text": "Start matches and take on other players.",
+    "feature2Title": "Measure",
+    "feature2Text": "Track your performance and see how you improve.",
+    "feature3Title": "Connect",
+    "feature3Text": "Find players, teams and a community that thinks like you."
+  }
+}

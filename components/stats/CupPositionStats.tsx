@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import { PanelTitle } from "@/components/stats/PanelCard";
 import {
   getPlayerCupPositionStats,
   type CupPositionStats as CupPositionData,
   type StatsRange,
-} from "@/app/spieler/match/playerStats";
+} from "@/app/[locale]/spieler/match/playerStats";
 
 /*
  * --------------------------------------------------------------------------

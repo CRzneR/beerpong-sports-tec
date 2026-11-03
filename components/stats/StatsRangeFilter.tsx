@@ -1,6 +1,6 @@
 "use client";
 
-import { STATS_RANGES, type StatsRange } from "@/app/spieler/match/playerStats";
+import { STATS_RANGES, type StatsRange } from "@/app/[locale]/spieler/match/playerStats";
 
 /*
  * --------------------------------------------------------------------------

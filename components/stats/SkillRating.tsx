@@ -2,15 +2,15 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
-import { getPlayerSkillRating, type SkillRatingOverview } from "@/app/spieler/match/playerStats";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
+import { getPlayerSkillRating, type SkillRatingOverview } from "@/app/[locale]/spieler/match/playerStats";
 import { PanelModal } from "@/components/stats/PanelCard";
 import {
   MAX_DELTA,
   MIN_RANKED_MATCHES,
   PROVISIONAL_MATCHES,
   START_RATING,
-} from "@/app/spieler/match/skillRating";
+} from "@/app/[locale]/spieler/match/skillRating";
 
 /*
  * --------------------------------------------------------------------------

@@ -1,4 +1,9 @@
+import { useFormatter, useTranslations } from "next-intl";
+
 export function CommunityStats() {
+  const t = useTranslations("CommunityStats");
+  const format = useFormatter();
+
   return (
     <section className="relative overflow-hidden bg-[#050708] py-28 lg:py-36">
       {/* Hintergrund */}
@@ -11,32 +16,47 @@ export function CommunityStats() {
         <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] lg:items-end">
           <div>
             <div className="mb-5 text-xs font-bold uppercase tracking-[0.3em] text-emerald-400">
-              Die Community
+              {t("eyebrow")}
             </div>
 
             <h2 className="text-4xl font-black uppercase leading-[0.95] tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
-              Mehr als nur
+              {t("title1")}
               <br />
-              <span className="text-white/35">ein Spiel.</span>
+              <span className="text-white/35">{t("title2")}</span>
             </h2>
           </div>
 
           <p className="max-w-xl text-base leading-relaxed text-white/45 lg:justify-self-end lg:text-lg">
-            Beerpong Sports Tec verbindet Spieler, Matches und Turniere an einem Ort. Jede Partie
-            wird Teil deiner persönlichen Geschichte.
+            {t("intro")}
           </p>
         </div>
 
         {/* Stats */}
         <div className="mt-16 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025]">
           <div className="grid divide-y divide-white/[0.08] sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
-            <CommunityStat value="2.481" label="Spieler" description="registrierte Spieler" />
+            <CommunityStat
+              value={format.number(2481)}
+              label={t("playersLabel")}
+              description={t("playersDescription")}
+            />
 
-            <CommunityStat value="184" label="Turniere" description="ausgetragen" />
+            <CommunityStat
+              value={format.number(184)}
+              label={t("tournamentsLabel")}
+              description={t("tournamentsDescription")}
+            />
 
-            <CommunityStat value="12.640" label="Matches" description="gespielte Matches" />
+            <CommunityStat
+              value={format.number(12640)}
+              label={t("matchesLabel")}
+              description={t("matchesDescription")}
+            />
 
-            <CommunityStat value="68.921" label="Cups" description="getroffene Becher" />
+            <CommunityStat
+              value={format.number(68921)}
+              label={t("cupsLabel")}
+              description={t("cupsDescription")}
+            />
           </div>
         </div>
 
@@ -44,20 +64,20 @@ export function CommunityStats() {
         <div className="mt-16 grid gap-6 lg:grid-cols-3">
           <CommunityFeature
             number="01"
-            title="Spielen"
-            text="Starte Matches und tritt gegen andere Spieler an."
+            title={t("feature1Title")}
+            text={t("feature1Text")}
           />
 
           <CommunityFeature
             number="02"
-            title="Messen"
-            text="Tracke deine Leistung und sieh, wie du dich entwickelst."
+            title={t("feature2Title")}
+            text={t("feature2Text")}
           />
 
           <CommunityFeature
             number="03"
-            title="Verbinden"
-            text="Finde Spieler, Teams und eine Community, die genauso denkt wie du."
+            title={t("feature3Title")}
+            text={t("feature3Text")}
           />
         </div>
       </div>

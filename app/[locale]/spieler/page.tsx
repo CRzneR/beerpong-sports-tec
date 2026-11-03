@@ -31,10 +31,10 @@ import {
 } from "@/components/stats/DashboardLayout";
 
 import { createClient } from "@/lib/supabase/client";
-import { getOwnProStatus } from "@/app/spieler/match/playerProfiles";
+import { getOwnProStatus } from "@/app/[locale]/spieler/match/playerProfiles";
 
-import type { SavedMatch } from "@/app/spieler/match/matchStorage";
-import type { PlayerOverallStats, StatsRange } from "@/app/spieler/match/playerStats";
+import type { SavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
+import type { PlayerOverallStats, StatsRange } from "@/app/[locale]/spieler/match/playerStats";
 
 const DASHBOARD_CARD_COUNT = DASHBOARD_CARDS.length;
 

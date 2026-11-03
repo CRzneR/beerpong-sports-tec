@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PanelTitle } from "@/components/stats/PanelCard";
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
-import { getAllPlayerOverallStats, type PlayerOverallStats } from "@/app/spieler/match/playerStats";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
+import { getAllPlayerOverallStats, type PlayerOverallStats } from "@/app/[locale]/spieler/match/playerStats";
 
 interface PlayerRankingProps {
   onSelectPlayer?: (player: PlayerOverallStats) => void;

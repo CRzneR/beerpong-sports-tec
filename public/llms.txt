@@ -1,23 +1,31 @@
 # BeerPongSportsTec
 
-> BeerPongSportsTec ist eine deutschsprachige Web-App für Beer Pong: Matches live erfassen, Statistiken und ein Skill-Rating verfolgen und Turniere mit Gruppenphase und Tabellen organisieren. Standort: München.
+> BeerPongSportsTec is a web app for beer pong (German: "Beerpong"): record matches live, follow statistics and a skill rating, and organize tournaments with group stage, standings and knockout bracket. Based in Munich, Germany. Available in German and English.
+>
+> BeerPongSportsTec ist eine Web-App für Beer Pong: Matches live erfassen, Statistiken und ein Skill-Rating verfolgen und Turniere mit Gruppenphase, Tabellen und K.-o.-Phase organisieren. Standort: München. Auf Deutsch und Englisch verfügbar.
 
-Die Plattform besteht aus zwei Bereichen: Pong Stats (Spielerprofil, Match-Erfassung, Statistiken, Rangliste) und Pong League (Turniere).
+The platform has two areas: Pong Stats (player profile, match tracking, statistics, ranking) and Pong League (tournaments).
 
-## Produkte
+## Pages in English
+
+- [Home](https://www.beerpongsportstec.de/en): Overview of the platform.
+- [Beer pong rules](https://www.beerpongsportstec.de/en/rules): Cup setup, elbow rule, bounce shots, multiple hits, swatting and rebuttal.
+- [About us](https://www.beerpongsportstec.de/en/about)
+- [Contact](https://www.beerpongsportstec.de/en/contact): Support, partnerships and feedback, with contact form and FAQ.
+
+## Produkte (Deutsch)
 
 - [Pong Stats](https://www.beerpongsportstec.de/spieler): Profil mit Statistiken zu Trefferquote, Becherpositionen, Spielverlauf, Achievements, Match-Historie, Rangliste und Skill-Rating (0 bis 1000). Matches werden Wurf für Wurf live erfasst.
 - [Pong League](https://www.beerpongsportstec.de/turniere): Turniere mit automatischer Gruppenverteilung, Spielplan und Tabellen.
 
-## Über das Projekt
+## Seiten auf Deutsch
 
+- [Startseite](https://www.beerpongsportstec.de/)
+- [Beer-Pong-Regeln](https://www.beerpongsportstec.de/regeln)
 - [Über uns](https://www.beerpongsportstec.de/about)
-- [Community](https://www.beerpongsportstec.de/community)
-- [Regeln](https://www.beerpongsportstec.de/regeln)
 - [Kontakt](https://www.beerpongsportstec.de/kontakt)
 
 ## Rechtliches
 
 - [Impressum](https://www.beerpongsportstec.de/impressum)
 - [Datenschutz](https://www.beerpongsportstec.de/datenschutz)
-- [AGB](https://www.beerpongsportstec.de/agb)

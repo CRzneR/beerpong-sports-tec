@@ -2,30 +2,15 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const faqs = [
-  {
-    question: "Wie schnell erhalte ich eine Antwort?",
-    answer: "In der Regel melden wir uns innerhalb von 1–2 Werktagen bei dir.",
-  },
-  {
-    question: "Kann ich eine Kooperation anfragen?",
-    answer:
-      "Ja, gerne! Wähle im Kontaktformular den Betreff „Kooperation“ und beschreibe kurz deine Idee.",
-  },
-  {
-    question: "Gibt es Support für die Apps?",
-    answer:
-      "Ja. Schreib uns über das Formular mit dem Betreff „Support“ und beschreibe dein Problem möglichst genau.",
-  },
-  {
-    question: "Wo finde ich technische Dokumentationen?",
-    answer:
-      "Die technischen Dokumentationen findest du im Bereich „Features“. Bei offenen Fragen helfen wir dir direkt weiter.",
-  },
-];
+type Faq = { question: string; answer: string };
 
 export default function FaqList() {
+  const t = useTranslations("Faq");
+  /* Die Fragen und Antworten stehen in messages/*.json unter "Faq.items". */
+  const faqs = t.raw("items") as Faq[];
+
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (

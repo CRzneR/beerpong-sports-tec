@@ -9,7 +9,7 @@ import {
   USERNAME_MAX_LENGTH,
   isUsernameTaken,
   validateUsername,
-} from "@/app/spieler/match/playerProfiles";
+} from "@/app/[locale]/spieler/match/playerProfiles";
 
 /*
  * useSearchParams() verlangt in Next.js einen Suspense-Wrapper auf der

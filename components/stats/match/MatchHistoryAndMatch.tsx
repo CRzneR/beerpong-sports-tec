@@ -5,8 +5,8 @@ import MatchHistory from "../MatchHistory";
 import MatchHistoryDetail from "./MatchHistoryDetail";
 import PlayerRanking from "./PlayerRanking";
 import PlayerDetail from "./PlayerDetail";
-import type { SavedMatch } from "@/app/spieler/match/matchStorage";
-import type { PlayerOverallStats } from "@/app/spieler/match/playerStats";
+import type { SavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
+import type { PlayerOverallStats } from "@/app/[locale]/spieler/match/playerStats";
 
 export default function MatchHistoryAndStats() {
   const [selectedMatch, setSelectedMatch] = useState<SavedMatch | null>(null);

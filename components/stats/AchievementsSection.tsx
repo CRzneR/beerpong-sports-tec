@@ -5,12 +5,12 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
 
-import { getOwnProfile } from "@/app/spieler/match/playerProfiles";
+import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import {
   syncAchievements,
   type AchievementKey,
   type AchievementView,
-} from "@/app/spieler/match/achievements";
+} from "@/app/[locale]/spieler/match/achievements";
 
 /*
  * --------------------------------------------------------------------------
