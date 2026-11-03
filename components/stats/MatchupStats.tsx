@@ -10,6 +10,7 @@ import {
   type StatsRange,
 } from "@/app/[locale]/spieler/match/playerStats";
 import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
+import { useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -21,7 +22,7 @@ import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
  *  - Gegner-Bilanz: Siege/Niederlagen gegen jeden einzelnen Mitspieler
  *  - Partner-Bilanz: dasselbe für Mitspieler im eigenen Team (2 gegen 2)
  *
- * Abzeichen ("Lieblingsgegner", "Angstgegner", "Bestes Team") gibt es erst
+ * Abzeichen (t("lieblingsgegner"), t("angstgegner"), t("bestesTeam")) gibt es erst
  * ab MIN_MATCHES gemeinsamen Matches, damit ein einzelnes Match nicht
  * gleich zum Lieblings- oder Angstgegner macht.
  * --------------------------------------------------------------------------
@@ -72,6 +73,8 @@ function pickExtremes(records: MatchupRecord[]): { best: string | null; worst: s
 }
 
 function RecordRow({ record, badge }: { record: MatchupRecord; badge: Badge | null }) {
+  const t = useTranslations("Stats.MatchupStats");
+
   return (
     <div className="flex items-center gap-3 py-2.5">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-[11px] font-black text-white/60">
@@ -100,9 +103,7 @@ function RecordRow({ record, badge }: { record: MatchupRecord; badge: Badge | nu
       </div>
 
       <div className="shrink-0 text-right">
-        <div className="text-sm font-black text-white">
-          {record.wins} S · {record.losses} N
-        </div>
+        <div className="text-sm font-black text-white">{t("sN", { wins: record.wins, losses: record.losses })}</div>
         <div className="mt-0.5 text-[11px] font-semibold text-white/35">{record.winRate} %</div>
       </div>
     </div>
@@ -124,12 +125,14 @@ function RecordCard({
   loading: boolean;
   message: string | null;
 }) {
+  const t = useTranslations("Stats.MatchupStats");
+
   const [showAll, setShowAll] = useState(false);
 
   let body: ReactNode;
 
   if (loading) {
-    body = <div className="py-10 text-center text-sm font-bold text-white/40">Lade …</div>;
+    body = <div className="py-10 text-center text-sm font-bold text-white/40">{t("lade")}</div>;
   } else if (message) {
     body = <div className="py-10 text-center text-sm font-bold text-white/50">{message}</div>;
   } else if (records.length === 0) {
@@ -154,9 +157,7 @@ function RecordCard({
                 type="button"
                 onClick={() => setShowAll(true)}
                 className="shrink-0 text-xs font-bold text-cyan-300 transition hover:text-cyan-200"
-              >
-                Alle anzeigen
-              </button>
+              >{t("alleAnzeigen")}</button>
             ) : null
           }
         >
@@ -180,6 +181,9 @@ function RecordCard({
 }
 
 export function MatchupStats({ range = "all" }: { range?: StatsRange }) {
+
+  const t = useTranslations("Stats.MatchupStats");
+
   const [data, setData] = useState<PlayerMatchupStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -210,7 +214,7 @@ export function MatchupStats({ range = "all" }: { range?: StatsRange }) {
         console.error("Fehler beim Laden der Bilanzen:", err);
 
         if (!cancelled) {
-          setError("Bilanzen konnten nicht geladen werden.");
+          setError(t("bilanzenKonntenNichtGeladen"));
         }
       } finally {
         if (!cancelled) {
@@ -226,7 +230,7 @@ export function MatchupStats({ range = "all" }: { range?: StatsRange }) {
     };
   }, [range]);
 
-  const message = !loggedIn ? "Melde dich an, um deine Bilanzen zu sehen." : error;
+  const message = !loggedIn ? t("meldeDichAnUm") : error;
 
   const opponentExtremes = pickExtremes(data?.opponents ?? []);
   const partnerExtremes = pickExtremes(data?.partners ?? []);
@@ -234,28 +238,28 @@ export function MatchupStats({ range = "all" }: { range?: StatsRange }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <RecordCard
-        title="Bilanz gegen Gegner"
+        title={t("bilanzGegenGegner")}
         records={data?.opponents ?? []}
-        emptyText="Noch keine Matches gegen andere Spieler."
+        emptyText={t("nochKeineMatchesGegen")}
         loading={loading}
         message={message}
         badgeFor={(record) =>
           record.playerId === opponentExtremes.best
-            ? { label: "Lieblingsgegner", ...BADGE_GOOD }
+            ? { label: t("lieblingsgegner"), ...BADGE_GOOD }
             : record.playerId === opponentExtremes.worst
-              ? { label: "Angstgegner", ...BADGE_BAD }
+              ? { label: t("angstgegner"), ...BADGE_BAD }
               : null
         }
       />
 
       <RecordCard
-        title="Partner-Bilanz"
+        title={t("partnerBilanz")}
         records={data?.partners ?? []}
-        emptyText="Noch keine Matches im Team (2 gegen 2)."
+        emptyText={t("nochKeineMatchesIm")}
         loading={loading}
         message={message}
         badgeFor={(record) =>
-          record.playerId === partnerExtremes.best ? { label: "Bestes Team", ...BADGE_GOOD } : null
+          record.playerId === partnerExtremes.best ? { label: t("bestesTeam"), ...BADGE_GOOD } : null
         }
       />
     </div>

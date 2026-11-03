@@ -1,3 +1,4 @@
+import { AppError } from "@/lib/appError";
 import { createClient } from "@/lib/supabase/client";
 
 /*
@@ -284,18 +285,39 @@ export const USERNAME_MAX_LENGTH = 20;
 
 /** Gibt eine Fehlermeldung zurück - oder null, wenn der Name formal passt. */
 export function validateUsername(raw: string): string | null {
-  const name = raw.trim();
+  const code = validateUsernameCode(raw);
 
-  if (name.length < USERNAME_MIN_LENGTH) {
+  if (code === "usernameTooShort") {
     return `Der Benutzername braucht mindestens ${USERNAME_MIN_LENGTH} Zeichen.`;
   }
 
-  if (name.length > USERNAME_MAX_LENGTH) {
+  if (code === "usernameTooLong") {
     return `Der Benutzername darf höchstens ${USERNAME_MAX_LENGTH} Zeichen haben.`;
   }
 
-  if (!/^[\p{L}\p{N}_.\- ]+$/u.test(name)) {
+  if (code === "usernameChars") {
     return "Erlaubt sind nur Buchstaben, Zahlen, Leerzeichen sowie _ . -";
+  }
+
+  return null;
+}
+
+/** Wie validateUsername, liefert aber einen Fehler-Code (Namensraum "Errors") statt eines Satzes. */
+export function validateUsernameCode(
+  raw: string,
+): "usernameTooShort" | "usernameTooLong" | "usernameChars" | null {
+  const name = raw.trim();
+
+  if (name.length < USERNAME_MIN_LENGTH) {
+    return "usernameTooShort";
+  }
+
+  if (name.length > USERNAME_MAX_LENGTH) {
+    return "usernameTooLong";
+  }
+
+  if (!/^[\p{L}\p{N}_.\- ]+$/u.test(name)) {
+    return "usernameChars";
   }
 
   return null;
@@ -335,17 +357,17 @@ export async function isUsernameTaken(raw: string, ownPlayerId?: string): Promis
  */
 export async function saveOwnUsername(raw: string): Promise<PlayerProfile> {
   const name = raw.trim();
-  const formatError = validateUsername(name);
+  const formatError = validateUsernameCode(name);
 
   if (formatError) {
-    throw new Error(formatError);
+    throw new AppError(formatError);
   }
 
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
 
   if (!userData.user) {
-    throw new Error("Nicht eingeloggt.");
+    throw new AppError("notLoggedIn");
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -359,7 +381,7 @@ export async function saveOwnUsername(raw: string): Promise<PlayerProfile> {
   }
 
   if (await isUsernameTaken(name, existing?.id)) {
-    throw new Error("Dieser Benutzername ist schon vergeben.");
+    throw new AppError("usernameTaken");
   }
 
   const initials = computeInitials(name);
@@ -378,7 +400,7 @@ export async function saveOwnUsername(raw: string): Promise<PlayerProfile> {
   if (error) {
     /* 23505 = unique violation (falls der Index aus username.sql aktiv ist) */
     if (error.code === "23505") {
-      throw new Error("Dieser Benutzername ist schon vergeben.");
+      throw new AppError("usernameTaken");
     }
 
     throw error;

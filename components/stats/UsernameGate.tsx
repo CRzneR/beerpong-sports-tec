@@ -6,8 +6,12 @@ import {
   USERNAME_MAX_LENGTH,
   getUsernameStatus,
   saveOwnUsername,
-  validateUsername,
+  validateUsernameCode,
+  USERNAME_MIN_LENGTH,
 } from "@/app/[locale]/spieler/match/playerProfiles";
+import { useTranslations } from "next-intl";
+
+import { AppError } from "@/lib/appError";
 
 /*
  * --------------------------------------------------------------------------
@@ -30,6 +34,10 @@ type Props = {
 };
 
 export function UsernameGate({ variant = "stats" }: Props) {
+  const t = useTranslations("Stats.UsernameGate");
+  const tErr = useTranslations("Errors");
+  const errParams = { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH };
+
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,9 +73,9 @@ export function UsernameGate({ variant = "stats" }: Props) {
     event.preventDefault();
     if (saving) return;
 
-    const formatError = validateUsername(name);
-    if (formatError) {
-      setError(formatError);
+    const formatCode = validateUsernameCode(name);
+    if (formatCode) {
+      setError(tErr(formatCode, errParams));
       return;
     }
 
@@ -80,7 +88,7 @@ export function UsernameGate({ variant = "stats" }: Props) {
       window.location.reload();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Benutzername konnte nicht gespeichert werden.",
+        err instanceof AppError ? tErr(err.code, errParams) : t("benutzernameKonnteNichtGespeichert"),
       );
       setSaving(false);
     }
@@ -97,17 +105,11 @@ export function UsernameGate({ variant = "stats" }: Props) {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#07090d] p-6 text-white shadow-2xl"
       >
-        <div className={`text-[9px] font-black uppercase tracking-[0.2em] ${accentText}`}>
-          Willkommen
-        </div>
+        <div className={`text-[9px] font-black uppercase tracking-[0.2em] ${accentText}`}>{t("willkommen")}</div>
 
-        <h2 id="username-gate-title" className="mt-2 text-xl font-black uppercase tracking-tight">
-          Wähle deinen Benutzernamen
-        </h2>
+        <h2 id="username-gate-title" className="mt-2 text-xl font-black uppercase tracking-tight">{t("waehleDeinenBenutzernamen")}</h2>
 
-        <p className="mt-2 text-xs font-semibold text-white/50">
-          So erscheinst du in Matches, im Ranking und in Turnieren. Er muss einmalig sein.
-        </p>
+        <p className="mt-2 text-xs font-semibold text-white/50">{t("soErscheinstDuIn")}</p>
 
         {error && (
           <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3 text-xs font-bold text-red-400/80">
@@ -122,7 +124,7 @@ export function UsernameGate({ variant = "stats" }: Props) {
           maxLength={USERNAME_MAX_LENGTH}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Benutzername"
+          placeholder={t("benutzername")}
           className={`mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:outline-none ${accentFocus}`}
         />
 
@@ -131,7 +133,7 @@ export function UsernameGate({ variant = "stats" }: Props) {
           disabled={saving}
           className={`mt-2 w-full rounded-xl border px-4 py-3 text-xs font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-30 ${accentBorder} ${accentBg} ${accentText}`}
         >
-          {saving ? "Speichere …" : "Speichern"}
+          {saving ? t("speichere") : t("speichern")}
         </button>
       </form>
     </div>

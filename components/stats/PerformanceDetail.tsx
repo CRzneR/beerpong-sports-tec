@@ -8,6 +8,7 @@ import {
   type PlayerDetailStats,
   type StatsRange,
 } from "@/app/[locale]/spieler/match/playerStats";
+import { useFormatter, useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -139,6 +140,9 @@ function Bar({ label, value, color }: { label: string; value: number; color: "cy
 /* ------------------------------------------------------------------------ */
 
 export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
+  const t = useTranslations("Stats.PerformanceDetail");
+  const format = useFormatter();
+
   const [stats, setStats] = useState<PlayerDetailStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -182,25 +186,19 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
 
   if (loading) {
     return (
-      <div className={`${CARD} text-center text-sm font-bold text-white/40`}>
-        Lade Statistiken …
-      </div>
+      <div className={`${CARD} text-center text-sm font-bold text-white/40`}>{t("ladeStatistiken")}</div>
     );
   }
 
   if (!loggedIn) {
     return (
-      <div className={`${CARD} text-center text-sm font-bold text-white/50`}>
-        Melde dich an, um deine Detail-Statistiken zu sehen.
-      </div>
+      <div className={`${CARD} text-center text-sm font-bold text-white/50`}>{t("meldeDichAnUm")}</div>
     );
   }
 
   if (!stats) {
     return (
-      <div className={`${CARD} text-center text-sm font-bold text-white/40`}>
-        Noch keine abgeschlossenen Matches für Detail-Statistiken.
-      </div>
+      <div className={`${CARD} text-center text-sm font-bold text-white/40`}>{t("nochKeineAbgeschlossenenMatches")}</div>
     );
   }
 
@@ -208,27 +206,27 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
 
   /* Linkes Feld: Wurf-Bilanz neben dem Ring. */
   const rows: { icon: IconName; label: string; value: string }[] = [
-    { icon: "target", label: "Würfe gesamt", value: String(stats.throws) },
-    { icon: "trophy", label: "Treffer", value: String(stats.hits) },
-    { icon: "cross", label: "Fehlwürfe", value: String(stats.misses) },
+    { icon: "target", label: t("wuerfeGesamt"), value: String(stats.throws) },
+    { icon: "trophy", label: t("treffer"), value: String(stats.hits) },
+    { icon: "cross", label: t("fehlwuerfe"), value: String(stats.misses) },
     {
       icon: "cup",
-      label: "Ø Becher pro Spiel",
-      value: stats.avgCupsPerMatch.toFixed(1).replace(".", ","),
+      label: t("becherProSpiel"),
+      value: format.number(stats.avgCupsPerMatch, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
     },
   ];
 
   /* Untere Leiste: Bestwerte neben der Form. */
   const highlights: { icon: IconName; label: string; value: string }[] = [
-    { icon: "trophy", label: "Längste Siegesserie", value: String(stats.longestWinStreak) },
-    { icon: "flame", label: "Längste Trefferserie", value: String(stats.longestHitStreak) },
-    { icon: "target", label: "Höchste Trefferquote", value: `${stats.bestHitRate} %` },
+    { icon: "trophy", label: t("laengsteSiegesserie"), value: String(stats.longestWinStreak) },
+    { icon: "flame", label: t("laengsteTrefferserie"), value: String(stats.longestHitStreak) },
+    { icon: "target", label: t("hoechsteTrefferquote"), value: `${stats.bestHitRate} %` },
   ];
 
   const hitTypeRows = [
-    { label: "Einzeltreffer", value: stats.hitTypeDistribution.single },
-    { label: "Aufhüpfen", value: stats.hitTypeDistribution.bounce },
-    { label: "Trickshot", value: stats.hitTypeDistribution.trickshot },
+    { label: t("einzeltreffer"), value: stats.hitTypeDistribution.single },
+    { label: t("aufhuepfen"), value: stats.hitTypeDistribution.bounce },
+    { label: t("trickshot"), value: stats.hitTypeDistribution.trickshot },
   ];
 
   const hasHitTypeData =
@@ -243,18 +241,16 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
     endphaseBody = (
       <>
         <div className="mt-5 space-y-4">
-          <Bar label="Endphase" value={stats.endphase.hitRate} color="cyan" />
-          <Bar label="Sonstige Würfe" value={stats.endphase.otherHitRate} color="gray" />
+          <Bar label={t("endphase")} value={stats.endphase.hitRate} color="cyan" />
+          <Bar label={t("sonstigeWuerfe")} value={stats.endphase.otherHitRate} color="gray" />
         </div>
 
-        <p className="mt-4 text-xs font-semibold text-white/35">
-          Würfe, bei denen der Gegner nur noch 3 oder weniger Becher hatte.
-        </p>
+        <p className="mt-4 text-xs font-semibold text-white/35">{t("wuerfeBeiDenenDer")}</p>
       </>
     );
   } else {
     endphaseBody = (
-      <div className="mt-5 text-xs font-bold text-white/30">Noch keine Würfe in der Endphase.</div>
+      <div className="mt-5 text-xs font-bold text-white/30">{t("nochKeineWuerfeIn")}</div>
     );
   }
 
@@ -267,12 +263,8 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
             <span className="mt-0.5 h-6 w-1 shrink-0 rounded-full bg-cyan-400" />
 
             <div>
-              <div className="text-lg font-black tracking-tight text-white">
-                Statistiken im Detail
-              </div>
-              <div className="mt-0.5 text-xs font-semibold text-white/40">
-                Detaillierte Auswertung deiner bisherigen Matches.
-              </div>
+              <div className="text-lg font-black tracking-tight text-white">{t("statistikenImDetail")}</div>
+              <div className="mt-0.5 text-xs font-semibold text-white/40">{t("detaillierteAuswertungDeinerBisher")}</div>
             </div>
           </div>
 
@@ -305,11 +297,9 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
 
               <div className="absolute flex flex-col items-center">
                 <span className="text-2xl font-black text-white sm:text-[1.65rem]">
-                  {stats.winRate.toFixed(1).replace(".", ",")} %
+                  {format.number(stats.winRate, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %
                 </span>
-                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                  Win Rate
-                </span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/45">{t("winRate")}</span>
               </div>
             </div>
 
@@ -337,7 +327,7 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
         <div className="min-w-0 border-t border-white/[0.06] pt-8 md:border-l md:border-t-0 md:pl-8 md:pt-0">
           <div className="flex items-center gap-3.5">
             <IconTile name="target" />
-            <div className="text-lg font-black tracking-tight text-white">Trefferarten</div>
+            <div className="text-lg font-black tracking-tight text-white">{t("trefferarten")}</div>
           </div>
 
           {hasHitTypeData ? (
@@ -347,23 +337,19 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
               ))}
             </div>
           ) : (
-            <div className="mt-5 text-xs font-bold text-white/30">
-              Noch keine Trefferarten erfasst.
-            </div>
+            <div className="mt-5 text-xs font-bold text-white/30">{t("nochKeineTrefferartenErfasst")}</div>
           )}
 
           <div className="mt-6 border-t border-white/[0.06] pt-6">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3.5">
                 <IconTile name="clock" />
-                <div className="text-sm font-black uppercase tracking-wide text-white/80">
-                  Endphase-Quote
-                </div>
+                <div className="text-sm font-black uppercase tracking-wide text-white/80">{t("endphaseQuote")}</div>
               </div>
 
               {stats.endphase && (
                 <div className="text-xs font-semibold text-white/40">
-                  {stats.endphase.throws} {stats.endphase.throws === 1 ? "Wurf" : "Würfe"}
+                  {t("wuerfeAnzahl", { count: stats.endphase.throws })}
                 </div>
               )}
             </div>
@@ -380,10 +366,7 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
         <div className="lg:pr-6">
           <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-wide text-white/50">
             <Icon name="bars" className="h-4 w-4 text-cyan-400" />
-            <span>
-              Form (letzte {stats.recentForm.length}{" "}
-              {stats.recentForm.length === 1 ? "Spiel" : "Spiele"})
-            </span>
+            <span>{t("formLetzteSpiele", { count: stats.recentForm.length })}</span>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -396,7 +379,7 @@ export function PerformanceDetail({ range = "all" }: { range?: StatsRange }) {
                     : "border-red-400/20 bg-red-500/20 text-red-300"
                 }`}
               >
-                {result}
+                {result === "S" ? t("siegKurz") : t("niederlageKurz")}
               </span>
             ))}
           </div>

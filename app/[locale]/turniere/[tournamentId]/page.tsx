@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { localizePath } from "@/lib/localizePath";
 import { QRCodeSVG } from "qrcode.react";
 
 import {
@@ -26,7 +27,7 @@ import {
   computeKoQualifiersBy,
   isKoMatchEditable,
   koChampionId,
-  koRoundLabel,
+  koRoundCode,
   koTeamCountAllowed,
   koTotalRounds,
   koWinnerId,
@@ -42,18 +43,19 @@ import {
 import { KoBracket, type KoBracketMatch } from "../KoBracket";
 import { getOwnProStatus, getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale, useTranslations } from "next-intl";
+import { useRoundText } from "../useRoundText";
+import type { Locale } from "@/i18n/routing";
 
 type TabId = "gruppen" | "spielplan" | "ko" | "teams" | "verwaltung";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "gruppen", label: "Gruppen" },
-  { id: "spielplan", label: "Spielplan" },
-  { id: "ko", label: "K.-o." },
-  { id: "teams", label: "Teams" },
-  { id: "verwaltung", label: "Verwaltung" },
-];
+const TAB_IDS: TabId[] = ["gruppen", "spielplan", "ko", "teams", "verwaltung"];
 
 export default function TurnierDetailPage() {
+  const t = useTranslations("League.DetailPage");
+  const roundOf = useRoundText();
+  const locale = useLocale() as Locale;
+
   const params = useParams();
   const router = useRouter();
   const tournamentId = params.tournamentId as string;
@@ -135,7 +137,7 @@ export default function TurnierDetailPage() {
          * die generische Fehlermeldung.
          */
         if (!data.user) {
-          router.replace(`/login?next=${encodeURIComponent(`/turniere/${tournamentId}`)}`);
+          router.replace({ pathname: "/login", query: { next: `/turniere/${tournamentId}` } });
           return;
         }
 
@@ -153,7 +155,7 @@ export default function TurnierDetailPage() {
           }
 
           if (!result) {
-            setError("Turnier wurde nicht gefunden.");
+            setError(t("turnierWurdeNichtGefunden"));
             return;
           }
 
@@ -170,7 +172,7 @@ export default function TurnierDetailPage() {
         console.error("Fehler beim Laden des Turniers:", err);
 
         if (!cancelled) {
-          setError("Turnier konnte nicht geladen werden.");
+          setError(t("turnierKonnteNichtGeladen"));
         }
       })
       .finally(() => {
@@ -296,7 +298,7 @@ export default function TurnierDetailPage() {
     const team = teamById(teamId);
     const rank = groupRankById.get(teamId);
 
-    return team && rank ? `${rank}. Gruppe ${team.groupLabel}` : null;
+    return team && rank ? t("koTag", { rank, group: team.groupLabel }) : null;
   };
 
   const koDialogMatch = koDialogMatchId
@@ -324,14 +326,14 @@ export default function TurnierDetailPage() {
       if (result !== "started") {
         setKoError(
           result === "group_open"
-            ? "Es sind noch nicht alle Gruppenspiele eingetragen."
+            ? t("koFehlerGruppeOffen")
             : result === "already_started"
-              ? "Die K.-o.-Phase läuft bereits. Lade die Seite neu."
+              ? t("koFehlerLaeuftBereits")
               : result === "not_allowed"
-                ? "Nur der Veranstalter darf die K.-o.-Phase starten."
+                ? t("koFehlerNurVeranstalter")
                 : result === "pro_required"
-                  ? "Die K.-o.-Phase gibt es nur mit Pro."
-                  : "Diese Auswahl ist nicht gültig (Teamzahl oder Modus). Wähle sie neu.",
+                  ? t("koFehlerNurPro")
+                  : t("koFehlerAuswahlUngueltig"),
         );
 
         if (result === "pro_required") {
@@ -358,8 +360,8 @@ export default function TurnierDetailPage() {
 
       setKoError(
         code === "PGRST202" || code === "42883" || /could not find the function/i.test(message)
-          ? "Die Datenbank-Funktion fehlt. Führe ko-phase.sql im Supabase-SQL-Editor aus."
-          : `K.-o.-Phase konnte nicht gestartet werden.${message ? ` (${code ? `${code}: ` : ""}${message})` : ""}`,
+          ? t("koFehlerDatenbankFunktion")
+          : `${t("koFehlerStart")}${message ? ` (${code ? `${code}: ` : ""}${message})` : ""}`,
       );
     } finally {
       setStartingKo(false);
@@ -387,7 +389,7 @@ export default function TurnierDetailPage() {
       setTab("ko");
     } catch (err) {
       console.error("Fehler beim Zurücksetzen der K.-o.-Phase:", err);
-      setKoError("K.-o.-Phase konnte nicht zurückgesetzt werden.");
+      setKoError(t("kOPhaseKonnte"));
     } finally {
       setResettingKo(false);
     }
@@ -412,7 +414,7 @@ export default function TurnierDetailPage() {
     setTournament({ ...tournament, status: koChampionId(updated) ? "finished" : "active" });
   };
 
-  const inviteUrl = tournament?.joinCode ? buildInviteUrl(origin, tournament.joinCode) : "";
+  const inviteUrl = tournament?.joinCode ? buildInviteUrl(origin, tournament.joinCode, locale) : "";
 
   /* Pro freischalten: Stripe-Checkout, danach zurück zu diesem Turnier. */
   const handleUpgrade = async () => {
@@ -427,18 +429,18 @@ export default function TurnierDetailPage() {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnTo: `/turniere/${tournamentId}` }),
+        body: JSON.stringify({ returnTo: `/turniere/${tournamentId}`, locale }),
       });
       const data = await response.json();
 
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "Checkout fehlgeschlagen.");
+        throw new Error(data.error ?? "Checkout failed.");
       }
 
       window.location.href = data.url;
     } catch (err) {
       console.error("Fehler beim Starten des Checkouts:", err);
-      setUpgradeError("Checkout konnte nicht gestartet werden.");
+      setUpgradeError(t("checkoutKonnteNichtGestartet"));
       setUpgrading(false);
     }
   };
@@ -463,7 +465,7 @@ export default function TurnierDetailPage() {
       setConfirmRemoveId(null);
     } catch (err) {
       console.error("Fehler beim Entfernen des Spielers:", err);
-      setMemberError("Spieler konnte nicht entfernt werden.");
+      setMemberError(t("spielerKonnteNichtEntfernt"));
     } finally {
       setMemberBusy(false);
     }
@@ -486,7 +488,7 @@ export default function TurnierDetailPage() {
       setConfirmingLeave(false);
     } catch (err) {
       console.error("Fehler beim Lösen der Verknüpfung:", err);
-      setMemberError("Verknüpfung konnte nicht gelöst werden.");
+      setMemberError(t("verknuepfungKonnteNichtGeloest"));
     } finally {
       setMemberBusy(false);
     }
@@ -517,7 +519,7 @@ export default function TurnierDetailPage() {
       router.push("/turniere");
     } catch (err) {
       console.error("Fehler beim Löschen des Turniers:", err);
-      setDeleteError("Turnier konnte nicht gelöscht werden.");
+      setDeleteError(t("turnierKonnteNichtGeloescht"));
       setDeleting(false);
     }
   };
@@ -525,7 +527,7 @@ export default function TurnierDetailPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-[#07090d] px-5 py-10 text-white">
-        <div className="mx-auto max-w-4xl text-sm font-bold text-white/40">Lade Turnier …</div>
+        <div className="mx-auto max-w-4xl text-sm font-bold text-white/40">{t("ladeTurnier")}</div>
       </main>
     );
   }
@@ -534,7 +536,7 @@ export default function TurnierDetailPage() {
     return (
       <main className="min-h-screen bg-[#07090d] px-5 py-10 text-white">
         <div className="mx-auto max-w-4xl text-sm font-bold text-red-400/70">
-          {error ?? "Turnier wurde nicht gefunden."}
+          {error ?? t("turnierWurdeNichtGefunden")}
         </div>
       </main>
     );
@@ -547,53 +549,42 @@ export default function TurnierDetailPage() {
           href="/turniere"
           className="group mb-8 inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
         >
-          <span className="transition-transform group-hover:-translate-x-1">←</span>
-          Zurück zu Turnieren
-        </Link>
+          <span className="transition-transform group-hover:-translate-x-1">←</span>{t("zurueckZuTurnieren")}</Link>
 
-        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400">
-          Pong League
-        </div>
+        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("pongLeague")}</div>
 
         <h1 className="mt-1 text-2xl font-black uppercase tracking-tight">{tournament.name}</h1>
 
         <div className="mt-1 text-xs font-bold text-white/30">
-          {tournament.teamCount} Teams · {tournament.groupCount}{" "}
-          {tournament.groupCount === 1 ? "Gruppe" : "Gruppen"}
+          {t("teamsGruppen", { teams: tournament.teamCount, groups: tournament.groupCount })}
         </div>
 
         {championTeam && (
-          <div className="mr-2 mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-400/[0.12] px-4 py-2 text-[11px] font-black uppercase tracking-wider text-yellow-300">
-            Turniersieger: {championTeam.name}
-          </div>
+          <div className="mr-2 mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-400/[0.12] px-4 py-2 text-[11px] font-black uppercase tracking-wider text-yellow-300">{t("turniersieger", { name: championTeam.name })}</div>
         )}
 
         {myTeam && (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">
-            Du spielst für {myTeam.name}
-          </div>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">{t("duSpielstFuer", { name: myTeam.name })}</div>
         )}
 
         {/* MENÜ */}
 
         <div className="mt-8 flex gap-2 overflow-x-auto border-b border-white/[0.08]">
-          {TABS.filter((entry) => entry.id !== "verwaltung" || isOwner).map((entry) => (
+          {TAB_IDS.filter((id) => id !== "verwaltung" || isOwner).map((id) => (
             <button
-              key={entry.id}
+              key={id}
               type="button"
-              onClick={() => setTab(entry.id)}
+              onClick={() => setTab(id)}
               className={`shrink-0 px-4 py-3 text-xs font-black uppercase tracking-wider transition ${
-                tab === entry.id
+                tab === id
                   ? "border-b-2 border-yellow-400 text-yellow-400"
                   : "text-white/30 hover:text-white"
               }`}
             >
-              {entry.label}
+              {t(`tab_${id}`)}
 
-              {entry.id === "ko" && isOwner && isPro === false && !koStarted && (
-                <span className="ml-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-1.5 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">
-                  PRO
-                </span>
+              {id === "ko" && isOwner && isPro === false && !koStarted && (
+                <span className="ml-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-1.5 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">{t("pro")}</span>
               )}
             </button>
           ))}
@@ -613,35 +604,21 @@ export default function TurnierDetailPage() {
                   key={groupLabel}
                   className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
                 >
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                    Gruppe {groupLabel}
-                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("gruppe2", { groupLabel })}</div>
 
                   <table className="mt-4 w-full text-left">
                     <thead>
                       <tr className="text-[9px] font-black uppercase tracking-wider text-white/30">
-                        <th className="pb-2">Team</th>
-                        <th className="pb-2 text-center" title="Spiele">
-                          Sp
-                        </th>
-                        <th className="pb-2 text-center" title="Siege">
-                          S
-                        </th>
-                        <th className="pb-2 text-center" title="Niederlagen">
-                          N
-                        </th>
+                        <th className="pb-2">{t("team")}</th>
+                        <th className="pb-2 text-center" title={t("spiele")}>{t("sp")}</th>
+                        <th className="pb-2 text-center" title={t("siege")}>{t("s")}</th>
+                        <th className="pb-2 text-center" title={t("niederlagen")}>{t("n")}</th>
                         <th
                           className="pb-2 text-center"
-                          title="Trefferverhältnis (erzielt:kassiert)"
-                        >
-                          Treffer
-                        </th>
-                        <th className="pb-2 text-center" title="Punkte">
-                          Pkt
-                        </th>
-                        <th className="pb-2 pl-2 text-right" title="Form (letzte 3 Spiele)">
-                          Form
-                        </th>
+                          title={t("trefferverhaeltnisErzieltKassiert")}
+                        >{t("treffer")}</th>
+                        <th className="pb-2 text-center" title={t("punkte")}>{t("pkt")}</th>
+                        <th className="pb-2 pl-2 text-right" title={t("formLetzte3Spiele")}>{t("form")}</th>
                       </tr>
                     </thead>
 
@@ -657,7 +634,7 @@ export default function TurnierDetailPage() {
                             {row.team.id === myTeamId && (
                               <span
                                 className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-yellow-400 align-middle"
-                                aria-label="Dein Team"
+                                aria-label={t("deinTeam")}
                               />
                             )}
                             {row.team.name}
@@ -709,9 +686,7 @@ export default function TurnierDetailPage() {
           <div className="mt-6 space-y-6">
             {groupLabels.map((groupLabel) => (
               <div key={groupLabel}>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                  Gruppe {groupLabel}
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("gruppe2", { groupLabel })}</div>
 
                 <div className="mt-3 space-y-2">
                   {matches
@@ -750,12 +725,12 @@ export default function TurnierDetailPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs font-bold text-white/30">
                     {tournament.koMode === "reseed"
-                      ? "Bester gegen Schlechtesten (vor jeder Runde neu gesetzt)"
-                      : "Mit Freilos für die Besten"}
+                      ? t("besterGegenSchlechtestenVor")
+                      : t("mitFreilosFuerDie")}
                     {" · "}
                     {tournament.koSelect === "overall"
-                      ? `Beste ${tournament.koPerGroup} Teams`
-                      : `${tournament.koPerGroup} pro Gruppe`}
+                      ? t("besteTeams", { koPerGroup: tournament.koPerGroup ?? 0 })
+                      : t("proGruppe", { koPerGroup: tournament.koPerGroup ?? 0 })}
                   </div>
 
                   {isOwner && !confirmingKoBack && (
@@ -773,18 +748,13 @@ export default function TurnierDetailPage() {
                       }}
                       disabled={resettingKo}
                       className="rounded-full border border-white/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:border-yellow-400/40 hover:text-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      ← Zurück zur Auswahl
-                    </button>
+                    >{t("zurueckZurAuswahl")}</button>
                   )}
                 </div>
 
                 {isOwner && confirmingKoBack && (
                   <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.03] p-4">
-                    <p className="text-sm text-white/60">
-                      Zurück zur Auswahl? Die K.-o.-Phase wird zurückgesetzt und alle eingetragenen
-                      K.-o.-Ergebnisse gehen verloren. Die Gruppenphase bleibt unverändert.
-                    </p>
+                    <p className="text-sm text-white/60">{t("zurueckZurAuswahlDie")}</p>
 
                     <div className="mt-3 flex flex-wrap gap-3">
                       <button
@@ -793,7 +763,7 @@ export default function TurnierDetailPage() {
                         disabled={resettingKo}
                         className="rounded-full bg-red-400 px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {resettingKo ? "Setzt zurück …" : "Ja, zurück zur Auswahl"}
+                        {resettingKo ? t("setztZurueck") : t("jaZurueckZurAuswahl")}
                       </button>
 
                       <button
@@ -801,9 +771,7 @@ export default function TurnierDetailPage() {
                         onClick={() => setConfirmingKoBack(false)}
                         disabled={resettingKo}
                         className="rounded-full border border-white/[0.08] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Abbrechen
-                      </button>
+                      >{t("abbrechen")}</button>
                     </div>
 
                     {koError && (
@@ -836,7 +804,7 @@ export default function TurnierDetailPage() {
                   {Array.from({ length: koTotal }, (_, index) => index + 1).map((round) => (
                     <div key={round} className="flex flex-col md:min-w-[230px] md:flex-1">
                       <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                        {koRoundLabel(round, koTotal)}
+                        {roundOf(koRoundCode(round, koTotal))}
                       </div>
 
                       <div className="mt-3 flex flex-1 flex-col gap-3 md:justify-around">
@@ -871,28 +839,17 @@ export default function TurnierDetailPage() {
                 )}
               </>
             ) : isOwner && isPro === null ? (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">
-                Lädt …
-              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">{t("laedt")}</div>
             ) : isOwner && !isPro ? (
               <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.03] p-6 text-center md:p-8">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                  🔒 Pro-Funktion
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("proFunktion")}</div>
 
-                <div className="mt-2 text-lg font-black text-white">K.-o.-Phase mit Pro</div>
+                <div className="mt-2 text-lg font-black text-white">{t("kOPhaseMit")}</div>
 
-                <p className="mx-auto mt-2 max-w-md text-sm text-white/50">
-                  Mit Pro startest du nach der Gruppenphase die K.-o.-Phase: Wähle, wie viele Teams
-                  weiterkommen, und spiele den Turniersieger im Turnierbaum aus. Pro ist eine
-                  einmalige Zahlung und schaltet auch die Statistiken in Pong Stats frei.
-                </p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-white/50">{t("mitProStartestDu")}</p>
 
                 {proReturn === "success" && (
-                  <div className="mx-auto mt-4 max-w-md rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] px-4 py-3 text-xs font-bold text-yellow-300">
-                    Danke für deinen Kauf! Pro wird in der Regel innerhalb weniger Sekunden
-                    freigeschaltet. Falls es noch nicht angezeigt wird, lade die Seite kurz neu.
-                  </div>
+                  <div className="mx-auto mt-4 max-w-md rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] px-4 py-3 text-xs font-bold text-yellow-300">{t("dankeFuerDeinenKauf")}</div>
                 )}
 
                 {upgradeError && (
@@ -905,44 +862,34 @@ export default function TurnierDetailPage() {
                   disabled={upgrading}
                   className="mt-5 rounded-full bg-yellow-400 px-6 py-3 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_25px_rgba(250,204,21,0.18)] transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {upgrading ? "Lädt …" : "Pro freischalten"}
+                  {upgrading ? t("laedt") : t("proFreischalten")}
                 </button>
               </div>
             ) : isOwner ? (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                  K.-o.-Phase starten
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("kOPhaseStarten")}</div>
 
-                <p className="mt-2 text-sm text-white/50">
-                  Die besten Teams spielen im K.-o.-System den Turniersieger aus. Ein Spiel pro
-                  Paarung, ein Unentschieden gibt es nicht.
-                </p>
+                <p className="mt-2 text-sm text-white/50">{t("dieBestenTeamsSpielen")}</p>
 
                 {openGroupMatches > 0 ? (
-                  <div className="mt-4 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-bold text-white/50">
-                    Trag zuerst alle Gruppenspiele ein. Noch {openGroupMatches}{" "}
-                    {openGroupMatches === 1 ? "Spiel" : "Spiele"} offen.
-                  </div>
+                  <div className="mt-4 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-bold text-white/50">{t("tragZuerstAlleGruppenspiele", { count: openGroupMatches })}</div>
                 ) : (
                   <>
                     <div className="mt-5">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                        Wer kommt weiter?
-                      </div>
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">{t("werKommtWeiter")}</div>
 
                       <div className="mt-2 grid gap-3 md:grid-cols-2">
                         {(
                           [
                             {
                               id: "group",
-                              title: "Beste jeder Gruppe",
-                              text: "Aus jeder Gruppe kommen gleich viele Teams weiter, zum Beispiel die zwei Ersten.",
+                              title: t("optBesteJederGruppeTitle"),
+                              text: t("optBesteJederGruppeText"),
                             },
                             {
                               id: "overall",
-                              title: "Beste Teams insgesamt",
-                              text: "Die besten Teams über alle Gruppen, egal aus welcher Gruppe sie kommen.",
+                              title: t("optBesteInsgesamtTitle"),
+                              text: t("optBesteInsgesamtText"),
                             },
                           ] as { id: KoSelect; title: string; text: string }[]
                         ).map((option) => (
@@ -969,10 +916,7 @@ export default function TurnierDetailPage() {
                       </div>
 
                       {singleGroup && (
-                        <p className="mt-3 text-xs font-semibold text-white/35">
-                          Dein Turnier hat nur eine Gruppe, beide Auswahlen ergeben dasselbe
-                          Ergebnis.
-                        </p>
+                        <p className="mt-3 text-xs font-semibold text-white/35">{t("deinTurnierHatNur")}</p>
                       )}
                     </div>
 
@@ -980,9 +924,7 @@ export default function TurnierDetailPage() {
                       <label
                         htmlFor="ko-per-group"
                         className="text-[10px] font-black uppercase tracking-wider text-white/40"
-                      >
-                        Wie viele Teams kommen weiter?
-                      </label>
+                      >{t("wieVieleTeamsKommen")}</label>
 
                       <select
                         id="ko-per-group"
@@ -1000,9 +942,7 @@ export default function TurnierDetailPage() {
                                     key={count}
                                     value={count}
                                     disabled={!koTeamCountAllowed(koModeChoice, total)}
-                                  >
-                                    {count} pro Gruppe ({total} Teams gesamt)
-                                  </option>
+                                  >{t("proGruppeTeamsGesamt", { count, total })}</option>
                                 );
                               },
                             )
@@ -1014,30 +954,26 @@ export default function TurnierDetailPage() {
                                 key={count}
                                 value={count}
                                 disabled={!koTeamCountAllowed(koModeChoice, count)}
-                              >
-                                Die besten {count} Teams
-                              </option>
+                              >{t("dieBestenTeams", { count })}</option>
                             ))}
                       </select>
                     </div>
 
                     <div className="mt-5">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                        Modus
-                      </div>
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white/40">{t("modus")}</div>
 
                       <div className="mt-2 grid gap-3 md:grid-cols-2">
                         {(
                           [
                             {
                               id: "reseed",
-                              title: "Bester gegen Schlechtesten",
-                              text: "Der beste Platz spielt gegen den schlechtesten, der zweitbeste gegen den zweitschlechtesten und so weiter, in jeder Runde neu. Keine Freilose, die Teamzahl muss 2, 4, 8 oder 16 sein.",
+                              title: t("optReseedTitle"),
+                              text: t("optReseedText"),
                             },
                             {
                               id: "bracket",
-                              title: "Mit Freilos für die Besten",
-                              text: "Passt die Teamzahl nicht auf 2, 4, 8 oder 16 (zum Beispiel 6), haben die besten Teams in Runde 1 frei, bei 6 Teams die beiden besten. Links und rechts im Baum stehen gleich viele Teams, deshalb nur gerade Teamzahlen.",
+                              title: t("optBracketTitle"),
+                              text: t("optBracketText"),
                             },
                           ] as { id: KoMode; title: string; text: string }[]
                         ).map((option) => (
@@ -1063,17 +999,17 @@ export default function TurnierDetailPage() {
                       {amountChoices.length === 0 && (
                         <p className="mt-3 text-xs font-bold text-yellow-400/80">
                           {koModeChoice === "reseed"
-                            ? `Mit dieser Auswahl ergibt sich nie 2, 4, 8 oder 16 Teams. Wähle „Beste Teams insgesamt" oder „Mit Freilos für die Besten".`
-                            : "Mit dieser Auswahl ergibt sich keine gerade Teamzahl."}
+                            ? t("mitDieserAuswahlErgibt")
+                            : t("mitDieserAuswahlErgibt2")}
                         </p>
                       )}
                     </div>
 
                     <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
                       <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                        {koModeChoice === "bracket" ? "Vorschau Turnierbaum" : "Vorschau Runde 1"} (
-                        {koQualifiers.length} Teams)
-                      </div>
+                        {t(koModeChoice === "bracket" ? "vorschauTurnierbaumTeams" : "vorschauRunde1Teams", {
+                          count: koQualifiers.length,
+                        })}</div>
 
                       {koTeamCountValid && koModeChoice === "bracket" && (
                         <div className="mt-3 hidden md:block">
@@ -1113,12 +1049,10 @@ export default function TurnierDetailPage() {
                                 </span>
 
                                 {match.status === "bye" ? (
-                                  <span className="shrink-0 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400">
-                                    Freilos
-                                  </span>
+                                  <span className="shrink-0 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400">{t("freilos")}</span>
                                 ) : (
                                   <>
-                                    <span className="shrink-0 text-white/25">gegen</span>
+                                    <span className="shrink-0 text-white/25">{t("gegen")}</span>
                                     <span className="min-w-0 truncate">
                                       <span className="mr-1.5 text-[10px] font-black text-white/30">
                                         #
@@ -1138,8 +1072,8 @@ export default function TurnierDetailPage() {
                       ) : (
                         <div className="mt-3 text-xs font-bold text-red-400/80">
                           {koModeChoice === "reseed"
-                            ? "Ohne Freilose geht das nur mit 2, 4, 8, 16 oder 32 Teams. Wähle eine passende Anzahl oder den Modus mit Freilos."
-                            : `Wähle eine gerade Teamzahl zwischen ${MIN_KO_TEAMS} und ${MAX_KO_TEAMS}, damit links und rechts im Baum gleich viele Teams stehen.`}
+                            ? t("ohneFreiloseGehtDas")
+                            : t("waehleEineGeradeTeamzahl", { MIN_KO_TEAMS, MAX_KO_TEAMS })}
                         </div>
                       )}
                     </div>
@@ -1154,15 +1088,13 @@ export default function TurnierDetailPage() {
                       disabled={startingKo || !koTeamCountValid}
                       className="mt-5 w-full rounded-full bg-yellow-400 px-5 py-3.5 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_25px_rgba(250,204,21,0.18)] transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-40 md:w-auto md:px-8"
                     >
-                      {startingKo ? "Startet …" : "K.-o.-Phase starten"}
+                      {startingKo ? t("startet") : t("kOPhaseStarten")}
                     </button>
                   </>
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">
-                Die K.-o.-Phase wurde noch nicht gestartet.
-              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">{t("dieKOPhase")}</div>
             )}
           </div>
         )}
@@ -1173,15 +1105,9 @@ export default function TurnierDetailPage() {
           <div className="mt-6 space-y-6">
             {isOwner && inviteUrl && (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                  Spieler einladen
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("spielerEinladen")}</div>
 
-                <p className="mt-2 text-sm text-white/50">
-                  Jeder Spieler öffnet den Link, meldet sich an und wählt sein Team. Damit verknüpft
-                  er sein eigenes Profil mit dem Teamnamen und kann das Turnier in Pong Stats
-                  verfolgen. Ergebnisse trägst weiterhin du ein.
-                </p>
+                <p className="mt-2 text-sm text-white/50">{t("jederSpielerOeffnetDen")}</p>
 
                 <div className="mt-4 flex flex-col gap-5 md:flex-row md:items-center">
                   <div className="min-w-0 flex-1">
@@ -1190,7 +1116,7 @@ export default function TurnierDetailPage() {
                         readOnly
                         value={inviteUrl}
                         onFocus={(event) => event.currentTarget.select()}
-                        aria-label="Beitritts-Link"
+                        aria-label={t("beitrittsLink")}
                         className="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/70 focus:border-yellow-400/40 focus:outline-none"
                       />
 
@@ -1199,17 +1125,15 @@ export default function TurnierDetailPage() {
                         onClick={handleCopyInvite}
                         className="shrink-0 rounded-full bg-yellow-400 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-yellow-300"
                       >
-                        {copied ? "Kopiert" : "Kopieren"}
+                        {copied ? t("kopiert") : t("kopieren")}
                       </button>
                     </div>
 
                     {!myTeamId && (
                       <Link
-                        href={`/turniere/beitreten/${tournament.joinCode}`}
+                        href={{ pathname: "/turniere/beitreten/[code]", params: { code: tournament.joinCode } }}
                         className="mt-3 inline-block text-xs font-bold text-yellow-400/80 transition hover:text-yellow-400"
-                      >
-                        Selbst mitspielen? Mich mit einem Team verknüpfen →
-                      </Link>
+                      >{t("selbstMitspielenMichMit")}</Link>
                     )}
                   </div>
 
@@ -1218,9 +1142,7 @@ export default function TurnierDetailPage() {
                       <QRCodeSVG value={inviteUrl} size={132} />
                     </div>
 
-                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
-                      Mit dem Handy scannen
-                    </div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">{t("mitDemHandyScannen")}</div>
                   </div>
                 </div>
               </div>
@@ -1230,9 +1152,7 @@ export default function TurnierDetailPage() {
 
             {groupLabels.map((groupLabel) => (
               <div key={groupLabel}>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-                  Gruppe {groupLabel}
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("gruppe2", { groupLabel })}</div>
 
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   {teams
@@ -1261,9 +1181,7 @@ export default function TurnierDetailPage() {
                           </div>
 
                           {teamMembers.length === 0 ? (
-                            <div className="mt-3 text-xs font-bold text-white/25">
-                              Noch kein Spieler verknüpft
-                            </div>
+                            <div className="mt-3 text-xs font-bold text-white/25">{t("nochKeinSpielerVerknuepft")}</div>
                           ) : (
                             <ul className="mt-3 space-y-1.5">
                               {teamMembers.map((member) => (
@@ -1274,9 +1192,7 @@ export default function TurnierDetailPage() {
                                   <span className="min-w-0 truncate">
                                     {member.name}
                                     {member.playerId === myPlayerId && (
-                                      <span className="ml-2 text-[9px] font-black uppercase tracking-wider text-yellow-400">
-                                        Du
-                                      </span>
+                                      <span className="ml-2 text-[9px] font-black uppercase tracking-wider text-yellow-400">{t("du")}</span>
                                     )}
                                   </span>
 
@@ -1289,28 +1205,22 @@ export default function TurnierDetailPage() {
                                           onClick={() => handleRemoveMember(member.playerId)}
                                           disabled={memberBusy}
                                           className="rounded-full bg-red-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:opacity-60"
-                                        >
-                                          Entfernen
-                                        </button>
+                                        >{t("entfernen")}</button>
 
                                         <button
                                           type="button"
                                           onClick={() => setConfirmRemoveId(null)}
                                           disabled={memberBusy}
                                           className="rounded-full border border-white/[0.08] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:opacity-60"
-                                        >
-                                          Nein
-                                        </button>
+                                        >{t("nein")}</button>
                                       </span>
                                     ) : (
                                       <button
                                         type="button"
                                         onClick={() => setConfirmRemoveId(member.playerId)}
-                                        aria-label={`${member.name} aus dem Turnier entfernen`}
+                                        aria-label={t("ausDemTurnierEntfernen", { name: member.name })}
                                         className="shrink-0 rounded-full border border-white/[0.08] px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white/30 transition hover:border-red-400/30 hover:text-red-400"
-                                      >
-                                        Entfernen
-                                      </button>
+                                      >{t("entfernen")}</button>
                                     ))}
                                 </li>
                               ))}
@@ -1325,15 +1235,12 @@ export default function TurnierDetailPage() {
 
             {myTeamId && (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-                  Deine Verknüpfung
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t("deineVerknuepfung")}</div>
 
-                <p className="mt-2 text-sm text-white/50">
-                  Dein Profil ist mit {myTeam?.name ?? "deinem Team"} verknüpft.{" "}
+                <p className="mt-2 text-sm text-white/50">{t("deinProfilVerknuepft", { team: myTeam?.name ?? t("deinemTeam") })}{" "}
                   {isOwner
-                    ? "Du kannst die Verknüpfung lösen, das Turnier bleibt dir als Veranstalter erhalten."
-                    : "Wenn du sie löst, siehst du das Turnier nicht mehr, bis du dem Link erneut folgst."}
+                    ? t("duKannstDieVerknuepfung")
+                    : t("wennDuSieLoest")}
                 </p>
 
                 {confirmingLeave ? (
@@ -1344,7 +1251,7 @@ export default function TurnierDetailPage() {
                       disabled={memberBusy}
                       className="rounded-full bg-red-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {memberBusy ? "Löst …" : "Ja, Verknüpfung lösen"}
+                      {memberBusy ? t("loest") : t("jaVerknuepfungLoesen")}
                     </button>
 
                     <button
@@ -1352,18 +1259,14 @@ export default function TurnierDetailPage() {
                       onClick={() => setConfirmingLeave(false)}
                       disabled={memberBusy}
                       className="rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Abbrechen
-                    </button>
+                    >{t("abbrechen")}</button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setConfirmingLeave(true)}
                     className="mt-4 rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:border-red-400/30 hover:text-red-400"
-                  >
-                    Verknüpfung lösen
-                  </button>
+                  >{t("verknuepfungLoesen")}</button>
                 )}
               </div>
             )}
@@ -1376,15 +1279,9 @@ export default function TurnierDetailPage() {
           <div className="mt-6 space-y-4">
             {koStarted && (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-                  K.-o.-Phase
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t("kOPhase")}</div>
 
-                <p className="mt-2 text-sm text-white/50">
-                  Setzt die K.-o.-Phase zurück und löscht alle K.-o.-Ergebnisse. Die Gruppenphase
-                  bleibt unverändert, du kannst danach neu starten (zum Beispiel mit einer anderen
-                  Teamzahl oder einem anderen Modus).
-                </p>
+                <p className="mt-2 text-sm text-white/50">{t("setztDieKO")}</p>
 
                 {koError && <div className="mt-3 text-xs font-bold text-red-400/80">{koError}</div>}
 
@@ -1396,7 +1293,7 @@ export default function TurnierDetailPage() {
                       disabled={resettingKo}
                       className="rounded-full bg-red-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {resettingKo ? "Setzt zurück …" : "Ja, zurücksetzen"}
+                      {resettingKo ? t("setztZurueck") : t("jaZuruecksetzen")}
                     </button>
 
                     <button
@@ -1404,31 +1301,22 @@ export default function TurnierDetailPage() {
                       onClick={() => setConfirmingKoReset(false)}
                       disabled={resettingKo}
                       className="rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Abbrechen
-                    </button>
+                    >{t("abbrechen")}</button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setConfirmingKoReset(true)}
                     className="mt-4 rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:border-red-400/30 hover:text-red-400"
-                  >
-                    K.-o.-Phase zurücksetzen
-                  </button>
+                  >{t("kOPhaseZuruecksetzen")}</button>
                 )}
               </div>
             )}
 
             <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.03] p-5">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">
-                Gefahrenzone
-              </div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">{t("gefahrenzone")}</div>
 
-              <p className="mt-2 text-sm text-white/50">
-                Löscht dieses Turnier unwiderruflich - inklusive aller Teams und Spielergebnisse.
-                Das kann nicht rückgängig gemacht werden.
-              </p>
+              <p className="mt-2 text-sm text-white/50">{t("loeschtDiesesTurnierUnwiderruflich")}</p>
 
               {deleteError && (
                 <div className="mt-3 text-xs font-bold text-red-400/80">{deleteError}</div>
@@ -1442,7 +1330,7 @@ export default function TurnierDetailPage() {
                     disabled={deleting}
                     className="rounded-full bg-red-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {deleting ? "Löscht …" : "Ja, endgültig löschen"}
+                    {deleting ? t("loescht") : t("jaEndgueltigLoeschen")}
                   </button>
 
                   <button
@@ -1450,18 +1338,14 @@ export default function TurnierDetailPage() {
                     onClick={() => setConfirmingDelete(false)}
                     disabled={deleting}
                     className="rounded-full border border-white/[0.08] px-5 py-3 text-xs font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Abbrechen
-                  </button>
+                  >{t("abbrechen")}</button>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   className="mt-4 rounded-full border border-red-400/30 px-5 py-3 text-xs font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/10"
-                >
-                  Turnier löschen
-                </button>
+                >{t("turnierLoeschen")}</button>
               )}
             </div>
           </div>
@@ -1499,6 +1383,8 @@ function MatchRow({
     previousFinishedAt: string | null,
   ) => Promise<void>;
 }) {
+  const t = useTranslations("League.DetailPage");
+
   const [scoreA, setScoreA] = useState(match.teamAScore?.toString() ?? "");
   const [scoreB, setScoreB] = useState(match.teamBScore?.toString() ?? "");
   const [editing, setEditing] = useState(match.status !== "finished");
@@ -1528,7 +1414,7 @@ function MatchRow({
       setEditing(false);
     } catch (err) {
       console.error("Fehler beim Speichern des Ergebnisses:", err);
-      setSaveError("Konnte nicht gespeichert werden.");
+      setSaveError(t("konnteNichtGespeichertWerden"));
     } finally {
       setSaving(false);
     }
@@ -1573,7 +1459,7 @@ function MatchRow({
               : "bg-yellow-400 text-black hover:bg-yellow-300"
           }`}
         >
-          {saving ? "Speichert …" : isLocked ? "Bearbeiten" : "Speichern"}
+          {saving ? t("speichert") : isLocked ? t("bearbeiten") : t("speichern")}
         </button>
       </div>
 
@@ -1653,6 +1539,8 @@ function KoMatchCard({
   myTeamId: string | null;
   onSave: (matchId: string, teamAScore: number, teamBScore: number) => Promise<void>;
 }) {
+  const t = useTranslations("League.DetailPage");
+
   const teamA = match.teamAId ? teamById(match.teamAId) : undefined;
   const teamB = match.teamBId ? teamById(match.teamBId) : undefined;
 
@@ -1677,7 +1565,7 @@ function KoMatchCard({
     }
 
     if (a === b) {
-      setError("Unentschieden ist im K.-o. nicht möglich.");
+      setError(t("unentschiedenIstImK"));
       return;
     }
 
@@ -1689,7 +1577,7 @@ function KoMatchCard({
       setEditing(false);
     } catch (err) {
       console.error("Fehler beim Speichern des K.-o.-Ergebnisses:", err);
-      setError("Konnte nicht gespeichert werden.");
+      setError(t("konnteNichtGespeichertWerden"));
     } finally {
       setSaving(false);
     }
@@ -1716,7 +1604,7 @@ function KoMatchCard({
               : "font-bold text-white/20"
           }`}
         >
-          {team ? team.name : isBye ? "–" : "Offen"}
+          {team ? team.name : isBye ? "–" : t("offen2")}
         </span>
 
         {showInputs ? (
@@ -1727,7 +1615,7 @@ function KoMatchCard({
             onChange={(event) =>
               isA ? setScoreA(event.target.value) : setScoreB(event.target.value)
             }
-            aria-label={`Treffer ${team?.name ?? ""}`}
+            aria-label={t("treffer2", { v: team?.name ?? "" })}
             className="w-14 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-1.5 text-center text-sm font-black text-white focus:border-yellow-400/40 focus:outline-none"
           />
         ) : (
@@ -1753,9 +1641,7 @@ function KoMatchCard({
         <div className="space-y-2">
           {row(teamA, true)}
           {isBye ? (
-            <div className="pl-8 text-[9px] font-black uppercase tracking-wider text-yellow-400/80">
-              Freilos
-            </div>
+            <div className="pl-8 text-[9px] font-black uppercase tracking-wider text-yellow-400/80">{t("freilos")}</div>
           ) : (
             row(teamB, false)
           )}
@@ -1770,7 +1656,7 @@ function KoMatchCard({
                 disabled={saving}
                 className="rounded-full bg-yellow-400 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? "Speichert …" : "Speichern"}
+                {saving ? t("speichert") : t("speichern")}
               </button>
             ) : (
               <button
@@ -1780,23 +1666,19 @@ function KoMatchCard({
                   setError(null);
                 }}
                 disabled={!editable}
-                title={editable ? undefined : "In einer späteren Runde wurde schon gespielt."}
+                title={editable ? undefined : t("inEinerSpaeterenRunde")}
                 className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/30 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-white/30"
-              >
-                Bearbeiten
-              </button>
+              >{t("bearbeiten")}</button>
             )}
 
             {!showInputs && !editable && (
-              <span className="text-[9px] font-bold text-white/25">Gesperrt</span>
+              <span className="text-[9px] font-bold text-white/25">{t("gesperrt")}</span>
             )}
           </div>
         )}
 
         {!ready && !isBye && (
-          <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-white/25">
-            Wartet auf die Vorrunde
-          </div>
+          <div className="mt-2 text-[9px] font-bold uppercase tracking-wider text-white/25">{t("wartetAufDieVorrunde")}</div>
         )}
       </div>
 
@@ -1829,6 +1711,8 @@ function KoResultDialog({
   onSave: (matchId: string, teamAScore: number, teamBScore: number) => Promise<void>;
   onClose: () => void;
 }) {
+  const t = useTranslations("League.DetailPage");
+
   const teamA = match.teamAId ? teamById(match.teamAId) : undefined;
   const teamB = match.teamBId ? teamById(match.teamBId) : undefined;
 
@@ -1854,12 +1738,12 @@ function KoResultDialog({
     const b = Number(scoreB);
 
     if (scoreA.trim() === "" || scoreB.trim() === "" || Number.isNaN(a) || Number.isNaN(b)) {
-      setError("Trag für beide Teams die Treffer ein.");
+      setError(t("tragFuerBeideTeams"));
       return;
     }
 
     if (a === b) {
-      setError("Unentschieden ist im K.-o. nicht möglich.");
+      setError(t("unentschiedenIstImK"));
       return;
     }
 
@@ -1871,7 +1755,7 @@ function KoResultDialog({
       onClose();
     } catch (err) {
       console.error("Fehler beim Speichern des K.-o.-Ergebnisses:", err);
-      setError("Konnte nicht gespeichert werden.");
+      setError(t("konnteNichtGespeichertWerden"));
       setSaving(false);
     }
   };
@@ -1883,7 +1767,7 @@ function KoResultDialog({
   ) => (
     <label className="flex items-center gap-3">
       <span className="min-w-0 flex-1 truncate text-sm font-black text-white">
-        {team?.name ?? "Offen"}
+        {team?.name ?? t("offen2")}
       </span>
 
       <input
@@ -1892,7 +1776,7 @@ function KoResultDialog({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         disabled={!editable}
-        aria-label={`Treffer ${team?.name ?? ""}`}
+        aria-label={t("treffer2", { v: team?.name ?? "" })}
         className="w-16 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-2 text-center text-sm font-black text-white focus:border-yellow-400/40 focus:outline-none disabled:opacity-50"
       />
     </label>
@@ -1906,13 +1790,11 @@ function KoResultDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="K.-o.-Ergebnis eintragen"
+        aria-label={t("kOErgebnisEintragen")}
         className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0b0f14] p-5"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-          Ergebnis eintragen
-        </div>
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("ergebnisEintragen")}</div>
 
         <div className="mt-4 space-y-3">
           {field(teamA, scoreA, setScoreA)}
@@ -1920,9 +1802,7 @@ function KoResultDialog({
         </div>
 
         {!editable && (
-          <div className="mt-4 text-xs font-bold text-white/40">
-            Gesperrt: In einer späteren Runde wurde schon gespielt.
-          </div>
+          <div className="mt-4 text-xs font-bold text-white/40">{t("gesperrtInEinerSpaeteren")}</div>
         )}
 
         {error && <div className="mt-4 text-xs font-bold text-red-400/80">{error}</div>}
@@ -1932,9 +1812,7 @@ function KoResultDialog({
             type="button"
             onClick={onClose}
             className="rounded-full border border-white/[0.08] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:text-white"
-          >
-            Schließen
-          </button>
+          >{t("schliessen")}</button>
 
           {editable && (
             <button
@@ -1943,7 +1821,7 @@ function KoResultDialog({
               disabled={saving}
               className="rounded-full bg-yellow-400 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Speichert …" : "Speichern"}
+              {saving ? t("speichert") : t("speichern")}
             </button>
           )}
         </div>

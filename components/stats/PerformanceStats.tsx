@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { PanelTitle } from "@/components/stats/PanelCard";
 import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import { getPlayerOverallStats, type StatsRange } from "@/app/[locale]/spieler/match/playerStats";
+import { useTranslations } from "next-intl";
 
 type Summary = {
   matches: number;
@@ -121,6 +122,8 @@ export function PerformanceStats({
   /** Die Karte "Weitere Statistiken" anzeigen (zusätzlich zu Pro nötig). */
   showMore?: boolean;
 }) {
+  const t = useTranslations("Stats.PerformanceStats");
+
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -182,17 +185,13 @@ export function PerformanceStats({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/40">
-        Lade Statistiken …
-      </div>
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/40">{t("ladeStatistiken")}</div>
     );
   }
 
   if (!loggedIn) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/50">
-        Melde dich an, um deine Performance-Übersicht zu sehen.
-      </div>
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center text-sm font-bold text-white/50">{t("meldeDichAnUm")}</div>
     );
   }
 
@@ -202,12 +201,12 @@ export function PerformanceStats({
   }
 
   const stats: { value: string; label: string; icon: IconName; accent?: boolean }[] = [
-    { value: String(summary?.matches ?? 0), label: "Matches", icon: "matches", accent: true },
-    { value: `${summary?.winrate ?? 0}%`, label: "Winrate", icon: "winrate", accent: true },
-    { value: `${summary?.hitRate ?? 0}%`, label: "Trefferquote", icon: "hitRate", accent: true },
-    { value: String(summary?.cupsRemoved ?? 0), label: "Becher", icon: "cups" },
-    { value: String(summary?.wins ?? 0), label: "Siege", icon: "wins" },
-    { value: String(summary?.losses ?? 0), label: "Niederlagen", icon: "losses" },
+    { value: String(summary?.matches ?? 0), label: t("matches"), icon: "matches", accent: true },
+    { value: `${summary?.winrate ?? 0}%`, label: t("winrate"), icon: "winrate", accent: true },
+    { value: `${summary?.hitRate ?? 0}%`, label: t("trefferquote"), icon: "hitRate", accent: true },
+    { value: String(summary?.cupsRemoved ?? 0), label: t("becher"), icon: "cups" },
+    { value: String(summary?.wins ?? 0), label: t("siege"), icon: "wins" },
+    { value: String(summary?.losses ?? 0), label: t("niederlagen"), icon: "losses" },
   ];
 
   /*
@@ -219,15 +218,15 @@ export function PerformanceStats({
    */
 
   const throwStats: { value: string; label: string }[] = [
-    { value: String(summary?.throws ?? 0), label: "Würfe gesamt" },
-    { value: String(summary?.hits ?? 0), label: "Treffer" },
-    { value: String(summary?.misses ?? 0), label: "Fehlwürfe" },
-    { value: String(summary?.singleHits ?? 0), label: "Einzeltreffer" },
-    { value: String(summary?.bounceHits ?? 0), label: "Aufhüpfer" },
-    { value: String(summary?.trickshotHits ?? 0), label: "Trickshots" },
+    { value: String(summary?.throws ?? 0), label: t("wuerfeGesamt") },
+    { value: String(summary?.hits ?? 0), label: t("treffer") },
+    { value: String(summary?.misses ?? 0), label: t("fehlwuerfe") },
+    { value: String(summary?.singleHits ?? 0), label: t("einzeltreffer") },
+    { value: String(summary?.bounceHits ?? 0), label: t("aufhuepfer") },
+    { value: String(summary?.trickshotHits ?? 0), label: t("trickshots") },
     /* Gutgeschriebene Becher ohne Wurf - zählen nicht in Würfe, Treffer und Quote. */
-    { value: String(summary?.penaltyCups ?? 0), label: "Strafbecher" },
-    { value: String(summary?.knockedOverCups ?? 0), label: "Umgeworfen" },
+    { value: String(summary?.penaltyCups ?? 0), label: t("strafbecher") },
+    { value: String(summary?.knockedOverCups ?? 0), label: t("umgeworfen") },
   ];
 
   return (
@@ -261,9 +260,7 @@ export function PerformanceStats({
             ))}
           </div>
 
-          <p className="mt-3 text-[10px] font-semibold text-white/25">
-            Es zählen nur Matches gegen registrierte Gegner.
-          </p>
+          <p className="mt-3 text-[10px] font-semibold text-white/25">{t("esZaehlenNurMatches")}</p>
         </>
       )}
 
@@ -275,7 +272,7 @@ export function PerformanceStats({
             showMain ? "mt-6 md:mt-8" : ""
           }`}
         >
-          <PanelTitle>Weitere Statistiken</PanelTitle>
+          <PanelTitle>{t("weitereStatistiken")}</PanelTitle>
 
           <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-0">
             {throwStats.map((stat, index) => (

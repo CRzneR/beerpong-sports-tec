@@ -1,3 +1,5 @@
+import type { Locale } from "@/i18n/routing";
+import { localizePath } from "@/lib/localizePath";
 /*
 |--------------------------------------------------------------------------
 | PONG LEAGUE - FACHLOGIK
@@ -326,8 +328,8 @@ export type JoinPreview = {
 
 export type JoinResult = "joined" | "login" | "no_profile" | "invalid" | "finished" | "full";
 
-export function buildInviteUrl(origin: string, joinCode: string): string {
-  return `${origin.replace(/\/$/, "")}/turniere/beitreten/${joinCode}`;
+export function buildInviteUrl(origin: string, joinCode: string, locale: Locale = "de"): string {
+  return `${origin.replace(/\/$/, "")}${localizePath(`/turniere/beitreten/${joinCode}`, locale)}`;
 }
 
 /*
@@ -834,15 +836,29 @@ export function isKoMatchEditable(match: KoMatch, all: KoMatch[]): boolean {
   return !all.some((other) => other.round > match.round && other.status === "finished");
 }
 
-export function koRoundLabel(round: number, totalRounds: number): string {
+/*
+ * Die Rundenbezeichnung als Code ("final", "semi", "quarter", "eighth" oder
+ * "round:N"). Den sichtbaren Text liefert roundText() über den Namensraum
+ * "Rounds", damit er in jeder Sprache stimmt.
+ */
+export function koRoundCode(round: number, totalRounds: number): string {
   const fromEnd = totalRounds - round;
 
-  if (fromEnd === 0) return "Finale";
-  if (fromEnd === 1) return "Halbfinale";
-  if (fromEnd === 2) return "Viertelfinale";
-  if (fromEnd === 3) return "Achtelfinale";
+  if (fromEnd === 0) return "final";
+  if (fromEnd === 1) return "semi";
+  if (fromEnd === 2) return "quarter";
+  if (fromEnd === 3) return "eighth";
 
-  return `Runde ${round}`;
+  return `round:${round}`;
+}
+
+export type RoundTranslator = (key: string, values?: Record<string, number>) => string;
+
+export function roundText(code: string | null, t: RoundTranslator): string {
+  if (!code) return "";
+  if (code.startsWith("round:")) return t("round", { n: Number(code.slice(6)) });
+
+  return t(code);
 }
 
 export function koTotalRounds(matches: KoMatch[]): number {
@@ -878,7 +894,7 @@ export type MyKoStatus = {
   stage: "not_qualified" | "waiting" | "next" | "eliminated" | "champion";
   seed: number | null;
   /* Name der aktuellen bzw. nächsten Runde, z. B. "Halbfinale". */
-  roundLabel: string | null;
+  roundCode: string | null;
   opponent: TournamentTeam | null;
   /* Bei "eliminated": das verlorene Spiel aus Sicht des Teams. */
   lostScore: { own: number; opponent: number } | null;
@@ -898,7 +914,7 @@ export function buildMyKoStatus(
     return {
       stage: "not_qualified",
       seed: null,
-      roundLabel: null,
+      roundCode: null,
       opponent: null,
       lostScore: null,
     };
@@ -913,7 +929,7 @@ export function buildMyKoStatus(
     return {
       stage: "champion",
       seed: team.koSeed,
-      roundLabel: "Finale",
+      roundCode: "final",
       opponent: null,
       lostScore: null,
     };
@@ -932,7 +948,7 @@ export function buildMyKoStatus(
     return {
       stage: "eliminated",
       seed: team.koSeed,
-      roundLabel: koRoundLabel(lost.round, total),
+      roundCode: koRoundCode(lost.round, total),
       opponent: teams.find((entry) => entry.id === opponentId) ?? null,
       lostScore:
         lost.teamAScore !== null && lost.teamBScore !== null
@@ -952,7 +968,7 @@ export function buildMyKoStatus(
     return {
       stage: "next",
       seed: team.koSeed,
-      roundLabel: koRoundLabel(open.round, total),
+      roundCode: koRoundCode(open.round, total),
       opponent: teams.find((entry) => entry.id === opponentId) ?? null,
       lostScore: null,
     };
@@ -969,7 +985,7 @@ export function buildMyKoStatus(
   return {
     stage: "waiting",
     seed: team.koSeed,
-    roundLabel: koRoundLabel(nextRound, total),
+    roundCode: koRoundCode(nextRound, total),
     opponent: null,
     lostScore: null,
   };

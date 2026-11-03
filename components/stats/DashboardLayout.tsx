@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { PanelModal } from "@/components/stats/PanelCard";
+import { useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -26,76 +27,20 @@ export type DashboardCardId =
 
 export const DASHBOARD_CARDS: {
   id: DashboardCardId;
-  label: string;
-  description: string;
   pro?: boolean;
 }[] = [
-  {
-    id: "summary",
-    label: "Hauptwerte",
-    description: "Matches, Winrate, Trefferquote, Becher, Siege, Niederlagen",
-  },
-  {
-    id: "more",
-    label: "Weitere Statistiken",
-    description: "Würfe, Treffer, Fehlwürfe und Trefferarten als Zahlen",
-    pro: true,
-  },
-  {
-    id: "rating",
-    label: "Skill-Rating",
-    description: "Dein Rating von 0 bis 1000, Rang, Verlauf und Bestleistung",
-    pro: true,
-  },
-  {
-    id: "chart",
-    label: "Performance Verlauf",
-    description: "Entwicklung deiner Werte über die Matches",
-    pro: true,
-  },
-  {
-    id: "cups",
-    label: "Treffer nach Becherposition",
-    description: "Welche Becher du am häufigsten triffst",
-    pro: true,
-  },
-  {
-    id: "detail",
-    label: "Statistiken im Detail",
-    description: "Win Rate, Trefferarten, Endphase, Form und Serien",
-    pro: true,
-  },
-  {
-    id: "flow",
-    label: "Spielverlauf",
-    description: "Comeback, Führung, Starttreffer und Ergebnisse",
-    pro: true,
-  },
-  {
-    id: "matchup",
-    label: "Bilanz gegen Gegner und Partner",
-    description: "Siege und Niederlagen pro Mitspieler",
-    pro: true,
-  },
-  {
-    id: "achievements",
-    label: "Achievements",
-    description: "Deine freigeschalteten Erfolge",
-    pro: true,
-  },
-  {
-    id: "history",
-    label: "Letzte Matches",
-    description: "Deine zuletzt gespielten Matches",
-    pro: true,
-  },
-  { id: "ranking", label: "Weltrangliste", description: "Alle Spieler im Vergleich", pro: true },
-  {
-    id: "tournament",
-    label: "Turnier (Pong League)",
-    description: "Dein Platz, Tabelle und nächstes Spiel, wenn du mit einem Team verknüpft bist",
-    pro: true,
-  },
+  { id: "summary" },
+  { id: "more", pro: true },
+  { id: "rating", pro: true },
+  { id: "chart", pro: true },
+  { id: "cups", pro: true },
+  { id: "detail", pro: true },
+  { id: "flow", pro: true },
+  { id: "matchup", pro: true },
+  { id: "achievements", pro: true },
+  { id: "history", pro: true },
+  { id: "ranking", pro: true },
+  { id: "tournament", pro: true },
 ];
 
 const STORAGE_KEY = "pongstats.dashboard.hidden.v1";
@@ -181,6 +126,8 @@ export function DashboardCustomizeButton({
   hiddenCount: number;
   onClick: () => void;
 }) {
+  const t = useTranslations("Stats.DashboardLayout");
+
   return (
     <button
       type="button"
@@ -202,12 +149,10 @@ export function DashboardCustomizeButton({
         <circle cx="8" cy="17" r="2" />
       </svg>
 
-      <span>Dashboard anpassen</span>
+      <span>{t("dashboardAnpassen")}</span>
 
       {hiddenCount > 0 && (
-        <span className="rounded-full bg-cyan-400/15 px-2 py-0.5 text-[9px] text-cyan-300">
-          {hiddenCount} aus
-        </span>
+        <span className="rounded-full bg-cyan-400/15 px-2 py-0.5 text-[9px] text-cyan-300">{t("aus", { hiddenCount })}</span>
       )}
     </button>
   );
@@ -224,12 +169,12 @@ export function DashboardCustomizeModal({
   onShowAll: () => void;
   onClose: () => void;
 }) {
+
+  const t = useTranslations("Stats.DashboardLayout");
+
   return (
-    <PanelModal title="Dashboard anpassen" onClose={onClose}>
-      <p className="text-xs font-semibold leading-relaxed text-white/40">
-        Wähle, welche Karten auf deiner Seite erscheinen. Die Auswahl wird auf diesem Gerät im
-        Browser gespeichert.
-      </p>
+    <PanelModal title={t("dashboardAnpassen")} onClose={onClose}>
+      <p className="text-xs font-semibold leading-relaxed text-white/40">{t("waehleWelcheKartenAuf")}</p>
 
       <ul className="mt-4 divide-y divide-white/[0.06] rounded-2xl border border-white/[0.08] bg-white/[0.02]">
         {DASHBOARD_CARDS.map((card) => {
@@ -239,17 +184,15 @@ export function DashboardCustomizeModal({
             <li key={card.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-black tracking-tight text-white">{card.label}</span>
+                  <span className="text-sm font-black tracking-tight text-white">{t(`card_${card.id}_label`)}</span>
 
                   {card.pro && (
-                    <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-yellow-400">
-                      Pro
-                    </span>
+                    <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-yellow-400">{t("pro")}</span>
                   )}
                 </div>
 
                 <div className="mt-0.5 text-[11px] font-semibold text-white/35">
-                  {card.description}
+                  {t(`card_${card.id}_description`)}
                 </div>
               </div>
 
@@ -257,7 +200,7 @@ export function DashboardCustomizeModal({
                 type="button"
                 role="switch"
                 aria-checked={visible}
-                aria-label={`${card.label} ${visible ? "ausblenden" : "einblenden"}`}
+                aria-label={t(visible ? "kartAusblenden" : "kartEinblenden", { name: t(`card_${card.id}_label`) })}
                 onClick={() => onToggle(card.id)}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                   visible ? "bg-cyan-400" : "bg-white/15"
@@ -280,17 +223,13 @@ export function DashboardCustomizeModal({
           onClick={onShowAll}
           disabled={hidden.length === 0}
           className="text-[10px] font-bold uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          Alle anzeigen
-        </button>
+        >{t("alleAnzeigen")}</button>
 
         <button
           type="button"
           onClick={onClose}
           className="rounded-full bg-cyan-400 px-6 py-3 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-cyan-300"
-        >
-          Fertig
-        </button>
+        >{t("fertig")}</button>
       </div>
     </PanelModal>
   );

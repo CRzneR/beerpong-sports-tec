@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProfile, resetPlayerStats } from "@/app/[locale]/spieler/match/playerProfiles";
+import { useLocale, useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -38,6 +39,9 @@ export function DeleteAccountSection({
   tournamentCount?: number;
   showResetStats?: boolean;
 }) {
+  const t = useTranslations("Stats.DeleteAccountSection");
+  const locale = useLocale();
+
   const [profileId, setProfileId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
@@ -100,7 +104,7 @@ export function DeleteAccountSection({
     } catch (err) {
       console.error("Fehler beim Zurücksetzen der Statistiken:", err);
 
-      setResetError("Zurücksetzen fehlgeschlagen. Bitte versuch es erneut.");
+      setResetError(t("zuruecksetzenFehlgeschlagenBitteVe"));
       setResetting(false);
     }
   };
@@ -116,38 +120,32 @@ export function DeleteAccountSection({
       const response = await fetch("/api/account/delete", { method: "POST" });
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Konto konnte nicht gelöscht werden.");
+        throw new Error("delete failed");
       }
 
       /* Lokale Session aufräumen (der Nutzer existiert serverseitig nicht mehr). */
       await createClient().auth.signOut();
-      window.location.href = "/";
+      window.location.href = locale === "de" ? "/" : `/${locale}`;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Konto konnte nicht gelöscht werden.");
+      setError(t("kontoKonnteNichtGeloescht"));
       setDeleting(false);
     }
   };
 
   return (
     <section className="border-t border-white/[0.06] pb-16 pt-8">
-      <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">Konto</div>
+      <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">{t("konto")}</div>
 
       <div className={`mt-4 grid gap-6 ${showResetStats ? "md:grid-cols-2 md:gap-0" : ""}`}>
         {showResetStats && (
           <div className="flex flex-col gap-3 md:items-start md:pr-8">
-            <p className="max-w-md text-xs font-semibold text-white/35">
-              Entfernt deine bisherigen Matches, Trefferquote und Serien aus deiner Statistik. Dein
-              Konto bleibt bestehen.
-            </p>
+            <p className="max-w-md text-xs font-semibold text-white/35">{t("entferntDeineBisherigenMatches")}</p>
 
             <button
               type="button"
               onClick={() => setResetOpen(true)}
               className="self-start rounded-full border border-red-400/20 bg-red-400/[0.05] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400/80 transition hover:bg-red-400/[0.12] hover:text-red-400"
-            >
-              Statistiken zurücksetzen
-            </button>
+            >{t("statistikenZuruecksetzen")}</button>
           </div>
         )}
 
@@ -158,18 +156,13 @@ export function DeleteAccountSection({
               : ""
           }`}
         >
-          <p className="max-w-md text-xs font-semibold text-white/35">
-            Löscht deinen Login und dein Profil dauerhaft. Deine Matches bleiben für deine
-            Mitspieler erhalten, erscheinen aber unter „Gelöschter Spieler“.
-          </p>
+          <p className="max-w-md text-xs font-semibold text-white/35">{t("loeschtDeinenLoginUnd")}</p>
 
           <button
             type="button"
             onClick={() => setOpen(true)}
             className="self-start rounded-full border border-red-400/20 bg-red-400/[0.05] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400/80 transition hover:bg-red-400/[0.12] hover:text-red-400"
-          >
-            Konto löschen
-          </button>
+          >{t("kontoLoeschen")}</button>
         </div>
       </div>
 
@@ -185,18 +178,11 @@ export function DeleteAccountSection({
             onClick={(event) => event.stopPropagation()}
             className="w-full max-w-sm rounded-2xl border border-red-400/20 bg-[#07090d] p-6 text-center text-white shadow-2xl"
           >
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-red-400/70">
-              Achtung
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-red-400/70">{t("achtung")}</div>
 
-            <h2 id="reset-stats-title" className="mt-1 text-lg font-black uppercase text-white">
-              Statistiken wirklich zurücksetzen?
-            </h2>
+            <h2 id="reset-stats-title" className="mt-1 text-lg font-black uppercase text-white">{t("statistikenWirklichZuruecksetzen")}</h2>
 
-            <p className="mt-2 text-xs text-white/40">
-              Deine bisherigen Matches, Trefferquote und Serien werden aus deiner Statistik
-              entfernt. Das kann nicht rückgängig gemacht werden.
-            </p>
+            <p className="mt-2 text-xs text-white/40">{t("deineBisherigenMatchesTrefferquote")}</p>
 
             {resetError && (
               <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.05] px-3 py-2 text-xs font-bold text-red-400/80">
@@ -211,7 +197,7 @@ export function DeleteAccountSection({
                 onClick={handleReset}
                 className="w-full rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {resetting ? "Wird zurückgesetzt …" : "Ja, zurücksetzen"}
+                {resetting ? t("wirdZurueckgesetzt") : t("jaZuruecksetzen")}
               </button>
 
               <button
@@ -219,9 +205,7 @@ export function DeleteAccountSection({
                 disabled={resetting}
                 onClick={closeReset}
                 className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-white/40 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                Abbrechen
-              </button>
+              >{t("abbrechen")}</button>
             </div>
           </div>
         </div>
@@ -243,25 +227,22 @@ export function DeleteAccountSection({
             <h2
               id="delete-account-title"
               className="text-xl font-black uppercase tracking-tight text-red-400"
-            >
-              Konto wirklich löschen?
-            </h2>
+            >{t("kontoWirklichLoeschen")}</h2>
 
             <ul className="mt-3 list-inside list-disc space-y-1 text-xs font-semibold text-white/50">
-              <li>Das lässt sich nicht rückgängig machen.</li>
-              <li>Pro-Status und Statistik-Zuordnung gehen verloren.</li>
-              <li>Eigene Turniere bleiben ohne Veranstalter bestehen.</li>
+              <li>{t("dasLaesstSichNicht")}</li>
+              <li>{t("proStatusUndStatistik")}</li>
+              <li>{t("eigeneTurniereBleibenOhne")}</li>
               {tournamentCount > 0 && (
                 <li className="font-bold text-red-400/80">
                   {tournamentCount === 1
-                    ? "Dein Turnier lässt sich danach nicht mehr verwalten. Lösche es vorher, wenn du das nicht möchtest."
-                    : `Deine ${tournamentCount} Turniere lassen sich danach nicht mehr verwalten. Lösche sie vorher, wenn du das nicht möchtest.`}
+                    ? t("deinTurnierLaesstSich")
+                    : t("deineTurniereLassenSich", { tournamentCount })}
                 </li>
               )}
             </ul>
 
-            <label className="mt-4 block text-[11px] font-bold text-white/50">
-              Tippe zur Bestätigung deinen Benutzernamen:{" "}
+            <label className="mt-4 block text-[11px] font-bold text-white/50">{t("tippeZurBestaetigungDeinen")}{" "}
               <span className="font-black text-white">{username}</span>
             </label>
 
@@ -287,16 +268,14 @@ export function DeleteAccountSection({
                 onClick={close}
                 disabled={deleting}
                 className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs font-black uppercase tracking-wider text-white/60 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
-              >
-                Abbrechen
-              </button>
+              >{t("abbrechen")}</button>
 
               <button
                 type="submit"
                 disabled={!matches || deleting}
                 className="rounded-xl border border-red-400/30 bg-red-400/[0.12] px-4 py-3 text-xs font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/[0.2] disabled:cursor-not-allowed disabled:opacity-30"
               >
-                {deleting ? "Lösche …" : "Endgültig löschen"}
+                {deleting ? t("loesche") : t("endgueltigLoeschen")}
               </button>
             </div>
           </form>

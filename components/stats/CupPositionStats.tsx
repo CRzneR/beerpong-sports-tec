@@ -9,6 +9,7 @@ import {
   type CupPositionStats as CupPositionData,
   type StatsRange,
 } from "@/app/[locale]/spieler/match/playerStats";
+import { useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -65,10 +66,10 @@ const POSITIONS: Record<Formation, { x: number; y: number }[]> = {
   ],
 };
 
-const TABS: { key: Formation; title: string; hint: string }[] = [
-  { key: "ten", title: "10er", hint: "7–10 Becher" },
-  { key: "six", title: "6er", hint: "4–6 Becher" },
-  { key: "three", title: "3er", hint: "2–3 Becher" },
+const TABS: { key: Formation; titleKey: string; hintKey: string }[] = [
+  { key: "ten", titleKey: "formationTen", hintKey: "hintTen" },
+  { key: "six", titleKey: "formationSix", hintKey: "hintSix" },
+  { key: "three", titleKey: "formationThree", hintKey: "hintThree" },
 ];
 
 /* Dezente Heat-Skala: kaum sichtbar bei wenig Treffern, kräftig rot bei vielen. */
@@ -81,6 +82,8 @@ function heatStroke(intensity: number): string {
 }
 
 export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
+  const t = useTranslations("Stats.CupPositionStats");
+
   const [data, setData] = useState<CupPositionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -111,7 +114,7 @@ export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
         console.error("Fehler beim Laden der Becherpositionen:", err);
 
         if (!cancelled) {
-          setError("Becherpositionen konnten nicht geladen werden.");
+          setError(t("becherpositionenKonntenNichtGelade"));
         }
       } finally {
         if (!cancelled) {
@@ -152,20 +155,16 @@ export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
 
   if (loading) {
     content = (
-      <div className="py-16 text-center text-sm font-bold text-white/40">
-        Lade Becherpositionen …
-      </div>
+      <div className="py-16 text-center text-sm font-bold text-white/40">{t("ladeBecherpositionen")}</div>
     );
   } else if (!loggedIn) {
     content = (
-      <div className="py-16 text-center text-sm font-bold text-white/50">
-        Melde dich an, um deine Becherpositionen zu sehen.
-      </div>
+      <div className="py-16 text-center text-sm font-bold text-white/50">{t("meldeDichAnUm")}</div>
     );
   } else if (error || !data || !current) {
     content = (
       <div className="py-16 text-center text-sm font-bold text-red-400/80">
-        {error ?? "Becherpositionen konnten nicht geladen werden."}
+        {error ?? t("becherpositionenKonntenNichtGelade")}
       </div>
     );
   } else {
@@ -192,16 +191,16 @@ export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
                     isActive ? "text-black" : "text-white/55"
                   }`}
                 >
-                  {tab.title}
+                  {t(tab.titleKey)}
                 </span>
                 <span
                   className={`block text-[9px] font-bold uppercase tracking-[0.12em] ${
                     isActive ? "text-black/55" : "text-white/25"
                   }`}
                 >
-                  <span className="hidden sm:inline">{tab.hint} · </span>
+                  <span className="hidden sm:inline">{t(tab.hintKey)} · </span>
                   {data[tab.key].total}
-                  <span className="sm:hidden"> Treffer</span>
+                  <span className="sm:hidden">{t("treffer")}</span>
                 </span>
               </button>
             );
@@ -214,7 +213,7 @@ export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
           <svg
             viewBox="0 0 100 100"
             role="img"
-            aria-label={`Treffer nach Becherposition, ${activeFormation === "ten" ? "10er" : activeFormation === "six" ? "6er" : "3er"}-Formation`}
+            aria-label={t("trefferNachBecherpositionFormation", { v: t(TABS.find((tab) => tab.key === activeFormation)!.titleKey) })}
             className="w-full max-w-[19rem]"
           >
             {positions.map((position, index) => {
@@ -282,23 +281,15 @@ export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
 
         <div className="mt-5 space-y-1 text-[11px] font-semibold text-white/30">
           {current.total === 0 ? (
-            <p>
-              In dieser Formation sind noch keine Treffer erfasst. Sie füllt sich mit neuen Matches.
-            </p>
+            <p>{t("inDieserFormationSind")}</p>
           ) : (
-            <p>
-              Basis: {current.total} Treffer in dieser Formation. Anteil = Verteilung deiner
-              Treffer, keine Trefferquote.
-            </p>
+            <p>{t("basisTrefferInDieser", { total: current.total })}</p>
           )}
 
-          <p>Ansicht aus deiner Wurfrichtung: Die Spitze zeigt zu dir.</p>
+          <p>{t("ansichtAusDeinerWurfrichtung")}</p>
 
           {current.legacyHits > 0 && (
-            <p>
-              Enthält {current.legacyHits} Treffer aus älteren Matches (Positionen dort nur
-              näherungsweise bekannt).
-            </p>
+            <p>{t("enthaeltTrefferAusAelteren", { legacyHits: current.legacyHits })}</p>
           )}
         </div>
       </>
@@ -307,7 +298,7 @@ export function CupPositionStats({ range = "all" }: { range?: StatsRange }) {
 
   return (
     <section className="flex h-full flex-col rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
-      <PanelTitle>Treffer nach Becherposition</PanelTitle>
+      <PanelTitle>{t("trefferNachBecherposition")}</PanelTitle>
 
       <div className="mt-5 flex-1">{content}</div>
     </section>

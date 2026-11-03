@@ -10,7 +10,9 @@ import {
   syncAchievements,
   type AchievementKey,
   type AchievementView,
+  THRESHOLDS,
 } from "@/app/[locale]/spieler/match/achievements";
+import { useLocale, useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -67,17 +69,20 @@ function badgeSrc(key: AchievementKey): string {
   return `/achievements/${key}.webp`;
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) {
     return "";
   }
 
   const date = new Date(iso);
 
-  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("de-DE");
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(locale);
 }
 
 export function AchievementsView({ achievements }: { achievements: AchievementView[] }) {
+  const t = useTranslations("Stats.AchievementsSection");
+  const locale = useLocale();
+
   /*
    * Nur FREIGESCHALTETE Achievements werden gezeigt. Gesperrte tauchen
    * nirgends auf - weder als Karte noch als Fortschritt oder Zähler
@@ -97,12 +102,8 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
   if (unlocked.length === 0) {
     return (
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-6 text-center">
-        <div className="text-sm font-bold text-white/50">
-          Noch keine Achievements freigeschaltet.
-        </div>
-        <div className="mt-1 text-xs font-semibold text-white/30">
-          Spiele Matches, um Achievements zu entdecken.
-        </div>
+        <div className="text-sm font-bold text-white/50">{t("nochKeineAchievementsFreigeschalte")}</div>
+        <div className="mt-1 text-xs font-semibold text-white/30">{t("spieleMatchesUmAchievements")}</div>
       </div>
     );
   }
@@ -110,8 +111,7 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
   return (
     <div>
       <div className="mb-4 text-xs font-black uppercase tracking-wider text-white/60">
-        {unlocked.length} {unlocked.length === 1 ? "Achievement" : "Achievements"} freigeschaltet
-      </div>
+        {t("achievementsFreigeschaltet", { count: unlocked.length })}</div>
 
       {/* Mobil 2 Karten nebeneinander, darüber 3 bzw. 4 - bewusst kompakt. */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3 lg:grid-cols-4">
@@ -124,9 +124,7 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
               className="relative flex flex-col items-center rounded-xl border border-white/[0.08] bg-[#0b0f14] px-3 pb-3 pt-2.5 text-center md:rounded-2xl md:px-4 md:pb-4 md:pt-3"
             >
               {item.isNew && (
-                <span className="absolute right-2 top-2 z-10 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-yellow-400">
-                  Neu
-                </span>
+                <span className="absolute right-2 top-2 z-10 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-yellow-400">{t("neu")}</span>
               )}
 
               <div className="relative h-24 w-full md:h-32">
@@ -140,11 +138,11 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
               </div>
 
               <h3 className="mt-1.5 text-sm font-black tracking-tight text-white md:text-base">
-                {item.title}
+                {t(`ach_${item.key}_title`)}
               </h3>
 
               <p className="mt-0.5 text-[10px] font-semibold leading-snug text-white/50 md:text-[11px]">
-                {item.description}
+                {t(`ach_${item.key}_description`, THRESHOLDS)}
               </p>
 
               <span
@@ -155,7 +153,7 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
 
               {item.unlockedAt && (
                 <div className="mt-2 text-[8px] font-bold uppercase tracking-[0.1em] text-white/25 md:text-[9px]">
-                  {formatDate(item.unlockedAt)}
+                  {formatDate(item.unlockedAt, locale)}
                 </div>
               )}
             </div>
@@ -176,6 +174,8 @@ export function AchievementsView({ achievements }: { achievements: AchievementVi
 const PREVIEW_COUNT = 3;
 
 export function AchievementsSection() {
+  const t = useTranslations("Stats.AchievementsSection");
+
   const [achievements, setAchievements] = useState<AchievementView[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -206,7 +206,7 @@ export function AchievementsSection() {
         console.error("Fehler beim Laden der Achievements:", err);
 
         if (!cancelled) {
-          setError("Achievements konnten nicht geladen werden.");
+          setError(t("achievementsKonntenNichtGeladen"));
         }
       } finally {
         if (!cancelled) {
@@ -235,18 +235,16 @@ export function AchievementsSection() {
 
   if (loading) {
     body = (
-      <div className="py-8 text-center text-sm font-bold text-white/40">Lade Achievements …</div>
+      <div className="py-8 text-center text-sm font-bold text-white/40">{t("ladeAchievements")}</div>
     );
   } else if (!loggedIn) {
     body = (
-      <div className="py-8 text-center text-sm font-bold text-white/50">
-        Melde dich an, um deine Achievements zu sehen.
-      </div>
+      <div className="py-8 text-center text-sm font-bold text-white/50">{t("meldeDichAnUm")}</div>
     );
   } else if (error || !achievements) {
     body = (
       <div className="py-8 text-center text-sm font-bold text-red-400/80">
-        {error ?? "Achievements konnten nicht geladen werden."}
+        {error ?? t("achievementsKonntenNichtGeladen")}
       </div>
     );
   } else if (unlocked.length === 0) {
@@ -270,12 +268,8 @@ export function AchievementsSection() {
         </div>
 
         <div>
-          <div className="text-sm font-bold text-white/70">
-            Noch keine Achievements freigeschaltet.
-          </div>
-          <div className="mt-1 text-xs font-semibold text-white/35">
-            Spiele Matches, um Achievements zu entdecken.
-          </div>
+          <div className="text-sm font-bold text-white/70">{t("nochKeineAchievementsFreigeschalte")}</div>
+          <div className="mt-1 text-xs font-semibold text-white/35">{t("spieleMatchesUmAchievements")}</div>
         </div>
       </div>
     );
@@ -288,9 +282,7 @@ export function AchievementsSection() {
             className="relative flex flex-col items-center rounded-xl border border-white/[0.06] bg-[#0b0f14] px-2 pb-2.5 pt-2 text-center"
           >
             {item.isNew && (
-              <span className="absolute right-1.5 top-1.5 z-10 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-yellow-400">
-                Neu
-              </span>
+              <span className="absolute right-1.5 top-1.5 z-10 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-yellow-400">{t("neu")}</span>
             )}
 
             <div className="relative h-16 w-full sm:h-20">
@@ -304,7 +296,7 @@ export function AchievementsSection() {
             </div>
 
             <div className="mt-1 text-[10px] font-black leading-tight text-white sm:text-[11px]">
-              {item.title}
+              {t(`ach_${item.key}_title`)}
             </div>
           </div>
         ))}
@@ -318,14 +310,10 @@ export function AchievementsSection() {
         <PanelTitle
           action={
             unlocked.length > 0 ? (
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/30">
-                {unlocked.length} freigeschaltet
-              </span>
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/30">{t("freigeschaltet2", { length: unlocked.length })}</span>
             ) : null
           }
-        >
-          Achievements
-        </PanelTitle>
+        >{t("achievements")}</PanelTitle>
 
         <div className="mt-5">{body}</div>
 
@@ -335,15 +323,13 @@ export function AchievementsSection() {
               type="button"
               onClick={() => setShowAll(true)}
               className="rounded-full border border-cyan-400/30 bg-cyan-400/[0.06] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-cyan-300 transition hover:bg-cyan-400/[0.14]"
-            >
-              Alle Achievements
-            </button>
+            >{t("alleAchievements")}</button>
           </div>
         )}
       </section>
 
       {showAll && achievements && (
-        <PanelModal title="Achievements" onClose={() => setShowAll(false)}>
+        <PanelModal title={t("achievements")} onClose={() => setShowAll(false)}>
           <AchievementsView achievements={achievements} />
         </PanelModal>
       )}

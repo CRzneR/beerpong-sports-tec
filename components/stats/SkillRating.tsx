@@ -11,6 +11,7 @@ import {
   PROVISIONAL_MATCHES,
   START_RATING,
 } from "@/app/[locale]/spieler/match/skillRating";
+import { useLocale, useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -21,12 +22,12 @@ import {
 const OUTER = "rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7";
 const INNER = "rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5";
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) {
     return "–";
   }
 
-  return new Date(iso).toLocaleDateString("de-DE", {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
@@ -69,6 +70,9 @@ function RatingChart({
   selected: number;
   onSelect: (index: number) => void;
 }) {
+  const t = useTranslations("Stats.SkillRating");
+  const locale = useLocale();
+
   const values = history.map((step) => step.after);
   const count = values.length;
 
@@ -105,7 +109,7 @@ function RatingChart({
       viewBox={`0 0 ${CHART_W} ${CHART_H}`}
       className="h-auto w-full"
       role="img"
-      aria-label={`Rating-Verlauf der letzten ${count} Matches, aktuell ${values[count - 1]} Punkte`}
+      aria-label={t("ratingVerlaufDerLetzten", { count, v: values[count - 1] })}
     >
       <defs>
         <linearGradient id="rating-area" x1="0" y1="0" x2="0" y2="1">
@@ -183,7 +187,7 @@ function RatingChart({
       ))}
 
       <text x={PAD_L} y={CHART_H - 6} fontSize="11" fontWeight="700" fill="rgba(255,255,255,0.35)">
-        {formatDate(history[0].savedAt)}
+        {formatDate(history[0].savedAt, locale)}
       </text>
       {count > 1 && (
         <text
@@ -194,7 +198,7 @@ function RatingChart({
           fontWeight="700"
           fill="rgba(255,255,255,0.35)"
         >
-          {formatDate(history[count - 1].savedAt)}
+          {formatDate(history[count - 1].savedAt, locale)}
         </text>
       )}
 
@@ -244,44 +248,22 @@ function InfoBlock({ title, children }: { title: string; children: ReactNode }) 
 }
 
 function RatingInfoModal({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("Stats.SkillRating");
+
   return (
-    <PanelModal title="So entsteht dein Skill-Rating" onClose={onClose}>
-      <p className="text-xs font-semibold leading-relaxed text-white/45">
-        Dein Rating ist eine Zahl von 0 bis 1000. Du startest bei {START_RATING}. Nach jedem Match
-        steigt oder sinkt der Wert, je nachdem, wie das Match im Verhältnis zur Erwartung
-        ausgegangen ist.
-      </p>
+    <PanelModal title={t("soEntstehtDeinSkill")} onClose={onClose}>
+      <p className="text-xs font-semibold leading-relaxed text-white/45">{t("deinRatingIstEine", { START_RATING })}</p>
 
       <div className="mt-4 space-y-3">
-        <InfoBlock title="1. Stärke der Gegner">
-          Aus den Ratings beider Teams wird berechnet, wer als Favorit ins Match geht (bei 2 gegen 2
-          zählt der Durchschnitt des Teams). Ein Sieg gegen einen stärkeren Gegner bringt viele
-          Punkte, ein Sieg gegen einen deutlich schwächeren kaum welche. Umgekehrt kostet eine
-          Niederlage gegen einen Schwächeren mehr.
-        </InfoBlock>
+        <InfoBlock title={t("t1StaerkeDerGegner")}>{t("ausDenRatingsBeider")}</InfoBlock>
 
-        <InfoBlock title="2. Ergebnis und Becherdifferenz">
-          Zum Ergebnis zählt der Sieg (70 %) und der Anteil der Becher, die dein Team getroffen hat
-          (30 %). Ein 10:2 ist deshalb mehr wert als ein 10:9, und eine knappe Niederlage kostet
-          weniger als eine klare.
-        </InfoBlock>
+        <InfoBlock title={t("t2ErgebnisUndBecherdifferenz")}>{t("zumErgebnisZaehltDer")}</InfoBlock>
 
-        <InfoBlock title="3. Neue Spieler bewegen sich stärker">
-          In den ersten Matches schwankt das Rating stärker, damit es schnell zu deiner Stärke
-          findet. Mit jedem Match werden die Schritte kleiner. Pro Match sind höchstens ±{MAX_DELTA}{" "}
-          Punkte möglich.
-        </InfoBlock>
+        <InfoBlock title={t("t3NeueSpielerBewegen")}>{t("inDenErstenMatches", { MAX_DELTA })}</InfoBlock>
 
-        <InfoBlock title="4. Nicht nur die Trefferquote">
-          Die Trefferquote geht nicht ein. Wer in wenigen Matches stark trifft, steht deshalb nicht
-          sofort ganz oben. Bis zum {PROVISIONAL_MATCHES}. Match gilt dein Rating als vorläufig, in
-          die Rangliste kommst du ab {MIN_RANKED_MATCHES} Matches.
-        </InfoBlock>
+        <InfoBlock title={t("t4NichtNurDie")}>{t("dieTrefferquoteGehtNicht", { PROVISIONAL_MATCHES, MIN_RANKED_MATCHES })}</InfoBlock>
 
-        <InfoBlock title="Welche Matches zählen?">
-          Wie bei deinen Statistiken: nur Matches gegen registrierte Gegner und nur Matches nach
-          einem Zurücksetzen der Statistiken. Der Zeitraum-Filter wirkt beim Rating nicht.
-        </InfoBlock>
+        <InfoBlock title={t("welcheMatchesZaehlen")}>{t("wieBeiDeinenStatistiken")}</InfoBlock>
       </div>
 
       <div className="mt-5 flex justify-end">
@@ -289,9 +271,7 @@ function RatingInfoModal({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           className="rounded-full bg-cyan-400 px-6 py-3 text-[10px] font-black uppercase tracking-wider text-black transition hover:bg-cyan-300"
-        >
-          Verstanden
-        </button>
+        >{t("verstanden")}</button>
       </div>
     </PanelModal>
   );
@@ -302,6 +282,9 @@ function RatingInfoModal({ onClose }: { onClose: () => void }) {
 /* ------------------------------------------------------------------------ */
 
 export function SkillRating() {
+  const t = useTranslations("Stats.SkillRating");
+  const locale = useLocale();
+
   const [data, setData] = useState<SkillRatingOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -353,25 +336,19 @@ export function SkillRating() {
 
   if (loading) {
     return (
-      <div className={`${OUTER} text-center text-sm font-bold text-white/40`}>
-        Lade Skill-Rating …
-      </div>
+      <div className={`${OUTER} text-center text-sm font-bold text-white/40`}>{t("ladeSkillRating")}</div>
     );
   }
 
   if (!loggedIn) {
     return (
-      <div className={`${OUTER} text-center text-sm font-bold text-white/50`}>
-        Melde dich an, um dein Skill-Rating zu sehen.
-      </div>
+      <div className={`${OUTER} text-center text-sm font-bold text-white/50`}>{t("meldeDichAnUm")}</div>
     );
   }
 
   if (error) {
     return (
-      <div className={`${OUTER} text-center text-sm font-bold text-red-400/80`}>
-        Skill-Rating konnte nicht geladen werden.
-      </div>
+      <div className={`${OUTER} text-center text-sm font-bold text-red-400/80`}>{t("skillRatingKonnteNicht")}</div>
     );
   }
 
@@ -380,16 +357,13 @@ export function SkillRating() {
       <span className="mt-0.5 h-6 w-1 shrink-0 rounded-full bg-cyan-400" />
 
       <div>
-        <div className="text-lg font-black tracking-tight text-white">Skill-Rating</div>
-        <div className="mt-0.5 text-xs font-semibold text-white/40">
-          Zählt Ergebnis, Becherdifferenz und Stärke deiner Gegner, nicht nur die Trefferquote.{" "}
+        <div className="text-lg font-black tracking-tight text-white">{t("skillRating")}</div>
+        <div className="mt-0.5 text-xs font-semibold text-white/40">{t("zaehltErgebnisBecherdifferenzUnd")}{" "}
           <button
             type="button"
             onClick={() => setInfoOpen(true)}
             className="font-black text-cyan-400 underline decoration-cyan-400/40 underline-offset-2 transition hover:text-cyan-300"
-          >
-            Mehr
-          </button>
+          >{t("mehr")}</button>
         </div>
       </div>
 
@@ -401,10 +375,7 @@ export function SkillRating() {
     return (
       <div className={OUTER}>
         {header}
-        <div className="mt-6 text-xs font-bold text-white/30">
-          Noch kein Rating: Spiele ein Match gegen registrierte Gegner, dann geht es bei{" "}
-          {START_RATING} Punkten los.
-        </div>
+        <div className="mt-6 text-xs font-bold text-white/30">{t("nochKeinRatingSpiele", { START_RATING })}</div>
       </div>
     );
   }
@@ -423,14 +394,10 @@ export function SkillRating() {
         {/* RATING */}
         <div className={INNER}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">
-              Aktuelles Rating
-            </span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">{t("aktuellesRating")}</span>
 
             {data.provisional && (
-              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-yellow-400">
-                Vorläufig
-              </span>
+              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-yellow-400">{t("vorlaeufig")}</span>
             )}
           </div>
 
@@ -443,9 +410,7 @@ export function SkillRating() {
             {data.lastDelta !== null && (
               <span
                 className={`mb-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${deltaBadgeClass(data.lastDelta)}`}
-              >
-                {formatDelta(data.lastDelta)} Punkte
-              </span>
+              >{t("punkte", { v: formatDelta(data.lastDelta) })}</span>
             )}
           </div>
 
@@ -462,35 +427,31 @@ export function SkillRating() {
           <div className="mt-4 text-xs font-semibold text-white/50">
             {data.rank ? (
               <>
-                Rang <span className="font-black text-white">#{data.rank.rank}</span> von{" "}
-                {data.rank.total}{" "}
-                {data.rank.total === 1 ? "platziertem Spieler" : "platzierten Spielern"}
+                {t.rich("rangVonSpielern", {
+                  rank: data.rank.rank,
+                  total: data.rank.total,
+                  b: (chunks) => <span className="font-black text-white">{chunks}</span>,
+                })}
               </>
             ) : (
-              <>
-                Noch {data.matchesToRank} {data.matchesToRank === 1 ? "Match" : "Matches"} bis zur
-                Platzierung (ab {MIN_RANKED_MATCHES} Matches).
-              </>
+              <>{t("nochMatchesBisPlatzierung", { count: data.matchesToRank, min: MIN_RANKED_MATCHES })}</>
             )}
           </div>
 
           {data.provisional && (
-            <div className="mt-1 text-[11px] font-semibold leading-relaxed text-white/35">
-              Verlässlich ab {PROVISIONAL_MATCHES} Matches, bis dahin kann sich dein Wert noch
-              stärker bewegen.
-            </div>
+            <div className="mt-1 text-[11px] font-semibold leading-relaxed text-white/35">{t("verlaesslichAbMatchesBis", { PROVISIONAL_MATCHES })}</div>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Tile
-              label="Bestleistung"
+              label={t("bestleistung")}
               value={String(data.best)}
-              hint={formatDate(data.bestSavedAt)}
+              hint={formatDate(data.bestSavedAt, locale)}
             />
             <Tile
-              label={`Letzte ${data.history.length}`}
+              label={t("letzte", { length: data.history.length })}
               value={`${formatDelta(trend)}`}
-              hint={`${data.matches} ${data.matches === 1 ? "Match" : "Matches"} gesamt`}
+              hint={t("matchesGesamt", { count: data.matches })}
             />
           </div>
         </div>
@@ -499,8 +460,7 @@ export function SkillRating() {
         <div className={INNER}>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-white/40">
-              Rating-Verlauf · letzte {data.history.length}{" "}
-              {data.history.length === 1 ? "Match" : "Matches"}
+              {t("ratingVerlaufLetzteMatches", { count: data.history.length })}
             </span>
           </div>
 
@@ -510,14 +470,14 @@ export function SkillRating() {
 
           {step && (
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-white/35">
-                Match {matchNumber} · {formatDate(step.savedAt)}
-              </span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-white/35">{t("match2", { matchNumber, v: formatDate(step.savedAt, locale) })}</span>
 
               <span className="min-w-0 truncate text-xs font-bold text-white/70">
-                {step.won === null ? "Unentschieden" : step.won ? "Sieg" : "Niederlage"} gegen{" "}
-                {step.opponentNames.join(" & ") || "–"}{" "}
-                <span className="text-white/35">(Ø {step.opponentRating})</span>
+                {t("ergebnisGegen", {
+                  result: step.won === null ? "draw" : step.won ? "win" : "loss",
+                  names: step.opponentNames.join(" & ") || "–",
+                })}{" "}
+                <span className="text-white/35">{t("text", { opponentRating: step.opponentRating })}</span>
               </span>
 
               <span className="ml-auto text-xs font-black text-white">

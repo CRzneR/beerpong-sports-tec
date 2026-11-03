@@ -15,6 +15,7 @@ import {
   type MatchScore,
   type StatsRange,
 } from "@/app/[locale]/spieler/match/playerStats";
+import { useLocale, useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -50,20 +51,24 @@ function formatScore(score: MatchScore | null): string {
   return score ? `${score.own} : ${score.opp}` : "–";
 }
 
-function formatDiff(value: number): string {
+function formatDiff(value: number, locale: string): string {
   if (value === 0) {
     return "0";
   }
 
-  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(1).replace(".", ",")}`;
+  const abs = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
+    Math.abs(value),
+  );
+
+  return `${value > 0 ? "+" : "−"}${abs}`;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   const date = new Date(iso);
 
   return Number.isNaN(date.getTime())
     ? ""
-    : date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    : date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /* ------------------------------------------------------------------------ */
@@ -368,6 +373,8 @@ const MAX_DOTS = 16;
 
 /* Becherverlauf: eigenes Team (Cyan bzw. Rot bei Niederlage) gegen den Gegner (Grau). */
 function MiniChart({ entry }: { entry: MatchFlowEntry }) {
+  const t = useTranslations("Stats.ComebackStats");
+
   const count = entry.ownSeries.length;
   const maxValue = Math.max(10, ...entry.ownSeries, ...entry.oppSeries);
 
@@ -403,7 +410,7 @@ function MiniChart({ entry }: { entry: MatchFlowEntry }) {
       viewBox={`0 0 ${CHART_W} ${CHART_H}`}
       className="mt-3 block w-full"
       role="img"
-      aria-label={`Becherverlauf: ${entry.own} zu ${entry.opp}`}
+      aria-label={t("becherverlaufZu", { own: entry.own, opp: entry.opp })}
     >
       <line
         x1={CHART_PAD_X}
@@ -456,22 +463,31 @@ function MiniChart({ entry }: { entry: MatchFlowEntry }) {
 }
 
 function MatchTile({ entry, onOpen }: { entry: MatchFlowEntry; onOpen: () => void }) {
+  const t = useTranslations("Stats.ComebackStats");
+  const locale = useLocale();
+
   const diff = entry.own - entry.opp;
 
   const diffClass = diff > 0 ? "text-emerald-400" : diff < 0 ? "text-red-400" : "text-white/50";
-  const diffText = diff === 0 ? "±0 Becher" : `${diff > 0 ? "+" : "−"}${Math.abs(diff)} Becher`;
+  const diffText =
+    diff === 0
+      ? t("diffNull")
+      : t("diffBecher", { sign: diff > 0 ? "+" : "−", count: Math.abs(diff) });
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Verlauf ansehen: ${entry.won ? "Sieg" : "Niederlage"} ${entry.own} zu ${entry.opp} gegen ${
-        entry.opponents.join(" und ") || "Unbekannt"
-      }`}
+      aria-label={t("verlaufAnsehen", {
+        result: entry.won ? "win" : "loss",
+        own: entry.own,
+        opp: entry.opp,
+        names: entry.opponents.join(t("und")) || t("unbekannt"),
+      })}
       className="flex min-w-0 cursor-pointer flex-col rounded-xl border border-white/[0.08] bg-[#0a0d11] p-3.5 text-left transition duration-200 hover:border-cyan-400/30 hover:bg-[#0c1116] focus:outline-none focus-visible:border-cyan-400/50"
     >
       <div className="flex w-full flex-col items-start gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
-        <span className="text-[11px] font-semibold text-white/40">{formatDate(entry.savedAt)}</span>
+        <span className="text-[11px] font-semibold text-white/40">{formatDate(entry.savedAt, locale)}</span>
 
         <span
           className={`shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold ${
@@ -480,15 +496,14 @@ function MatchTile({ entry, onOpen }: { entry: MatchFlowEntry; onOpen: () => voi
               : "border-red-400/30 bg-red-400/10 text-red-300"
           }`}
         >
-          {entry.won ? "Sieg" : "Niederlage"}
+          {entry.won ? t("sieg") : t("niederlage")}
         </span>
       </div>
 
       <div
         className="mt-2 w-full truncate text-sm font-black text-white"
         title={entry.opponents.join(" & ")}
-      >
-        vs. {entry.opponents.join(" & ") || "Unbekannt"}
+      >{t("vs")}{" "}{entry.opponents.join(" & ") || t("unbekannt")}
       </div>
 
       <div className="mt-0.5 text-lg font-black tracking-tight text-white">
@@ -543,6 +558,8 @@ function summarizeFlow(entry: MatchFlowEntry) {
 }
 
 function BigChart({ entry }: { entry: MatchFlowEntry }) {
+  const t = useTranslations("Stats.ComebackStats");
+
   const steps = Math.max(1, Math.min(entry.ownSeries.length, entry.oppSeries.length) - 1);
   const maxValue = Math.max(10, ...entry.ownSeries, ...entry.oppSeries);
 
@@ -571,7 +588,7 @@ function BigChart({ entry }: { entry: MatchFlowEntry }) {
       viewBox={`0 0 ${BIG_W} ${BIG_H}`}
       className="block w-full"
       role="img"
-      aria-label={`Becherverlauf: ${entry.own} zu ${entry.opp}`}
+      aria-label={t("becherverlaufZu", { own: entry.own, opp: entry.opp })}
     >
       {gridValues.map((value) => (
         <g key={value}>
@@ -631,7 +648,7 @@ function BigChart({ entry }: { entry: MatchFlowEntry }) {
           fontSize="9"
           fill="rgba(255,255,255,0.4)"
         >
-          {tick === 0 ? "Start" : `Wurf ${tick}`}
+          {tick === 0 ? t("start") : t("wurf", { tick })}
         </text>
       ))}
     </svg>
@@ -639,27 +656,30 @@ function BigChart({ entry }: { entry: MatchFlowEntry }) {
 }
 
 function MatchFlowModal({ entry, onClose }: { entry: MatchFlowEntry; onClose: () => void }) {
+  const t = useTranslations("Stats.ComebackStats");
+  const locale = useLocale();
+
   const summary = summarizeFlow(entry);
   const diff = entry.own - entry.opp;
 
   const facts: { label: string; value: string }[] = [
-    { label: "Endstand", value: `${entry.own} : ${entry.opp}` },
+    { label: t("endstand"), value: `${entry.own} : ${entry.opp}` },
     {
-      label: "Becherdifferenz",
+      label: t("becherdifferenz"),
       value: diff === 0 ? "±0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff)}`,
     },
-    { label: "Würfe im Match", value: String(summary.steps) },
-    { label: "Größter Vorsprung", value: summary.maxLead > 0 ? `${summary.maxLead} Becher` : "–" },
+    { label: t("wuerfeImMatch"), value: String(summary.steps) },
+    { label: t("groessterVorsprung"), value: summary.maxLead > 0 ? t("becherAnzahl", { count: summary.maxLead }) : "–" },
     {
-      label: "Größter Rückstand",
-      value: summary.maxDeficit > 0 ? `${summary.maxDeficit} Becher` : "–",
+      label: t("groessterRueckstand"),
+      value: summary.maxDeficit > 0 ? t("becherAnzahl", { count: summary.maxDeficit }) : "–",
     },
-    { label: "Führungswechsel", value: String(summary.leadChanges) },
+    { label: t("fuehrungswechsel"), value: String(summary.leadChanges) },
   ];
 
   return (
     <PanelModal
-      title={`Match-Verlauf · vs. ${entry.opponents.join(" & ") || "Unbekannt"}`}
+      title={t("matchVerlaufVs", { names: entry.opponents.join(" & ") || t("unbekannt") })}
       onClose={onClose}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -671,22 +691,18 @@ function MatchFlowModal({ entry, onClose }: { entry: MatchFlowEntry; onClose: ()
                 : "border-red-400/30 bg-red-400/10 text-red-300"
             }`}
           >
-            {entry.won ? "Sieg" : "Niederlage"}
+            {entry.won ? t("sieg") : t("niederlage")}
           </span>
 
-          <span className="text-xs font-semibold text-white/40">{formatDate(entry.savedAt)}</span>
+          <span className="text-xs font-semibold text-white/40">{formatDate(entry.savedAt, locale)}</span>
         </div>
 
         <div className="flex items-center gap-4 text-[11px] font-semibold text-white/45">
           <span className="flex items-center gap-1.5">
-            <span className={`h-2 w-2 rounded-full ${entry.won ? "bg-cyan-400" : "bg-red-400"}`} />
-            Dein Team
-          </span>
+            <span className={`h-2 w-2 rounded-full ${entry.won ? "bg-cyan-400" : "bg-red-400"}`} />{t("deinTeam")}</span>
 
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-slate-400" />
-            Gegner
-          </span>
+            <span className="h-2 w-2 rounded-full bg-slate-400" />{t("gegner")}</span>
         </div>
       </div>
 
@@ -694,9 +710,7 @@ function MatchFlowModal({ entry, onClose }: { entry: MatchFlowEntry; onClose: ()
         <BigChart entry={entry} />
       </div>
 
-      <p className="mt-2 text-center text-[11px] font-semibold text-white/30">
-        Entfernte Becher pro Wurf – so hat sich das Match entwickelt.
-      </p>
+      <p className="mt-2 text-center text-[11px] font-semibold text-white/30">{t("entfernteBecherProWurf")}</p>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {facts.map((fact) => (
@@ -720,6 +734,10 @@ function MatchFlowModal({ entry, onClose }: { entry: MatchFlowEntry; onClose: ()
 /* ------------------------------------------------------------------------ */
 
 export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
+
+  const t = useTranslations("Stats.ComebackStats");
+  const locale = useLocale();
+
   const [stats, setStats] = useState<ComebackData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -770,25 +788,19 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
 
   if (loading) {
     return (
-      <div className={`${OUTER} text-center text-sm font-bold text-white/40`}>
-        Lade Spielverlauf …
-      </div>
+      <div className={`${OUTER} text-center text-sm font-bold text-white/40`}>{t("ladeSpielverlauf")}</div>
     );
   }
 
   if (!loggedIn) {
     return (
-      <div className={`${OUTER} text-center text-sm font-bold text-white/50`}>
-        Melde dich an, um deinen Spielverlauf zu sehen.
-      </div>
+      <div className={`${OUTER} text-center text-sm font-bold text-white/50`}>{t("meldeDichAnUm")}</div>
     );
   }
 
   if (error) {
     return (
-      <div className={`${OUTER} text-center text-sm font-bold text-red-400/80`}>
-        Spielverlauf konnte nicht geladen werden.
-      </div>
+      <div className={`${OUTER} text-center text-sm font-bold text-red-400/80`}>{t("spielverlaufKonnteNichtGeladen")}</div>
     );
   }
 
@@ -798,18 +810,16 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
         <span className="mt-0.5 h-6 w-1 shrink-0 rounded-full bg-cyan-400" />
 
         <div>
-          <div className="text-lg font-black tracking-tight text-white">Spielverlauf</div>
-          <div className="mt-0.5 text-xs font-semibold text-white/40">
-            Detaillierte Analyse deines bisherigen Spielverlaufs.
-          </div>
+          <div className="text-lg font-black tracking-tight text-white">{t("spielverlauf")}</div>
+          <div className="mt-0.5 text-xs font-semibold text-white/40">{t("detaillierteAnalyseDeinesBisherige")}</div>
         </div>
       </div>
 
       <Select
         value={mode}
         onChange={(value) => setMode(value as GameMode)}
-        options={GAME_MODES}
-        label="Spielmodus"
+        options={GAME_MODES.map((option) => ({ ...option, label: t(`mode_${option.value}`) }))}
+        label={t("spielmodus")}
       />
     </div>
   );
@@ -820,8 +830,8 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
         {header}
         <div className="mt-6 text-xs font-bold text-white/30">
           {mode === "all"
-            ? "Noch keine abgeschlossenen Matches."
-            : "Keine abgeschlossenen Matches in diesem Spielmodus."}
+            ? t("nochKeineAbgeschlossenenMatches")
+            : t("keineAbgeschlossenenMatchesIn")}
         </div>
       </div>
     );
@@ -830,23 +840,25 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
   const results: Row[] = [
     {
       icon: "trophy",
-      label: "Größter Sieg",
+      label: t("groessterSieg"),
       value: formatScore(stats.biggestWin),
       iconClass: "text-yellow-400/80",
     },
     {
       icon: "skull",
-      label: "Größte Niederlage",
+      label: t("groessteNiederlage"),
       value: formatScore(stats.biggestLoss),
       iconClass: "text-red-400/70",
     },
     {
       icon: "cross",
-      label: "Knappe Matches",
+      label: t("knappeMatches"),
       value:
-        stats.close.matches > 0 ? `${stats.close.won} von ${stats.close.matches} gewonnen` : "–",
+        stats.close.matches > 0
+          ? t("knappGewonnen", { won: stats.close.won, matches: stats.close.matches })
+          : "–",
     },
-    { icon: "balance", label: "Ø Becherdifferenz", value: formatDiff(stats.avgDiff) },
+    { icon: "balance", label: t("oBecherdifferenz"), value: formatDiff(stats.avgDiff, locale) },
   ];
 
   const recent = stats.recent.slice(0, RECENT_SHOWN);
@@ -860,122 +872,110 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
         <div className={INNER}>
           <SectionHead
             icon="refresh"
-            title="Comeback-Quote"
-            subtitle="Matches, in denen du einen Rückstand aufgeholt hast."
+            title={t("comebackQuote")}
+            subtitle={t("matchesInDenenDu")}
           />
 
           {stats.behind > 0 ? (
             <RingBlock
               percent={stats.rate}
-              caption="Comebacks"
+              caption={t("comebacks")}
               rows={[
                 {
                   icon: "down",
-                  label: "Hinten gelegen",
-                  value: `${stats.behind} ${stats.behind === 1 ? "Match" : "Matches"}`,
+                  label: t("hintenGelegen"),
+                  value: t("matchesAnzahl", { count: stats.behind }),
                 },
-                { icon: "refresh", label: "Davon gewonnen", value: String(stats.won) },
+                { icon: "refresh", label: t("davonGewonnen"), value: String(stats.won) },
                 {
                   icon: "bars",
-                  label: "Größter gedrehter Rückstand",
-                  value: stats.biggest > 0 ? `${stats.biggest} Becher` : "–",
+                  label: t("groessterGedrehterRueckstand"),
+                  value: stats.biggest > 0 ? t("becherAnzahl", { count: stats.biggest }) : "–",
                 },
               ]}
             />
           ) : (
-            <div className="mt-5 text-xs font-bold text-white/30">
-              Noch nie mit {COMEBACK_DEFICIT} oder mehr Bechern zurückgelegen.
-            </div>
+            <div className="mt-5 text-xs font-bold text-white/30">{t("nochNieMitOder", { COMEBACK_DEFICIT })}</div>
           )}
 
-          <InfoNote>
-            Matches, in denen dein Team mindestens {COMEBACK_DEFICIT} Becher zurücklag.
-          </InfoNote>
+          <InfoNote>{t("matchesInDenenDein", { COMEBACK_DEFICIT })}</InfoNote>
         </div>
 
         {/* FÜHRUNG */}
         <div className={INNER}>
           <SectionHead
             icon="crown"
-            title="Führung gehalten"
-            subtitle="Matches, in denen du die Führung bis zum Ende gehalten hast."
+            title={t("fuehrungGehalten")}
+            subtitle={t("matchesInDenenDu2")}
           />
 
           {stats.ahead > 0 ? (
             <RingBlock
               percent={stats.heldRate}
-              caption="Führung"
+              caption={t("fuehrung")}
               rows={[
                 {
                   icon: "up",
-                  label: "Vorne gelegen",
-                  value: `${stats.ahead} ${stats.ahead === 1 ? "Match" : "Matches"}`,
+                  label: t("vorneGelegen"),
+                  value: t("matchesAnzahl", { count: stats.ahead }),
                 },
-                { icon: "crown", label: "Davon gewonnen", value: String(stats.held) },
+                { icon: "crown", label: t("davonGewonnen"), value: String(stats.held) },
                 {
                   icon: "bars",
-                  label: "Größte verspielte Führung",
-                  value: stats.biggestBlown > 0 ? `${stats.biggestBlown} Becher` : "–",
+                  label: t("groessteVerspielteFuehrung"),
+                  value: stats.biggestBlown > 0 ? t("becherAnzahl", { count: stats.biggestBlown }) : "–",
                 },
               ]}
             />
           ) : (
-            <div className="mt-5 text-xs font-bold text-white/30">
-              Noch nie mit {COMEBACK_DEFICIT} oder mehr Bechern vorn gelegen.
-            </div>
+            <div className="mt-5 text-xs font-bold text-white/30">{t("nochNieMitOder2", { COMEBACK_DEFICIT })}</div>
           )}
 
-          <InfoNote>
-            Matches, in denen dein Team mindestens {COMEBACK_DEFICIT} Becher vorn lag.
-          </InfoNote>
+          <InfoNote>{t("matchesInDenenDein2", { COMEBACK_DEFICIT })}</InfoNote>
         </div>
 
         {/* STARTTREFFER */}
         <div className={INNER}>
           <SectionHead
             icon="target"
-            title="Starttreffer"
-            subtitle="Wie oft du den ersten Wurf getroffen hast."
+            title={t("starttreffer")}
+            subtitle={t("wieOftDuDen")}
           />
 
           {stats.start ? (
             <RingBlock
               percent={stats.start.rate}
-              caption="Starttreffer"
+              caption={t("starttreffer")}
               rows={[
-                { icon: "flag", label: "Matches mit Anwurf", value: String(stats.start.matches) },
-                { icon: "check", label: "Davon Starttreffer", value: String(stats.start.hits) },
+                { icon: "flag", label: t("matchesMitAnwurf"), value: String(stats.start.matches) },
+                { icon: "check", label: t("davonStarttreffer"), value: String(stats.start.hits) },
                 {
                   icon: "trophy",
-                  label: "Siege nach Starttreffer",
+                  label: t("siegeNachStarttreffer"),
                   value: String(stats.start.wonAfterHit),
                 },
               ]}
             />
           ) : (
-            <div className="mt-5 text-xs font-bold text-white/30">Noch kein Match mit Anwurf.</div>
+            <div className="mt-5 text-xs font-bold text-white/30">{t("nochKeinMatchMit")}</div>
           )}
 
-          <InfoNote>
-            Dein erster Wurf in der Eröffnungsrunde, wenn dein Team den Anwurf hatte.
-          </InfoNote>
+          <InfoNote>{t("deinErsterWurfIn")}</InfoNote>
         </div>
 
         {/* ERGEBNISSE */}
         <div className={INNER}>
           <SectionHead
             icon="bars"
-            title="Ergebnisse"
-            subtitle="Übersicht deiner Match-Ergebnisse."
+            title={t("ergebnisse")}
+            subtitle={t("uebersichtDeinerMatchErgebnisse")}
           />
 
           <div className="mt-4">
             <RowList rows={results} />
           </div>
 
-          <InfoNote>
-            Endstand in Bechern. Knapp heißt höchstens {CLOSE_MATCH_MARGIN} Becher Unterschied.
-          </InfoNote>
+          <InfoNote>{t("endstandInBechernKnapp", { CLOSE_MATCH_MARGIN })}</InfoNote>
         </div>
       </div>
 
@@ -984,20 +984,16 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <SectionHead
             icon="trend"
-            title="Match-Verlauf"
-            subtitle="Deine letzten 4 Matches. Tippe eins an, um den Verlauf zu sehen."
+            title={t("matchVerlauf")}
+            subtitle={t("deineLetzten4Matches")}
           />
 
           <div className="flex items-center gap-4 text-[11px] font-semibold text-white/45">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-cyan-400" />
-              Dein Team
-            </span>
+              <span className="h-2 w-2 rounded-full bg-cyan-400" />{t("deinTeam")}</span>
 
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-slate-400" />
-              Gegner
-            </span>
+              <span className="h-2 w-2 rounded-full bg-slate-400" />{t("gegner")}</span>
           </div>
         </div>
 
@@ -1008,9 +1004,7 @@ export function ComebackStats({ range = "all" }: { range?: StatsRange }) {
             ))}
           </div>
         ) : (
-          <div className="mt-4 text-xs font-bold text-white/30">
-            Noch keine abgeschlossenen Matches.
-          </div>
+          <div className="mt-4 text-xs font-bold text-white/30">{t("nochKeineAbgeschlossenenMatches")}</div>
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { BRACKET_BOX_H, BRACKET_BOX_W, layoutKoBracket, type BracketBox } from "./koBracketLayout";
 import { koWinnerId, type KoMatchStatus, type TournamentTeam } from "./tournamentLogic";
+import { useTranslations } from "next-intl";
 
 /*
 |--------------------------------------------------------------------------
@@ -47,12 +48,14 @@ type Props = {
 const MIN_SCALE = 0.6;
 
 function Trophy({ highlight }: { highlight: boolean }) {
+  const t = useTranslations("League.KoBracket");
+
   return (
     <svg
       viewBox="0 0 120 150"
       className={`h-[110px] w-[88px] ${highlight ? "drop-shadow-[0_0_18px_rgba(250,204,21,0.55)]" : "opacity-80"}`}
       role="img"
-      aria-label="Pokal"
+      aria-label={t("pokal")}
     >
       <defs>
         <linearGradient id="ko-trophy" x1="0" y1="0" x2="1" y2="1">
@@ -85,6 +88,8 @@ export function KoBracket({
   championId,
   onSelectMatch,
 }: Props) {
+  const t = useTranslations("League.KoBracket");
+
   const layout = layoutKoBracket(matches);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -196,7 +201,7 @@ export function KoBracket({
           onClick={() => onSelectMatch?.(match.id)}
           className={className}
           style={style}
-          aria-label={`Ergebnis eintragen: ${teamById(match.teamAId ?? "")?.name ?? ""} gegen ${teamById(match.teamBId ?? "")?.name ?? ""}`}
+          aria-label={t("ergebnisEintragenGegen", { v: teamById(match.teamAId ?? "")?.name ?? "", v2: teamById(match.teamBId ?? "")?.name ?? "" })}
         >
           {content}
         </button>

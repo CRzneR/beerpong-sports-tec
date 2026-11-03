@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import BeerPongTable, { Cup, CupSlotAssignment } from "@/components/stats/match/BeerPongTable";
+import { useTranslations } from "next-intl";
 
 /*
  * Das Overlay hat drei Modi:
@@ -68,34 +69,31 @@ interface HitOverlayProps {
 type ShotTypeOption = {
   id: ShotType;
 
-  title: string;
-
-  description: string;
 };
 
 const hitShotTypes: ShotTypeOption[] = [
   {
     id: "single",
 
-    title: "Einzeltreffer",
+    
 
-    description: "Direkter Treffer",
+    
   },
 
   {
     id: "bounce",
 
-    title: "Aufhüpfen",
+    
 
-    description: "Ball springt vorher auf",
+    
   },
 
   {
     id: "trickshot",
 
-    title: "Trickshot",
+    
 
-    description: "Besonderer Wurf",
+    
   },
 ];
 
@@ -103,17 +101,17 @@ const specialShotTypes: ShotTypeOption[] = [
   {
     id: "knockover",
 
-    title: "Umgeworfen",
+    
 
-    description: "Becher des Gegners wurde umgeworfen",
+    
   },
 
   {
     id: "penalty",
 
-    title: "Strafbecher",
+    
 
-    description: "Becher durch Regelverstoß des Gegners",
+    
   },
 ];
 
@@ -121,9 +119,9 @@ const specialShotTypes: ShotTypeOption[] = [
 const extraShotType: ShotTypeOption = {
   id: "extra",
 
-  title: "Extra Treffer",
+  
 
-  description: "Bonus-Becher dieser Runde",
+  
 };
 
 export default function HitOverlay({
@@ -139,6 +137,8 @@ export default function HitOverlay({
   onClose,
   onSave,
 }: HitOverlayProps) {
+  const t = useTranslations("Match.HitOverlay");
+
   const [shotType, setShotType] = useState<ShotType>(defaultShotType);
 
   const [selectedCups, setSelectedCups] = useState<number[]>([]);
@@ -205,12 +205,12 @@ export default function HitOverlay({
   const isCreditOnly = shotType === "penalty" || shotType === "knockover";
 
   const saveLabel = isExtraMode
-    ? "Bonus-Becher speichern"
+    ? t("bonusBecherSpeichern")
     : isSpecialMode && shotType === "penalty"
-      ? "Strafbecher speichern"
+      ? t("strafbecherSpeichern")
       : isSpecialMode && shotType === "knockover"
-        ? "Umgeworfen speichern"
-        : "Treffer speichern";
+        ? t("umgeworfenSpeichern")
+        : t("trefferSpeichern");
 
   const handleShotTypeChange = (next: ShotType) => {
     if (isExtraMode) {
@@ -296,10 +296,10 @@ export default function HitOverlay({
               "
             >
               {isExtraMode
-                ? `Bonus-Becher auswählen · ${selectionLimit}`
+                ? t("bonusBecherAuswaehlen", { selectionLimit })
                 : isSpecialMode
-                  ? "Special erfassen"
-                  : "Treffer erfassen"}
+                  ? t("specialErfassen")
+                  : t("trefferErfassen")}
             </div>
 
             <h2
@@ -339,7 +339,7 @@ export default function HitOverlay({
               lg:w-12
               lg:text-2xl
             "
-            aria-label="Overlay schließen"
+            aria-label={t("overlaySchliessen")}
           >
             ×
           </button>
@@ -350,7 +350,7 @@ export default function HitOverlay({
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 lg:hidden">
           <div className="shrink-0">
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
-              01 · {isSpecialMode ? "Special" : "Trefferart"}
+              01 · {isSpecialMode ? t("special") : t("trefferart")}
             </div>
 
             <div className={`mt-2 grid gap-1.5 ${mobileColumns}`}>
@@ -373,7 +373,7 @@ export default function HitOverlay({
                         active ? "text-cyan-400" : "text-white"
                       }`}
                     >
-                      {type.title}
+                      {t(`shot_${type.id}_title`)}
                     </div>
                   </button>
                 );
@@ -381,9 +381,7 @@ export default function HitOverlay({
             </div>
 
             {isCreditOnly && (
-              <p className="mt-1.5 text-[9px] font-semibold leading-snug text-white/35">
-                Kein Wurf: Der Becher wird gutgeschrieben, Würfe und Quote bleiben gleich.
-              </p>
+              <p className="mt-1.5 text-[9px] font-semibold leading-snug text-white/35">{t("keinWurfDerBecher")}</p>
             )}
           </div>
 
@@ -391,13 +389,9 @@ export default function HitOverlay({
 
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex shrink-0 items-center justify-between">
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
-                02 · Getroffener Becher
-              </div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">{t("t02GetroffenerBecher")}</div>
 
-              <div className="text-xs font-black text-cyan-400">
-                {selectedCups.length}/{selectionLimit} ausgewählt
-              </div>
+              <div className="text-xs font-black text-cyan-400">{t("ausgewaehlt", { length: selectedCups.length, selectionLimit })}</div>
             </div>
 
             <div className="mt-2 min-h-0 flex-1 rounded-2xl border border-white/[0.06] bg-black/20 p-2">
@@ -458,9 +452,7 @@ export default function HitOverlay({
                   transition
                   hover:text-white
                 "
-              >
-                Abbrechen
-              </button>
+              >{t("abbrechen")}</button>
             )}
           </div>
         </div>
@@ -491,7 +483,7 @@ export default function HitOverlay({
                 text-white/30
               "
             >
-              01 · {isSpecialMode ? "Special" : "Trefferart"}
+              01 · {isSpecialMode ? t("special") : t("trefferart")}
             </div>
 
             <div
@@ -541,7 +533,7 @@ export default function HitOverlay({
                           ${active ? "text-cyan-400" : "text-white"}
                         `}
                     >
-                      {type.title}
+                      {t(`shot_${type.id}_title`)}
                     </div>
 
                     <div
@@ -551,7 +543,7 @@ export default function HitOverlay({
                           text-white/30
                         "
                     >
-                      {type.description}
+                      {t(`shot_${type.id}_description`)}
                     </div>
                   </button>
                 );
@@ -559,18 +551,11 @@ export default function HitOverlay({
             </div>
 
             {isCreditOnly && (
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-relaxed text-white/50">
-                Kein Wurf: Der Becher wird dem Spieler gutgeschrieben und sofort entfernt. Würfe,
-                Treffer und Trefferquote bleiben unverändert, der Spieler wirft danach ganz normal.
-              </div>
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-relaxed text-white/50">{t("keinWurfDerBecher2")}</div>
             )}
 
             {shotType === "bounce" && (
-              <div className="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] p-3 text-[11px] leading-relaxed text-yellow-200/80">
-                Ein Aufhüpfer zählt 2 Becher: hier den direkt getroffenen wählen, der zweite folgt
-                automatisch nach Ende dieser Runde als "Extra Treffer" - aus der dann aktuellen
-                Formation.
-              </div>
+              <div className="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] p-3 text-[11px] leading-relaxed text-yellow-200/80">{t("einAufhuepferZaehlt2")}</div>
             )}
           </div>
 
@@ -592,9 +577,7 @@ export default function HitOverlay({
                   tracking-[0.2em]
                   text-white/30
                 "
-              >
-                02 · Getroffener Becher
-              </div>
+              >{t("t02GetroffenerBecher")}</div>
 
               <div
                 className="
@@ -602,9 +585,7 @@ export default function HitOverlay({
                   font-black
                   text-cyan-400
                 "
-              >
-                {selectedCups.length}/{selectionLimit} ausgewählt
-              </div>
+              >{t("ausgewaehlt", { length: selectedCups.length, selectionLimit })}</div>
             </div>
 
             <div
@@ -676,9 +657,7 @@ export default function HitOverlay({
                   transition
                   hover:text-white
                 "
-              >
-                Abbrechen
-              </button>
+              >{t("abbrechen")}</button>
             )}
           </div>
         </div>

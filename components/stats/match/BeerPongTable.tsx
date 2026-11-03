@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export type Cup = {
   id: number;
@@ -487,6 +488,8 @@ function CupFormation({
 
   onCupClick?: (cupId: number) => void;
 }) {
+  const t = useTranslations("Match.BeerPongTable");
+
   const remainingCups = cups.filter((cup) => !cup.hit);
 
   const tier = getFormationTier(remainingCups.length);
@@ -536,7 +539,7 @@ function CupFormation({
             type="button"
             disabled={!isSelectable}
             onClick={() => onCupClick?.(cup.id)}
-            aria-label={`Becher ${cup.id}`}
+            aria-label={t("becher", { id: cup.id })}
             className={`
               absolute
               flex
@@ -653,6 +656,8 @@ export default function BeerPongTable({
   pendingCupIds,
   onCupClick,
 }: BeerPongTableProps) {
+  const t = useTranslations("Match.BeerPongTable");
+
   const showTeamA = displayTeam === "both" || displayTeam === "A";
 
   const showTeamB = displayTeam === "both" || displayTeam === "B";
@@ -729,9 +734,7 @@ export default function BeerPongTable({
               tracking-[0.2em]
               text-blue-400/50
             "
-          >
-            Team A
-          </div>
+          >{t("teamA")}</div>
         )}
 
         {showTeamB && (
@@ -747,9 +750,7 @@ export default function BeerPongTable({
               tracking-[0.2em]
               text-red-400/50
             "
-          >
-            Team B
-          </div>
+          >{t("teamB")}</div>
         )}
 
         {showTeamA && (
@@ -808,9 +809,7 @@ export default function BeerPongTable({
               tracking-wider
               text-blue-400/50
             "
-          >
-            A · {teamACups.filter((cup) => !cup.hit).length}
-          </div>
+          >{t("a", { length: teamACups.filter((cup) => !cup.hit).length })}</div>
 
           <div
             className="
@@ -826,9 +825,7 @@ export default function BeerPongTable({
               tracking-wider
               text-red-400/50
             "
-          >
-            B · {teamBCups.filter((cup) => !cup.hit).length}
-          </div>
+          >{t("b", { length: teamBCups.filter((cup) => !cup.hit).length })}</div>
         </div>
       )}
     </div>

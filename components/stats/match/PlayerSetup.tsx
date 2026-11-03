@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useLocale } from "next-intl";
+
 
 import { QRCodeSVG } from "qrcode.react";
 
@@ -25,9 +26,13 @@ import {
   type MatchLobby,
 } from "@/app/[locale]/spieler/match/matchLobby";
 
+import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
+import { localizePath } from "@/lib/localizePath";
 import { createClient } from "@/lib/supabase/client";
 
 import type { MatchPlayer } from "@/components/stats/match/PlayerCard";
+import { useTranslations } from "next-intl";
 
 interface PlayerSetupProps {
   lobbyId: string;
@@ -35,6 +40,9 @@ interface PlayerSetupProps {
 }
 
 export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
+  const t = useTranslations("Match.PlayerSetup");
+  const locale = useLocale() as Locale;
+
   const [profiles, setProfiles] = useState<PlayerProfile[]>([]);
   const [lobby, setLobby] = useState<MatchLobby | null>(null);
 
@@ -95,8 +103,8 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   const [joinUrl, setJoinUrl] = useState("");
 
   useEffect(() => {
-    setJoinUrl(`${window.location.origin}/spieler/match/${lobbyId}`);
-  }, [lobbyId]);
+    setJoinUrl(`${window.location.origin}${localizePath(`/spieler/match/${lobbyId}`, locale)}`);
+  }, [lobbyId, locale]);
 
   /*
    * EIGENES PROFIL (falls eingeloggt)
@@ -159,14 +167,14 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       email: trimmed,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-          `/spieler/match/${lobbyId}`,
+          localizePath(`/spieler/match/${lobbyId}`, locale),
         )}`,
       },
     });
 
     if (sendError) {
       console.error("Fehler beim Registrieren:", sendError);
-      setRegisterError("Login-Link konnte nicht gesendet werden.");
+      setRegisterError(t("loginLinkKonnteNicht"));
     } else {
       setRegisterSent(true);
     }
@@ -201,14 +209,14 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
         setOwnGuestIds(ownGuestsResult);
 
         if (!lobbyResult) {
-          setError("Match wurde nicht gefunden.");
+          setError(t("matchWurdeNichtGefunden"));
         }
       })
       .catch((err) => {
         console.error("Fehler beim Laden der Lobby:", err);
 
         if (!cancelled) {
-          setError("Lobby konnte nicht geladen werden.");
+          setError(t("lobbyKonnteNichtGeladen"));
         }
       })
       .finally(() => {
@@ -332,7 +340,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       setLobby(updated);
     } catch (err) {
       console.error("Fehler beim Beitreten:", err);
-      setError("Beitreten fehlgeschlagen.");
+      setError(t("beitretenFehlgeschlagen"));
     } finally {
       setBusyPlayerId(null);
     }
@@ -347,7 +355,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       setLobby(updated);
     } catch (err) {
       console.error("Fehler beim Entfernen:", err);
-      setError("Spieler konnte nicht entfernt werden.");
+      setError(t("spielerKonnteNichtEntfernt"));
     } finally {
       setBusyPlayerId(null);
     }
@@ -371,12 +379,12 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
         setProfiles((current) => current.filter((item) => item.id !== profile.id));
       } else {
         setNotice(
-          `${profile.name} kommt in einem gespeicherten Match vor und bleibt dort sichtbar, steht aber nicht mehr in deiner Gästeliste.`,
+          t("gastInMatchVorhanden", { name: profile.name }),
         );
       }
     } catch (err) {
       console.error("Fehler beim Löschen des Gast-Profils:", err);
-      setError("Gast-Profil konnte nicht gelöscht werden.");
+      setError(t("gastProfilKonnteNicht"));
     } finally {
       setConfirmDeleteId(null);
       setBusyPlayerId(null);
@@ -420,7 +428,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       await handleJoin(profile.id, team);
     } catch (err) {
       console.error("Fehler beim Anlegen des Spielers:", err);
-      setError("Spieler konnte nicht angelegt werden.");
+      setError(t("spielerKonnteNichtAngelegt"));
     }
   };
 
@@ -445,7 +453,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       // sobald status auf "live" wechselt.
     } catch (err) {
       console.error("Fehler beim Starten des Matches:", err);
-      setError("Match konnte nicht gestartet werden.");
+      setError(t("matchKonnteNichtGestartet"));
       setStarting(false);
       setIsHost(false);
     }
@@ -454,7 +462,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
   if (loading) {
     return (
       <main className="min-h-screen bg-[#07090d] px-5 py-6 text-white">
-        <div className="mx-auto max-w-3xl text-sm font-bold text-white/40">Lade Match …</div>
+        <div className="mx-auto max-w-3xl text-sm font-bold text-white/40">{t("ladeMatch")}</div>
       </main>
     );
   }
@@ -463,7 +471,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     return (
       <main className="min-h-screen bg-[#07090d] px-5 py-6 text-white">
         <div className="mx-auto max-w-3xl text-sm font-bold text-red-400/70">
-          {error ?? "Match wurde nicht gefunden."}
+          {error ?? t("matchWurdeNichtGefunden")}
         </div>
       </main>
     );
@@ -477,16 +485,11 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-5 py-6 text-center text-white">
         <div className="max-w-xs">
-          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
-            Pong Stats
-          </div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">{t("pongStats")}</div>
 
-          <h1 className="mt-2 text-lg font-black uppercase">Match läuft</h1>
+          <h1 className="mt-2 text-lg font-black uppercase">{t("matchLaeuft")}</h1>
 
-          <p className="mt-3 text-sm text-white/40">
-            Das Match wird gerade auf einem anderen Gerät gespielt. Sobald es beendet ist, erscheint
-            das Ergebnis automatisch hier.
-          </p>
+          <p className="mt-3 text-sm text-white/40">{t("dasMatchWirdGerade")}</p>
         </div>
       </main>
     );
@@ -500,22 +503,16 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#07090d] px-5 py-6 text-center text-white">
         <div className="max-w-xs">
-          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
-            Pong Stats
-          </div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">{t("pongStats")}</div>
 
-          <h1 className="mt-2 text-lg font-black uppercase">Match beendet</h1>
+          <h1 className="mt-2 text-lg font-black uppercase">{t("matchBeendet")}</h1>
 
-          <p className="mt-3 text-sm text-white/40">
-            Abgeschlossene Matches findest du in deiner Match-Historie.
-          </p>
+          <p className="mt-3 text-sm text-white/40">{t("abgeschlosseneMatchesFindestDu")}</p>
 
           <Link
             href="/spieler"
             className="mt-6 inline-block rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-6 py-3 text-xs font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18]"
-          >
-            Zur Match-Historie
-          </Link>
+          >{t("zurMatchHistorie")}</Link>
         </div>
       </main>
     );
@@ -526,37 +523,27 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
       <div className="mx-auto max-w-3xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
-              Pong Stats
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">{t("pongStats")}</div>
 
-            <h1 className="mt-1 text-lg font-black uppercase">Match-Lobby</h1>
+            <h1 className="mt-1 text-lg font-black uppercase">{t("matchLobby")}</h1>
           </div>
 
           {/* ABBRECHEN - zurück zum Profil in Pong Stats, ohne ein Match zu starten */}
           <Link
             href="/spieler"
             className="shrink-0 rounded-full border border-white/[0.1] bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:border-red-400/30 hover:bg-red-400/[0.08] hover:text-red-400"
-          >
-            Abbrechen
-          </Link>
+          >{t("abbrechen")}</Link>
         </div>
 
-        <p className="mt-2 text-xs text-white/35">
-          Andere Spieler scannen den Code und wählen dann ihr Profil.
-        </p>
+        <p className="mt-2 text-xs text-white/35">{t("andereSpielerScannenDen")}</p>
 
         {/* DAS BIST DU - prominenter direkter Beitritt für das eigene, eingeloggte Profil */}
 
         {ownProfile && !ownProfileJoined && (
           <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.06] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <div>
-              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">
-                Das bist du
-              </div>
-              <div className="mt-1 text-sm font-bold text-white">
-                {ownProfile.name} ist noch nicht in der Lobby.
-              </div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-400">{t("dasBistDu")}</div>
+              <div className="mt-1 text-sm font-bold text-white">{t("istNochNichtIn", { name: ownProfile.name })}</div>
             </div>
 
             <div className="flex shrink-0 gap-2">
@@ -565,18 +552,14 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
                 disabled={busyPlayerId === ownProfile.id}
                 onClick={() => handleJoin(ownProfile.id, "A")}
                 className="rounded-xl border border-blue-400/20 bg-blue-400/[0.08] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-blue-400 transition hover:bg-blue-400/[0.15] disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                Team A
-              </button>
+              >{t("teamA")}</button>
 
               <button
                 type="button"
                 disabled={busyPlayerId === ownProfile.id}
                 onClick={() => handleJoin(ownProfile.id, "B")}
                 className="rounded-xl border border-red-400/20 bg-red-400/[0.08] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/[0.15] disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                Team B
-              </button>
+              >{t("teamB")}</button>
             </div>
           </div>
         )}
@@ -588,9 +571,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
               <QRCodeSVG value={joinUrl} size={168} />
             </div>
 
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
-              Mit dem Handy scannen zum Beitreten
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">{t("mitDemHandyScannen")}</div>
           </div>
         )}
 
@@ -610,20 +591,12 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
 
         {!ownProfile && (
           <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
-              Noch kein Account?
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">{t("nochKeinAccount")}</div>
 
-            <p className="mt-2 text-xs text-white/40">
-              Registriere dich mit deiner E-Mail für ein echtes Profil mit eigener, dauerhafter
-              Statistik. Das freie Namensfeld unten legt dagegen nur ein Gast-Profil ohne Login an.
-            </p>
+            <p className="mt-2 text-xs text-white/40">{t("registriereDichMitDeiner")}</p>
 
             {registerSent ? (
-              <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-4 py-3 text-xs font-bold text-cyan-400/80">
-                Login-Link an {registerEmail} gesendet. E-Mail prüfen und Link öffnen — du landest
-                danach automatisch wieder hier in dieser Lobby.
-              </div>
+              <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-4 py-3 text-xs font-bold text-cyan-400/80">{t("loginLinkAnGesendet", { registerEmail })}</div>
             ) : (
               <form onSubmit={handleRegister} className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <input
@@ -631,7 +604,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
                   required
                   value={registerEmail}
                   onChange={(event) => setRegisterEmail(event.target.value)}
-                  placeholder="deine@email.de"
+                  placeholder={t("deineEmailDe")}
                   className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:border-cyan-400/40 focus:outline-none"
                 />
 
@@ -640,7 +613,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
                   disabled={registerSending}
                   className="rounded-xl border border-cyan-400/30 bg-cyan-400/[0.1] px-4 py-3 text-xs font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.18] disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  {registerSending ? "Sende Link …" : "Login-Link senden"}
+                  {registerSending ? t("sendeLink") : t("loginLinkSenden")}
                 </button>
               </form>
             )}
@@ -657,7 +630,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
             type="text"
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="Name (Gast-Profil ohne Login)"
+            placeholder={t("nameGastProfilOhne")}
             className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:border-cyan-400/40 focus:outline-none"
           />
 
@@ -667,31 +640,23 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
               onClick={() => handleCreateAndJoin("A")}
               disabled={!newName.trim()}
               className="flex-1 rounded-xl border border-blue-400/20 bg-blue-400/[0.08] px-4 py-3 text-[10px] font-black uppercase tracking-wider text-blue-400 transition hover:bg-blue-400/[0.15] disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              + Team A
-            </button>
+            >{t("teamA2")}</button>
 
             <button
               type="button"
               onClick={() => handleCreateAndJoin("B")}
               disabled={!newName.trim()}
               className="flex-1 rounded-xl border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-[10px] font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/[0.15] disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              + Team B
-            </button>
+            >{t("teamB2")}</button>
           </div>
         </div>
 
         {/* VORHANDENE PROFILE */}
         <div className="mt-8">
-          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
-            Mit bestehendem Gast-Profil beitreten
-          </div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25">{t("mitBestehendemGastProfil")}</div>
 
           {available.length === 0 ? (
-            <div className="mt-3 text-sm font-bold text-white/40">
-              Keine weiteren Profile verfügbar.
-            </div>
+            <div className="mt-3 text-sm font-bold text-white/40">{t("keineWeiterenProfileVerfuegbar")}</div>
           ) : (
             <div className="mt-3 flex flex-wrap gap-2">
               {available.map((profile) =>
@@ -700,25 +665,21 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
                     key={profile.id}
                     className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-400/[0.06] px-3 py-2"
                   >
-                    <span className="text-xs font-bold text-white">{profile.name} löschen?</span>
+                    <span className="text-xs font-bold text-white">{t("loeschen", { name: profile.name })}</span>
 
                     <button
                       type="button"
                       disabled={busyPlayerId === profile.id}
                       onClick={() => handleDeleteGuest(profile)}
                       className="rounded-lg border border-red-400/30 bg-red-400/[0.15] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-red-300 disabled:opacity-40"
-                    >
-                      Löschen
-                    </button>
+                    >{t("loeschen2")}</button>
 
                     <button
                       type="button"
                       disabled={busyPlayerId === profile.id}
                       onClick={() => setConfirmDeleteId(null)}
                       className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white/50 disabled:opacity-40"
-                    >
-                      Abbrechen
-                    </button>
+                    >{t("abbrechen")}</button>
                   </div>
                 ) : (
                   <div
@@ -728,9 +689,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
                     <span className="text-xs font-bold text-white">
                       {profile.name}
                       {profile.id === ownProfile?.id && (
-                        <span className="ml-1 text-[9px] font-black uppercase tracking-wider text-cyan-400">
-                          (Du)
-                        </span>
+                        <span className="ml-1 text-[9px] font-black uppercase tracking-wider text-cyan-400">{t("du")}</span>
                       )}
                     </span>
 
@@ -739,25 +698,21 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
                       disabled={busyPlayerId === profile.id}
                       onClick={() => handleJoin(profile.id, "A")}
                       className="rounded-lg border border-blue-400/20 bg-blue-400/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-400 disabled:opacity-40"
-                    >
-                      Team A
-                    </button>
+                    >{t("teamA")}</button>
 
                     <button
                       type="button"
                       disabled={busyPlayerId === profile.id}
                       onClick={() => handleJoin(profile.id, "B")}
                       className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-red-400 disabled:opacity-40"
-                    >
-                      Team B
-                    </button>
+                    >{t("teamB")}</button>
 
                     <button
                       type="button"
                       disabled={busyPlayerId === profile.id}
                       onClick={() => setConfirmDeleteId(profile.id)}
-                      aria-label={`Gast-Profil ${profile.name} löschen`}
-                      title="Gast-Profil löschen"
+                      aria-label={t("gastProfilLoeschen", { name: profile.name })}
+                      title={t("gastProfilLoeschen2")}
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/25 transition hover:bg-red-400/[0.12] hover:text-red-400 disabled:opacity-30"
                     >
                       <svg
@@ -783,7 +738,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
         {/* TEAMS (LIVE, ÜBER ALLE GERÄTE SYNCHRON) */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <TeamColumn
-            title="Team A"
+            title={t("teamA")}
             accent="text-blue-400"
             players={teamA}
             ownProfileId={ownProfile?.id ?? null}
@@ -791,7 +746,7 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
             onRemove={handleLeave}
           />
           <TeamColumn
-            title="Team B"
+            title={t("teamB")}
             accent="text-red-400"
             players={teamB}
             ownProfileId={ownProfile?.id ?? null}
@@ -809,21 +764,16 @@ export default function PlayerSetup({ lobbyId, onStart }: PlayerSetupProps) {
               onClick={handleStart}
               className="rounded-full border border-cyan-400/30 bg-cyan-400/[0.1] px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-cyan-400 transition hover:bg-cyan-400/[0.18] disabled:cursor-not-allowed disabled:opacity-20"
             >
-              {starting ? "Starte …" : "Match starten"}
+              {starting ? t("starte") : t("matchStarten")}
             </button>
           ) : (
-            <p className="max-w-xs text-center text-xs font-semibold text-white/40">
-              Nur der Ersteller der Lobby kann das Match starten. Sobald es losgeht, siehst du es
-              hier.
-            </p>
+            <p className="max-w-xs text-center text-xs font-semibold text-white/40">{t("nurDerErstellerDer")}</p>
           )}
 
           <Link
             href="/spieler"
             className="text-[10px] font-black uppercase tracking-wider text-white/35 transition hover:text-red-400"
-          >
-            Abbrechen
-          </Link>
+          >{t("abbrechen")}</Link>
         </div>
       </div>
     </main>
@@ -845,12 +795,14 @@ function TeamColumn({
   busyPlayerId: string | null;
   onRemove: (playerId: string) => void;
 }) {
+  const t = useTranslations("Match.PlayerSetup");
+
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
       <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${accent}`}>{title}</div>
 
       {players.length === 0 ? (
-        <div className="mt-3 text-xs font-bold text-white/25">Noch niemand beigetreten.</div>
+        <div className="mt-3 text-xs font-bold text-white/25">{t("nochNiemandBeigetreten")}</div>
       ) : (
         <div className="mt-3 space-y-2">
           {players.map((profile) => (
@@ -861,9 +813,7 @@ function TeamColumn({
               <span className="text-xs font-bold text-white">
                 {profile.name}
                 {profile.id === ownProfileId && (
-                  <span className="ml-1 text-[9px] font-black uppercase tracking-wider text-cyan-400">
-                    (Du)
-                  </span>
+                  <span className="ml-1 text-[9px] font-black uppercase tracking-wider text-cyan-400">{t("du")}</span>
                 )}
               </span>
 
@@ -871,7 +821,7 @@ function TeamColumn({
                 type="button"
                 disabled={busyPlayerId === profile.id}
                 onClick={() => onRemove(profile.id)}
-                aria-label={`${profile.name} entfernen`}
+                aria-label={t("entfernen", { name: profile.name })}
                 className="shrink-0 text-sm font-black text-white/25 transition hover:text-white disabled:opacity-30"
               >
                 ×

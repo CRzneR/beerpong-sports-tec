@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+
+import { useTranslations } from "next-intl";
+
+import { Link } from "@/i18n/navigation";
 
 /*
  * --------------------------------------------------------------------------
@@ -14,53 +17,17 @@ import Link from "next/link";
 type Slide = {
   src: string;
   eyebrow: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
 };
 
 const SLIDES: Slide[] = [
-  {
-    src: "/images/pro-previews/pro-preview-1.webp",
-    eyebrow: "01",
-    title: "Performance auf einen Blick",
-    description:
-      "Trefferquote, Treffer, Siege und mehr – alle Kennzahlen deiner Matches in einer Übersicht, inklusive Aufschlüsselung deiner Trefferarten.",
-  },
-  {
-    src: "/images/pro-previews/pro-preview-2.webp",
-    eyebrow: "02",
-    title: "Dein Leistungsverlauf",
-    description:
-      "Verfolge deine Entwicklung über die letzten Matches und sieh, wie sich deine Trefferquote Spiel für Spiel verbessert.",
-  },
-  {
-    src: "/images/pro-previews/pro-preview-3.webp",
-    eyebrow: "03",
-    title: "Match-Historie mit Details",
-    description:
-      "Alle abgeschlossenen Matches mit Ergebnis, übrigen Bechern und Detailansicht – jederzeit abrufbar.",
-  },
-  {
-    src: "/images/pro-previews/pro-preview-4.webp",
-    eyebrow: "04",
-    title: "Weltrangliste",
-    description:
-      "Vergleiche dich mit deinen Freunden: Siege, Trefferquote und Treffer im direkten Ranking.",
-  },
-  {
-    src: "/images/pro-previews/pro-preview-5.webp",
-    eyebrow: "05",
-    title: "Treffer nach Becherposition",
-    description:
-      "Sieh auf einen Blick, welche Becher du am häufigsten triffst – getrennt nach 10er-, 6er- und 3er-Formation, als Heatmap aus deiner Wurfrichtung.",
-  },
-  {
-    src: "/images/pro-previews/pro-preview-6.png",
-    eyebrow: "06",
-    title: "Jetzt Pro freischalten",
-    description:
-      "Mehr Statistiken, tiefere Analysen und dein komplettes Spiel auf dem nächsten Level – einmalige Zahlung, keine Abos, sofortiger Zugriff.",
-  },
+  { src: "/images/pro-previews/pro-preview-1.webp", eyebrow: "01", titleKey: "slide1Title", descriptionKey: "slide1Description" },
+  { src: "/images/pro-previews/pro-preview-2.webp", eyebrow: "02", titleKey: "slide2Title", descriptionKey: "slide2Description" },
+  { src: "/images/pro-previews/pro-preview-3.webp", eyebrow: "03", titleKey: "slide3Title", descriptionKey: "slide3Description" },
+  { src: "/images/pro-previews/pro-preview-4.webp", eyebrow: "04", titleKey: "slide4Title", descriptionKey: "slide4Description" },
+  { src: "/images/pro-previews/pro-preview-5.webp", eyebrow: "05", titleKey: "slide5Title", descriptionKey: "slide5Description" },
+  { src: "/images/pro-previews/pro-preview-6.png", eyebrow: "06", titleKey: "slide6Title", descriptionKey: "slide6Description" },
 ];
 
 interface ProPreviewModalProps {
@@ -76,8 +43,6 @@ interface ProPreviewModalProps {
   initialIndex?: number;
   /** false = Gast: der Haupt-Button führt zur Anmeldung statt zum Checkout. */
   loggedIn?: boolean;
-  /** Ziel des Anmelden-Buttons für Gäste. */
-  loginHref?: string;
 }
 
 export default function ProPreviewModal({
@@ -88,8 +53,9 @@ export default function ProPreviewModal({
   error = null,
   initialIndex = 0,
   loggedIn = true,
-  loginHref = "/login?next=/spieler",
 }: ProPreviewModalProps) {
+  const t = useTranslations("Stats.ProPreviewModal");
+
   const [index, setIndex] = useState(initialIndex);
   const touchStartX = useRef<number | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -193,7 +159,7 @@ export default function ProPreviewModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Pro-Vorschau"
+      aria-label={t("proVorschau")}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -225,20 +191,16 @@ export default function ProPreviewModal({
         {/* Kopfzeile */}
         <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5 md:px-7 md:pt-6">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[0.25em] text-cyan-400">
-              Pong Stats Pro
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.25em] text-cyan-400">{t("pongStatsPro")}</div>
 
-            <h2 className="mt-1 text-lg font-black uppercase tracking-tight text-white md:text-2xl">
-              Das schaltest du frei
-            </h2>
+            <h2 className="mt-1 text-lg font-black uppercase tracking-tight text-white md:text-2xl">{t("dasSchaltestDuFrei")}</h2>
           </div>
 
           <button
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            aria-label="Vorschau schließen"
+            aria-label={t("vorschauSchliessen")}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-base font-bold text-white/60 transition hover:bg-white/[0.1] hover:text-white"
           >
             ✕
@@ -272,7 +234,7 @@ export default function ProPreviewModal({
               <img
                 key={item.src}
                 src={item.src}
-                alt={item.title}
+                alt={t(item.titleKey)}
                 draggable={false}
                 style={{
                   position: "absolute",
@@ -292,7 +254,7 @@ export default function ProPreviewModal({
             <button
               type="button"
               onClick={goPrev}
-              aria-label="Vorheriges Bild"
+              aria-label={t("vorherigesBild")}
               style={{
                 position: "absolute",
                 left: "10px",
@@ -308,7 +270,7 @@ export default function ProPreviewModal({
             <button
               type="button"
               onClick={goNext}
-              aria-label="Nächstes Bild"
+              aria-label={t("naechstesBild")}
               style={{
                 position: "absolute",
                 right: "10px",
@@ -330,12 +292,12 @@ export default function ProPreviewModal({
             </span>
 
             <h3 className="text-base font-black uppercase tracking-tight text-white md:text-lg">
-              {slide.title}
+              {t(slide.titleKey)}
             </h3>
           </div>
 
           <p className="mt-2 min-h-[3.5rem] text-sm leading-relaxed text-white/45">
-            {slide.description}
+            {t(slide.descriptionKey)}
           </p>
         </div>
 
@@ -346,7 +308,7 @@ export default function ProPreviewModal({
               key={item.src}
               type="button"
               onClick={() => goTo(dotIndex)}
-              aria-label={`Bild ${dotIndex + 1} anzeigen`}
+              aria-label={t("bildAnzeigen", { v: dotIndex + 1 })}
               aria-current={dotIndex === index}
               style={{
                 width: dotIndex === index ? "24px" : "8px",
@@ -375,9 +337,7 @@ export default function ProPreviewModal({
             type="button"
             onClick={onClose}
             className="text-xs font-bold text-white/35 transition hover:text-white"
-          >
-            Vielleicht später
-          </button>
+          >{t("vielleichtSpaeter")}</button>
 
           {loggedIn ? (
             <button
@@ -388,15 +348,13 @@ export default function ProPreviewModal({
               }}
               className="w-full rounded-full bg-cyan-400 px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
             >
-              {upgrading ? "Lädt …" : "Jetzt Pro freischalten"}
+              {upgrading ? t("laedt") : t("jetztProFreischalten")}
             </button>
           ) : (
             <Link
-              href={loginHref}
+              href={{ pathname: "/login", query: { next: "/spieler" } }}
               className="w-full rounded-full bg-cyan-400 px-8 py-3.5 text-center text-xs font-black uppercase tracking-[0.2em] text-black transition hover:bg-cyan-300 md:w-auto"
-            >
-              Anmelden &amp; Pro freischalten
-            </Link>
+            >{t("anmeldenProFreischalten")}</Link>
           )}
         </div>
       </div>

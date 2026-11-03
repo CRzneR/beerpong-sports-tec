@@ -1,15 +1,21 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
+
+import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
+import { localizePath } from "@/lib/localizePath";
 
 import { createClient } from "@/lib/supabase/client";
 import {
   USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
   isUsernameTaken,
-  validateUsername,
+  validateUsernameCode,
 } from "@/app/[locale]/spieler/match/playerProfiles";
+import { useTranslations } from "next-intl";
 
 /*
  * useSearchParams() verlangt in Next.js einen Suspense-Wrapper auf der
@@ -18,6 +24,10 @@ import {
  */
 
 function LoginForm() {
+  const t = useTranslations("Login.Page");
+  const tErr = useTranslations("Errors");
+  const locale = useLocale() as Locale;
+
   const searchParams = useSearchParams();
 
   /*
@@ -57,10 +67,10 @@ function LoginForm() {
     const trimmedName = username.trim();
 
     if (mode === "register") {
-      const formatError = validateUsername(trimmedName);
+      const formatCode = validateUsernameCode(trimmedName);
 
-      if (formatError) {
-        setError(formatError);
+      if (formatCode) {
+        setError(tErr(formatCode, { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }));
         return;
       }
     }
@@ -71,7 +81,7 @@ function LoginForm() {
     if (mode === "register") {
       try {
         if (await isUsernameTaken(trimmedName)) {
-          setError("Dieser Benutzername ist schon vergeben.");
+          setError(tErr("usernameTaken"));
           setSending(false);
           return;
         }
@@ -87,13 +97,13 @@ function LoginForm() {
       email: trimmed,
       options: {
         ...(mode === "register" ? { data: { username: trimmedName } } : {}),
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(localizePath(nextPath, locale))}`,
       },
     });
 
     if (error) {
       console.error("Fehler beim E-Mail-Login:", error);
-      setError("Login-Link konnte nicht gesendet werden.");
+      setError(t("sendFailed"));
     } else {
       setSent(true);
     }
@@ -116,11 +126,11 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <div className="text-center">
           <div className={`text-[9px] font-black uppercase tracking-[0.2em] ${accentText}`}>
-            {isLeague ? "Pong League" : "Pong Stats"}
+            {isLeague ? t("pongLeague") : t("pongStats")}
           </div>
 
           <h1 className="mt-2 text-2xl font-black uppercase tracking-tight">
-            {mode === "register" ? "Registrieren" : "Anmelden"}
+            {mode === "register" ? t("registrieren") : t("anmelden")}
           </h1>
         </div>
 
@@ -140,7 +150,7 @@ function LoginForm() {
                     : "text-white/35 hover:text-white"
                 }`}
               >
-                {value === "login" ? "Anmelden" : "Registrieren"}
+                {value === "login" ? t("anmelden") : t("registrieren")}
               </button>
             ))}
           </div>
@@ -153,9 +163,7 @@ function LoginForm() {
         )}
 
         {sent ? (
-          <div className={`mt-6 rounded-xl border px-4 py-3 text-xs font-bold ${accentBanner}`}>
-            Login-Link an {email} gesendet. E-Mails prüfen und Link öffnen.
-          </div>
+          <div className={`mt-6 rounded-xl border px-4 py-3 text-xs font-bold ${accentBanner}`}>{t("loginLinkAnGesendet", { email })}</div>
         ) : (
           <form onSubmit={handleEmailLogin} className="mt-6 flex flex-col gap-2">
             {mode === "register" && (
@@ -166,7 +174,7 @@ function LoginForm() {
                 autoComplete="username"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                placeholder="Benutzername"
+                placeholder={t("benutzername")}
                 className={`rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:outline-none ${accentFocus}`}
               />
             )}
@@ -176,7 +184,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="deine@email.de"
+              placeholder={t("deineEmailDe")}
               className={`rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/25 focus:outline-none ${accentFocus}`}
             />
 
@@ -186,10 +194,10 @@ function LoginForm() {
               className={`rounded-xl border px-4 py-3 text-xs font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-30 ${accentBorder} ${accentBg} ${accentText}`}
             >
               {sending
-                ? "Sende Link …"
+                ? t("sendeLink")
                 : mode === "register"
-                  ? "Registrieren & Link senden"
-                  : "Login-Link senden"}
+                  ? t("registrierenLinkSenden")
+                  : t("loginLinkSenden")}
             </button>
           </form>
         )}
@@ -205,9 +213,7 @@ function LoginForm() {
             <Link
               href="/spieler"
               className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 transition hover:text-white"
-            >
-              Als Gast fortfahren →
-            </Link>
+            >{t("alsGastFortfahren")}</Link>
           </div>
         )}
       </div>

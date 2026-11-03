@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 
 import type { MatchStats, PlayerStats, TeamStats } from "@/app/[locale]/spieler/match/matchStats";
 import { createMatchLobby } from "@/app/[locale]/spieler/match/matchLobby";
+import { useTranslations } from "next-intl";
 
 interface MatchResultProps {
   stats: MatchStats;
@@ -17,6 +18,8 @@ interface MatchResultProps {
  */
 
 function PlayerRow({ player }: { player: PlayerStats }) {
+  const t = useTranslations("Match.MatchResult");
+
   return (
     <div
       className="
@@ -35,15 +38,13 @@ function PlayerRow({ player }: { player: PlayerStats }) {
       <div className="min-w-0">
         <div className="truncate text-sm font-bold text-white">{player.playerName}</div>
 
-        <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-white/25">
-          Team {player.team}
-        </div>
+        <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-white/25">{t("team", { team: player.team })}</div>
 
         {(player.penaltyCups > 0 || player.knockedOverCups > 0) && (
           <div className="mt-1 text-[9px] font-bold text-white/35">
             {[
-              player.penaltyCups > 0 ? `${player.penaltyCups} Strafbecher` : null,
-              player.knockedOverCups > 0 ? `${player.knockedOverCups} umgeworfen` : null,
+              player.penaltyCups > 0 ? t("strafbecher", { penaltyCups: player.penaltyCups }) : null,
+              player.knockedOverCups > 0 ? t("umgeworfen", { knockedOverCups: player.knockedOverCups }) : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -53,22 +54,22 @@ function PlayerRow({ player }: { player: PlayerStats }) {
 
       <div className="text-center">
         <div className="text-sm font-black text-white">{player.throws}</div>
-        <div className="text-[8px] uppercase tracking-wider text-white/25">Würfe</div>
+        <div className="text-[8px] uppercase tracking-wider text-white/25">{t("wuerfe")}</div>
       </div>
 
       <div className="text-center">
         <div className="text-sm font-black text-white">{player.hits}</div>
-        <div className="text-[8px] uppercase tracking-wider text-white/25">Treffer</div>
+        <div className="text-[8px] uppercase tracking-wider text-white/25">{t("treffer")}</div>
       </div>
 
       <div className="text-center">
         <div className="text-sm font-black text-white">{player.accuracy}%</div>
-        <div className="text-[8px] uppercase tracking-wider text-white/25">Quote</div>
+        <div className="text-[8px] uppercase tracking-wider text-white/25">{t("quote")}</div>
       </div>
 
       <div className="text-center">
         <div className="text-sm font-black text-white">{player.cupsHit}</div>
-        <div className="text-[8px] uppercase tracking-wider text-white/25">Becher</div>
+        <div className="text-[8px] uppercase tracking-wider text-white/25">{t("becher")}</div>
       </div>
     </div>
   );
@@ -81,6 +82,8 @@ function PlayerRow({ player }: { player: PlayerStats }) {
  */
 
 function TeamStatsCard({ team }: { team: TeamStats }) {
+  const t = useTranslations("Match.MatchResult");
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
       <div className="mb-4 flex items-center justify-between">
@@ -92,49 +95,47 @@ function TeamStatsCard({ team }: { team: TeamStats }) {
             tracking-[0.2em]
             ${team.team === "A" ? "text-blue-400" : "text-red-400"}
           `}
-        >
-          Team {team.team}
-        </div>
+        >{t("team", { team: team.team })}</div>
 
-        <div className="text-xs font-black text-white">{team.cupsRemaining} Becher übrig</div>
+        <div className="text-xs font-black text-white">{t("becherUebrig", { cupsRemaining: team.cupsRemaining })}</div>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl bg-white/[0.03] p-3 text-center">
           <div className="text-lg font-black text-white">{team.hits}</div>
-          <div className="text-[8px] uppercase tracking-wider text-white/25">Treffer</div>
+          <div className="text-[8px] uppercase tracking-wider text-white/25">{t("treffer")}</div>
         </div>
 
         <div className="rounded-xl bg-white/[0.03] p-3 text-center">
           <div className="text-lg font-black text-white">{team.misses}</div>
-          <div className="text-[8px] uppercase tracking-wider text-white/25">Daneben</div>
+          <div className="text-[8px] uppercase tracking-wider text-white/25">{t("daneben")}</div>
         </div>
 
         <div className="rounded-xl bg-white/[0.03] p-3 text-center">
           <div className="text-lg font-black text-white">{team.accuracy}%</div>
-          <div className="text-[8px] uppercase tracking-wider text-white/25">Quote</div>
+          <div className="text-[8px] uppercase tracking-wider text-white/25">{t("quote")}</div>
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-4 gap-2">
         <div className="rounded-lg bg-white/[0.02] p-2 text-center">
           <div className="text-xs font-black text-white">{team.singleHits}</div>
-          <div className="text-[7px] uppercase tracking-wider text-white/20">Einzel</div>
+          <div className="text-[7px] uppercase tracking-wider text-white/20">{t("einzel")}</div>
         </div>
 
         <div className="rounded-lg bg-white/[0.02] p-2 text-center">
           <div className="text-xs font-black text-white">{team.bounceHits}</div>
-          <div className="text-[7px] uppercase tracking-wider text-white/20">Aufhüpfer</div>
+          <div className="text-[7px] uppercase tracking-wider text-white/20">{t("aufhuepfer")}</div>
         </div>
 
         <div className="rounded-lg bg-white/[0.02] p-2 text-center">
           <div className="text-xs font-black text-white">{team.trickshotHits}</div>
-          <div className="text-[7px] uppercase tracking-wider text-white/20">Trickshot</div>
+          <div className="text-[7px] uppercase tracking-wider text-white/20">{t("trickshot")}</div>
         </div>
 
         <div className="rounded-lg bg-white/[0.02] p-2 text-center">
           <div className="text-xs font-black text-white">{team.cupsHit}</div>
-          <div className="text-[7px] uppercase tracking-wider text-white/20">Becher</div>
+          <div className="text-[7px] uppercase tracking-wider text-white/20">{t("becher")}</div>
         </div>
       </div>
     </div>
@@ -148,6 +149,8 @@ function TeamStatsCard({ team }: { team: TeamStats }) {
  */
 
 export default function MatchResult({ stats }: MatchResultProps) {
+  const t = useTranslations("Match.MatchResult");
+
   const router = useRouter();
 
   /*
@@ -172,11 +175,11 @@ export default function MatchResult({ stats }: MatchResultProps) {
     try {
       const lobby = await createMatchLobby();
 
-      router.push(`/spieler/match/${lobby.id}`);
+      router.push({ pathname: "/spieler/match/[matchId]", params: { matchId: lobby.id } });
     } catch (err) {
       console.error("Fehler beim Erstellen einer neuen Lobby:", err);
 
-      setRematchError("Neues Match konnte nicht erstellt werden.");
+      setRematchError(t("neuesMatchKonnteNicht"));
       setCreatingRematch(false);
     }
   };
@@ -200,12 +203,10 @@ export default function MatchResult({ stats }: MatchResultProps) {
       {/* ERGEBNIS */}
 
       <div className="rounded-3xl border border-white/10 bg-[#111419] p-6 text-center shadow-2xl">
-        <div className="text-[9px] font-black uppercase tracking-[0.25em] text-white/25">
-          Match beendet
-        </div>
+        <div className="text-[9px] font-black uppercase tracking-[0.25em] text-white/25">{t("matchBeendet")}</div>
 
         <div className="mt-2 text-3xl font-black text-white">
-          {stats.winner ? `Team ${stats.winner} gewinnt` : "Unentschieden"}
+          {stats.winner ? t("teamGewinnt", { winner: stats.winner }) : t("unentschieden")}
         </div>
       </div>
 
@@ -219,9 +220,7 @@ export default function MatchResult({ stats }: MatchResultProps) {
       {/* SPIELER */}
 
       <div className="rounded-2xl border border-white/10 bg-[#111419] p-4">
-        <div className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-white/25">
-          Spielerstatistik
-        </div>
+        <div className="mb-3 text-[9px] font-black uppercase tracking-[0.2em] text-white/25">{t("spielerstatistik")}</div>
 
         <div className="space-y-2">
           {teamAPlayers.map((player: PlayerStats) => (
@@ -249,16 +248,14 @@ export default function MatchResult({ stats }: MatchResultProps) {
           onClick={handleRematch}
           className="flex-1 rounded-2xl bg-cyan-400 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/[0.05] disabled:text-white/20"
         >
-          {creatingRematch ? "Erstelle Match …" : "Nochmal spielen"}
+          {creatingRematch ? t("erstelleMatch") : t("nochmalSpielen")}
         </button>
 
         <button
           type="button"
           onClick={handleFinish}
           className="flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white/40 transition hover:bg-white/[0.06] hover:text-white"
-        >
-          Spiel beenden
-        </button>
+        >{t("spielBeenden")}</button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { getSavedMatches } from "@/app/[locale]/spieler/match/matchStorage";
 import type { SavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
 import { getOwnProfile, getRegisteredPlayerIds } from "@/app/[locale]/spieler/match/playerProfiles";
 import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
+import { useLocale, useTranslations } from "next-intl";
 
 interface MatchHistoryProps {
   onSelectMatch?: (match: SavedMatch) => void;
@@ -43,27 +44,27 @@ function initialsOf(name: string): string {
 
 const OUTCOME_STYLE: Record<Outcome, { label: string; text: string; avatar: string }> = {
   win: {
-    label: "Sieg",
+    label: "sieg",
     text: "text-green-400",
     avatar: "border-green-400/30 bg-green-400/10 text-green-300",
   },
   loss: {
-    label: "Niederlage",
+    label: "niederlage",
     text: "text-red-400",
     avatar: "border-red-400/30 bg-red-400/10 text-red-300",
   },
   draw: {
-    label: "Unentschieden",
+    label: "unentschieden",
     text: "text-white/50",
     avatar: "border-white/15 bg-white/[0.05] text-white/60",
   },
   teamA: {
-    label: "Team A",
+    label: "teamA",
     text: "text-blue-400",
     avatar: "border-blue-400/30 bg-blue-400/10 text-blue-300",
   },
   teamB: {
-    label: "Team B",
+    label: "teamB",
     text: "text-red-400",
     avatar: "border-red-400/30 bg-red-400/10 text-red-300",
   },
@@ -78,6 +79,8 @@ function MatchRow({
   ownId: string | null;
   onClick: () => void;
 }) {
+  const t = useTranslations("Stats.MatchHistory");
+  const locale = useLocale();
   const state = match.state;
 
   const names = (team: "A" | "B") =>
@@ -103,12 +106,12 @@ function MatchRow({
     const otherTeam = ownTeam === "A" ? "B" : "A";
     const opponents = state.players.filter((player: { team: string }) => player.team === otherTeam);
 
-    title = `vs. ${names(otherTeam)}`;
+    title = t("vsNames", { names: names(otherTeam) });
     score = `${cupsHitBy(ownTeam)}:${cupsHitBy(otherTeam)}`;
     outcome = !state.winner ? "draw" : state.winner === ownTeam ? "win" : "loss";
     avatarText = initialsOf(opponents[0]?.name ?? "?");
   } else {
-    title = `${names("A")} vs. ${names("B")}`;
+    title = t("teamsVs", { a: names("A"), b: names("B") });
     score = `${cupsHitBy("A")}:${cupsHitBy("B")}`;
     outcome = !state.winner ? "draw" : state.winner === "A" ? "teamA" : "teamB";
     avatarText = state.winner ?? "–";
@@ -132,19 +135,21 @@ function MatchRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-bold text-white">{title}</span>
         <span className="mt-0.5 block text-[11px] font-semibold text-white/35">
-          {date.toLocaleDateString("de-DE")}
+          {date.toLocaleDateString(locale)}
         </span>
       </span>
 
       <span className="shrink-0 text-right">
         <span className="block text-sm font-black text-white">{score}</span>
-        <span className={`mt-0.5 block text-[11px] font-black ${style.text}`}>{style.label}</span>
+        <span className={`mt-0.5 block text-[11px] font-black ${style.text}`}>{t(style.label)}</span>
       </span>
     </button>
   );
 }
 
 export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
+  const t = useTranslations("Stats.MatchHistory");
+
   const [matches, setMatches] = useState<SavedMatch[]>([]);
   const [ownId, setOwnId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -186,7 +191,7 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
         console.error("Fehler beim Laden der Match-Historie:", err);
 
         if (!cancelled) {
-          setError("Match-Historie konnte nicht geladen werden.");
+          setError(t("matchHistorieKonnteNicht"));
           setMatches([]);
         }
       });
@@ -209,15 +214,13 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
 
   if (!mounted) {
     body = (
-      <div className="py-8 text-center text-sm font-bold text-white/50">Lade Match-Historie …</div>
+      <div className="py-8 text-center text-sm font-bold text-white/50">{t("ladeMatchHistorie")}</div>
     );
   } else if (error) {
     body = <div className="py-8 text-center text-sm font-bold text-red-400/70">{error}</div>;
   } else if (matches.length === 0) {
     body = (
-      <div className="py-8 text-center text-sm font-bold text-white/50">
-        Noch keine abgeschlossenen Matches
-      </div>
+      <div className="py-8 text-center text-sm font-bold text-white/50">{t("nochKeineAbgeschlossenenMatches")}</div>
     );
   } else {
     body = (
@@ -239,20 +242,16 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
                 type="button"
                 onClick={() => setShowAll(true)}
                 className="shrink-0 text-xs font-bold text-cyan-300 transition hover:text-cyan-200"
-              >
-                Alle anzeigen
-              </button>
+              >{t("alleAnzeigen")}</button>
             ) : null
           }
-        >
-          Letzte Matches
-        </PanelTitle>
+        >{t("letzteMatches")}</PanelTitle>
 
         <div className="mt-4">{body}</div>
       </section>
 
       {showAll && (
-        <PanelModal title={`Letzte Matches · ${matches.length}`} onClose={() => setShowAll(false)}>
+        <PanelModal title={t("letzteMatches2", { length: matches.length })} onClose={() => setShowAll(false)}>
           <div className="divide-y divide-white/[0.05]">
             {matches.map((match) => (
               <MatchRow key={match.id} match={match} ownId={ownId} onClick={() => select(match)} />

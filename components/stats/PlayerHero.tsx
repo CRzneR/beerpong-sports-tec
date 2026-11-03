@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 import { getOwnProfile, type PlayerProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import { getPlayerRank } from "@/app/[locale]/spieler/match/playerStats";
+import { useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -19,6 +20,8 @@ import { getPlayerRank } from "@/app/[locale]/spieler/match/playerStats";
  */
 
 export function PlayerHero() {
+  const t = useTranslations("Stats.PlayerHero");
+
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +58,7 @@ export function PlayerHero() {
         console.error("Fehler beim Laden des Profils:", err);
 
         if (!cancelled) {
-          setError("Profil konnte nicht geladen werden.");
+          setError(t("profilKonnteNichtGeladen"));
         }
       } finally {
         if (!cancelled) {
@@ -79,7 +82,7 @@ export function PlayerHero() {
     left = (
       <div>
         <ProfileLabel />
-        <div className="mt-2 text-sm font-bold text-white/40">Lade Profil …</div>
+        <div className="mt-2 text-sm font-bold text-white/40">{t("ladeProfil")}</div>
       </div>
     );
   } else if (error) {
@@ -93,9 +96,7 @@ export function PlayerHero() {
     left = (
       <div>
         <ProfileLabel />
-        <div className="mt-2 text-sm font-bold text-white/50">
-          Melde dich an, um dein Profil und deine Statistiken zu sehen.
-        </div>
+        <div className="mt-2 text-sm font-bold text-white/50">{t("meldeDichAnUm")}</div>
       </div>
     );
   } else {
@@ -109,11 +110,9 @@ export function PlayerHero() {
 
         {rank && (
           <div
-            title={`Platz ${rank.rank} von ${rank.total} registrierten Spielern`}
+            title={t("platzVonRegistriertenSpielern", { rank: rank.rank, total: rank.total })}
             className="mt-1 text-sm font-medium uppercase tracking-wide text-cyan-400"
-          >
-            #{rank.rank} Weltweit
-          </div>
+          >{t("weltweit", { rank: rank.rank })}</div>
         )}
       </div>
     );
@@ -131,10 +130,10 @@ export function PlayerHero() {
 }
 
 function ProfileLabel() {
+  const t = useTranslations("Stats.PlayerHero");
+
   return (
-    <div className="text-xs font-medium uppercase tracking-[0.15em] text-white/45 sm:text-[13px]">
-      Spielerprofil
-    </div>
+    <div className="text-xs font-medium uppercase tracking-[0.15em] text-white/45 sm:text-[13px]">{t("spielerprofil")}</div>
   );
 }
 
@@ -146,6 +145,8 @@ function ProfileLabel() {
  */
 
 function StartMatchTile() {
+  const t = useTranslations("Stats.PlayerHero");
+
   return (
     <Link
       href="/spieler/match"
@@ -165,9 +166,7 @@ function StartMatchTile() {
         <path d="M8 7h9v9" />
       </svg>
 
-      <span className="text-sm font-medium uppercase tracking-wide sm:text-base">
-        Match starten
-      </span>
+      <span className="text-sm font-medium uppercase tracking-wide sm:text-base">{t("matchStarten")}</span>
     </Link>
   );
 }

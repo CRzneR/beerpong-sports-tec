@@ -17,7 +17,6 @@ const UNTRANSLATED_EN_PATHS = [
   "/en/pong-league",
   "/en/legal-notice",
   "/en/privacy",
-  "/en/login",
 ];
 
 const nextConfig: NextConfig = {

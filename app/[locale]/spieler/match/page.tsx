@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 
 import { createMatchLobby, type MatchLobby } from "@/app/[locale]/spieler/match/matchLobby";
+import { useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -43,6 +44,8 @@ import { createMatchLobby, type MatchLobby } from "@/app/[locale]/spieler/match/
  */
 
 export default function NewMatchPage() {
+  const t = useTranslations("Match.MatchPage");
+
   const router = useRouter();
 
   const [error, setError] = useState<string | null>(null);
@@ -58,14 +61,14 @@ export default function NewMatchPage() {
     lobbyPromiseRef.current
       .then((lobby) => {
         if (!cancelled) {
-          router.replace(`/spieler/match/${lobby.id}`);
+          router.replace({ pathname: "/spieler/match/[matchId]", params: { matchId: lobby.id } });
         }
       })
       .catch((err) => {
         console.error("Fehler beim Erstellen einer neuen Lobby:", err);
 
         if (!cancelled) {
-          setError("Match konnte nicht erstellt werden.");
+          setError(t("matchKonnteNichtErstellt"));
         }
       });
 
@@ -84,12 +87,10 @@ export default function NewMatchPage() {
             <Link
               href="/spieler"
               className="mt-4 inline-block rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white/50 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              Zurück zum Profil
-            </Link>
+            >{t("zurueckZumProfil")}</Link>
           </>
         ) : (
-          <div className="text-sm font-bold text-white/40">Match wird erstellt …</div>
+          <div className="text-sm font-bold text-white/40">{t("matchWirdErstellt")}</div>
         )}
       </div>
     </main>

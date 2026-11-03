@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 /*
  * --------------------------------------------------------------------------
@@ -36,6 +37,8 @@ export function PanelModal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const t = useTranslations("Stats.PanelCard");
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -72,7 +75,7 @@ export function PanelModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={t("schliessen")}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-lg text-white/40 transition hover:bg-white/[0.1] hover:text-white"
           >
             ×

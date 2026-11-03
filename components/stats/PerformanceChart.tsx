@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { getOwnProfile } from "@/app/[locale]/spieler/match/playerProfiles";
 import { PanelTitle } from "@/components/stats/PanelCard";
 import { getPlayerMatchHistory, type StatsRange } from "@/app/[locale]/spieler/match/playerStats";
+import { useLocale, useTranslations } from "next-intl";
 
 type MatchPoint = {
   matchId: string;
@@ -16,10 +17,7 @@ type MatchPoint = {
 
 type Metric = "hitRate" | "winRate";
 
-const METRICS: { key: Metric; label: string }[] = [
-  { key: "hitRate", label: "Trefferquote" },
-  { key: "winRate", label: "Siegquote" },
-];
+const METRICS: Metric[] = ["hitRate", "winRate"];
 
 /* Reicht für "Letzte 30"; ältere Matches würden die Linie unleserlich machen. */
 const MAX_MATCHES = 30;
@@ -31,6 +29,8 @@ const MAX_DATE_LABELS = 5;
 const AXIS_LABELS = [100, 75, 50, 25, 0];
 
 export function PerformanceChart({ range = "all" }: { range?: StatsRange }) {
+  const t = useTranslations("Stats.PerformanceChart");
+
   const [points, setPoints] = useState<MatchPoint[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(true);
@@ -111,19 +111,15 @@ export function PerformanceChart({ range = "all" }: { range?: StatsRange }) {
 
   if (loading) {
     content = (
-      <div className="py-16 text-center text-sm font-bold text-white/40">Lade Verlauf …</div>
+      <div className="py-16 text-center text-sm font-bold text-white/40">{t("ladeVerlauf")}</div>
     );
   } else if (!loggedIn) {
     content = (
-      <div className="py-16 text-center text-sm font-bold text-white/50">
-        Melde dich an, um deinen Trefferquote-Verlauf zu sehen.
-      </div>
+      <div className="py-16 text-center text-sm font-bold text-white/50">{t("meldeDichAnUm")}</div>
     );
   } else if (!points || points.length === 0) {
     content = (
-      <div className="py-16 text-center text-sm font-bold text-white/40">
-        Noch keine Matches für einen Verlauf.
-      </div>
+      <div className="py-16 text-center text-sm font-bold text-white/40">{t("nochKeineMatchesFuer")}</div>
     );
   } else {
     content = <LineChart points={points} metric={metric} />;
@@ -133,18 +129,18 @@ export function PerformanceChart({ range = "all" }: { range?: StatsRange }) {
     <section className="flex h-full flex-col rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <PanelTitle>Performance Verlauf</PanelTitle>
+          <PanelTitle>{t("performanceVerlauf")}</PanelTitle>
 
           <div className="relative">
             <select
               value={metric}
               onChange={(event) => setMetric(event.target.value as Metric)}
-              aria-label="Kennzahl des Verlaufs"
+              aria-label={t("kennzahlDesVerlaufs")}
               className="cursor-pointer appearance-none rounded-xl border border-white/[0.08] bg-white/[0.03] py-1.5 pl-3 pr-8 text-[11px] font-bold text-white/70 transition hover:border-white/20 focus:border-cyan-400/40 focus:outline-none"
             >
-              {METRICS.map((item) => (
-                <option key={item.key} value={item.key} className="bg-[#0c0f16] text-white">
-                  {item.label}
+              {METRICS.map((key) => (
+                <option key={key} value={key} className="bg-[#0c0f16] text-white">
+                  {t(key === "hitRate" ? "trefferquote" : "siegquote")}
                 </option>
               ))}
             </select>
@@ -188,7 +184,7 @@ export function PerformanceChart({ range = "all" }: { range?: StatsRange }) {
               {trend} %
             </div>
 
-            <div className="mt-0.5 text-[10px] font-semibold text-white/30">Tendenz</div>
+            <div className="mt-0.5 text-[10px] font-semibold text-white/30">{t("tendenz")}</div>
           </div>
         )}
       </div>
@@ -209,6 +205,9 @@ export function PerformanceChart({ range = "all" }: { range?: StatsRange }) {
  */
 
 function LineChart({ points, metric }: { points: MatchPoint[]; metric: Metric }) {
+  const t = useTranslations("Stats.PerformanceChart");
+  const locale = useLocale();
+
   const count = points.length;
 
   const xOf = (index: number) => (count === 1 ? 50 : (index / (count - 1)) * 100);
@@ -232,7 +231,7 @@ function LineChart({ points, metric }: { points: MatchPoint[]; metric: Metric })
 
     return Number.isNaN(date.getTime())
       ? ""
-      : `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.`;
+      : new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit" }).format(date);
   };
 
   /* Die Zeichenfläche füllt die Kartenhöhe, damit sie neben der höheren Nachbarkarte nicht leer bleibt. */
@@ -315,9 +314,7 @@ function LineChart({ points, metric }: { points: MatchPoint[]; metric: Metric })
       </div>
 
       {metric === "winRate" && (
-        <p className="mt-4 text-[11px] font-semibold text-white/30">
-          Siegquote über alle Matches im gewählten Zeitraum bis zu diesem Punkt.
-        </p>
+        <p className="mt-4 text-[11px] font-semibold text-white/30">{t("siegquoteUeberAlleMatches")}</p>
       )}
     </div>
   );

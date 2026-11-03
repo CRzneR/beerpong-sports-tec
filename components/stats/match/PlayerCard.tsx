@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 export type MatchPlayer = {
   id: string;
   name: string;
@@ -46,6 +48,8 @@ export default function PlayerCard({
   disabled = false,
   specialDisabled = false,
 }: PlayerCardProps) {
+  const t = useTranslations("Match.PlayerCard");
+
   const hitRate = player.throws > 0 ? Math.round((player.hits / player.throws) * 100) : 0;
 
   return (
@@ -130,18 +134,16 @@ export default function PlayerCard({
                     tracking-wider
                     text-white/35
                   "
-                >
-                  Gast
-                </span>
+                >{t("gast")}</span>
               )}
             </div>
 
             <div className="mt-0.5 flex items-center gap-2 text-[9px] uppercase tracking-wider text-white/25 lg:mt-1">
-              <span>{player.throws} Würfe</span>
+              <span>{t("wuerfe", { throws: player.throws })}</span>
 
               <span className="text-white/10">·</span>
 
-              <span>{player.hits} Treffer</span>
+              <span>{t("treffer", { hits: player.hits })}</span>
             </div>
           </div>
         </div>
@@ -151,7 +153,7 @@ export default function PlayerCard({
         <div className="shrink-0 text-right">
           <div className="text-sm font-black tracking-tight text-white lg:text-lg">{hitRate}%</div>
 
-          <div className="text-[8px] font-bold uppercase tracking-wider text-white/20">Quote</div>
+          <div className="text-[8px] font-bold uppercase tracking-wider text-white/20">{t("quote")}</div>
         </div>
       </div>
 
@@ -186,9 +188,7 @@ export default function PlayerCard({
             disabled:active:scale-100
             lg:min-h-12
           "
-        >
-          Daneben
-        </button>
+        >{t("daneben")}</button>
 
         <button
           type="button"
@@ -215,9 +215,7 @@ export default function PlayerCard({
             disabled:active:scale-100
             lg:min-h-12
           "
-        >
-          Getroffen
-        </button>
+        >{t("getroffen")}</button>
 
         <button
           type="button"
@@ -245,9 +243,7 @@ export default function PlayerCard({
             disabled:active:scale-100
             lg:min-h-12
           "
-        >
-          Special
-        </button>
+        >{t("special")}</button>
       </div>
     </div>
   );

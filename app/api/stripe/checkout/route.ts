@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getPathname } from "@/i18n/navigation";
 import { stripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,20 +43,37 @@ export async function POST(request: Request) {
    * zur Profilseite (kein Open Redirect).
    */
 
-  let returnTo: string | null = null;
+  let tournamentId: string | null = null;
+  let locale: "de" | "en" = "de";
 
   try {
-    const body = (await request.json()) as { returnTo?: unknown };
+    const body = (await request.json()) as { returnTo?: unknown; locale?: unknown };
+
+    if (body.locale === "en") {
+      locale = "en";
+    }
 
     if (
       typeof body.returnTo === "string" &&
       /^\/turniere\/[A-Za-z0-9-]{1,64}$/.test(body.returnTo)
     ) {
-      returnTo = body.returnTo;
+      tournamentId = body.returnTo.slice("/turniere/".length);
     }
   } catch {
     /* Kein oder kein gültiger Body: Standard-Rückkehr zur Profilseite. */
   }
+
+  /*
+   * Rückkehradresse in der Sprache des Nutzers (/spieler bzw. /en/pong-stats,
+   * /turniere/<id> bzw. /en/pong-league/<id>).
+   */
+
+  const returnPath = tournamentId
+    ? getPathname({
+        locale,
+        href: { pathname: "/turniere/[tournamentId]", params: { tournamentId } },
+      })
+    : getPathname({ locale, href: "/spieler" });
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -63,6 +81,7 @@ export async function POST(request: Request) {
       client_reference_id: user.id,
       metadata: { user_id: user.id },
       customer_email: user.email ?? undefined,
+      locale,
       line_items: [
         {
           price_data: {
@@ -70,17 +89,17 @@ export async function POST(request: Request) {
             product_data: {
               name: "Pong Stats Pro",
               description:
-                "Dauerhafter Zugriff auf deine Statistiken, Match-Historie, die Rangliste und die K.-o.-Phase in Pong League.",
+                locale === "en"
+                  ? "Lifetime access to your statistics, match history, the leaderboard and the knockout stage in Pong League."
+                  : "Dauerhafter Zugriff auf deine Statistiken, Match-Historie, die Rangliste und die K.-o.-Phase in Pong League.",
             },
             unit_amount: PRO_PRICE_CENTS,
           },
           quantity: 1,
         },
       ],
-      success_url: returnTo ? `${origin}${returnTo}?pro=success` : `${origin}/spieler?pro=success`,
-      cancel_url: returnTo
-        ? `${origin}${returnTo}?pro=cancelled`
-        : `${origin}/spieler?pro=cancelled`,
+      success_url: `${origin}${returnPath}?pro=success`,
+      cancel_url: `${origin}${returnPath}?pro=cancelled`,
     });
 
     if (!session.url) {

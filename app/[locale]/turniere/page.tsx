@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link, useRouter } from "@/i18n/navigation";
 
 import { deleteTournament, getTournaments } from "./tournamentStorage";
 import type { Tournament } from "./tournamentLogic";
 import { createClient } from "@/lib/supabase/client";
 import { UsernameGate } from "@/components/stats/UsernameGate";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
+import { useTranslations } from "next-intl";
 
 export default function TurnierePage() {
+  const t = useTranslations("League.ListPage");
+
   const router = useRouter();
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -34,7 +36,7 @@ export default function TurnierePage() {
          * direkt weiter zur Anmeldung, kein Turnier wird angezeigt.
          */
         if (!data.user) {
-          router.replace("/login?next=/turniere");
+          router.replace({ pathname: "/login", query: { next: "/turniere" } });
           return;
         }
 
@@ -50,7 +52,7 @@ export default function TurnierePage() {
         console.error("Fehler beim Laden der Turniere:", err);
 
         if (!cancelled) {
-          setError("Turniere konnten nicht geladen werden.");
+          setError(t("turnierePageLoadError"));
         }
       })
       .finally(() => {
@@ -90,45 +92,35 @@ export default function TurnierePage() {
             href="/"
             className="group inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
           >
-            <span className="transition-transform group-hover:-translate-x-1">←</span>
-            Zurück zur Startseite
-          </Link>
+            <span className="transition-transform group-hover:-translate-x-1">←</span>{t("zurueckZurStartseite")}</Link>
 
           <button
             type="button"
             onClick={handleLogout}
             className="text-xs font-semibold text-white/30 transition hover:text-white"
-          >
-            Abmelden
-          </button>
+          >{t("abmelden")}</button>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400">
-              Pong League
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("pongLeague")}</div>
 
-            <h1 className="mt-1 text-2xl font-black uppercase tracking-tight">Deine Turniere</h1>
+            <h1 className="mt-1 text-2xl font-black uppercase tracking-tight">{t("deineTurniere")}</h1>
           </div>
 
           <Link
             href="/turniere/neu"
             className="rounded-full bg-yellow-400 px-5 py-3 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_25px_rgba(250,204,21,0.18)] transition hover:bg-yellow-300"
-          >
-            + Neues Turnier
-          </Link>
+          >{t("neuesTurnier")}</Link>
         </div>
 
         <div className="mt-8">
           {loading ? (
-            <div className="text-sm font-bold text-white/40">Lade Turniere …</div>
+            <div className="text-sm font-bold text-white/40">{t("ladeTurniere")}</div>
           ) : error ? (
             <div className="text-sm font-bold text-red-400/70">{error}</div>
           ) : tournaments.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">
-              Noch keine Turniere. Leg dein erstes an.
-            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm font-bold text-white/40">{t("nochKeineTurniereLeg")}</div>
           ) : (
             <div className="space-y-3">
               {tournaments.map((tournament) => (
@@ -172,6 +164,8 @@ function TournamentRow({
   isOwner: boolean;
   onDeleted: (tournamentId: string) => void;
 }) {
+  const t = useTranslations("League.ListPage");
+
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +179,7 @@ function TournamentRow({
       onDeleted(tournament.id);
     } catch (err) {
       console.error("Fehler beim Löschen des Turniers:", err);
-      setError("Löschen fehlgeschlagen.");
+      setError(t("deleteFailed"));
       setDeleting(false);
     }
   };
@@ -193,26 +187,23 @@ function TournamentRow({
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] transition hover:border-yellow-400/30 hover:bg-white/[0.04]">
       <div className="flex items-center justify-between gap-4 p-5">
-        <Link href={`/turniere/${tournament.id}`} className="min-w-0 flex-1">
+        <Link href={{ pathname: "/turniere/[tournamentId]", params: { tournamentId: tournament.id } }} className="min-w-0 flex-1">
           <div className="truncate text-sm font-black text-white">{tournament.name}</div>
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
             <span>
-              {tournament.teamCount} Teams · {tournament.groupCount}{" "}
-              {tournament.groupCount === 1 ? "Gruppe" : "Gruppen"}
+              {t("teamsGroups", { teamCount: tournament.teamCount, groupCount: tournament.groupCount })}
             </span>
 
             {!isOwner && (
-              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-2 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">
-                Beigetreten
-              </span>
+              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-2 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">{t("beigetreten")}</span>
             )}
           </div>
         </Link>
 
         <div className="flex shrink-0 items-center gap-2">
           {!isOwner ? (
-            <Link href={`/turniere/${tournament.id}`} className="text-yellow-400">
+            <Link href={{ pathname: "/turniere/[tournamentId]", params: { tournamentId: tournament.id } }} className="text-yellow-400">
               →
             </Link>
           ) : confirming ? (
@@ -223,7 +214,7 @@ function TournamentRow({
                 disabled={deleting}
                 className="rounded-full bg-red-400 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-black transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {deleting ? "Löscht …" : "Ja, löschen"}
+                {deleting ? t("loescht") : t("jaLoeschen")}
               </button>
 
               <button
@@ -231,9 +222,7 @@ function TournamentRow({
                 onClick={() => setConfirming(false)}
                 disabled={deleting}
                 className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/40 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Abbrechen
-              </button>
+              >{t("abbrechen")}</button>
             </>
           ) : (
             <>
@@ -241,11 +230,9 @@ function TournamentRow({
                 type="button"
                 onClick={() => setConfirming(true)}
                 className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/30 transition hover:border-red-400/30 hover:text-red-400"
-              >
-                Löschen
-              </button>
+              >{t("loeschen")}</button>
 
-              <Link href={`/turniere/${tournament.id}`} className="text-yellow-400">
+              <Link href={{ pathname: "/turniere/[tournamentId]", params: { tournamentId: tournament.id } }} className="text-yellow-400">
                 →
               </Link>
             </>

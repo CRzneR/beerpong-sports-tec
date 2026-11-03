@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+
+import { useRouter } from "@/i18n/navigation";
 
 import BeerPongTable, {
   Cup,
@@ -21,6 +23,7 @@ import { getMatchStats } from "../matchStats";
 import MatchResult from "@/components/stats/match/MatchResult";
 import { saveMatch } from "../matchStorage";
 import { finishMatchLobby } from "../matchLobby";
+import { useTranslations } from "next-intl";
 type MatchEvent =
   | {
       id: string;
@@ -293,6 +296,8 @@ const createCups = (): Cup[] =>
   );
 
 export default function MatchPage() {
+  const t = useTranslations("Match.LivePage");
+
   /*
    * MATCH-ID AUS DER URL
    *
@@ -578,7 +583,7 @@ export default function MatchPage() {
 
     if (phase.kind === "redemption") {
       return redemptionThrowsNeeded > 1
-        ? `Wurf ${Math.min(redemptionRound.length + 1, redemptionThrowsNeeded)}/${redemptionThrowsNeeded}`
+        ? t("wurfXVonY", { current: Math.min(redemptionRound.length + 1, redemptionThrowsNeeded), total: redemptionThrowsNeeded })
         : null;
     }
 
@@ -593,7 +598,7 @@ export default function MatchPage() {
     );
     const total = teamPlayers.length * throwsPerPlayer;
 
-    return `Wurf ${Math.min(done + 1, total)}/${total}`;
+    return t("wurfXVonY", { current: Math.min(done + 1, total), total });
   };
 
   const canPlayerAct = (player: MatchPlayer) => {
@@ -888,7 +893,7 @@ export default function MatchPage() {
         savedFinishedMatchRef.current = false;
 
         setSaveError(
-          "Match konnte nicht gespeichert werden. Die Statistik wurde vermutlich nicht aktualisiert.",
+          t("matchKonnteNichtGespeichert"),
         );
       });
   };
@@ -1364,7 +1369,7 @@ export default function MatchPage() {
 
       playerId: "extra",
 
-      playerName: extraPlayerName || "Extra Treffer",
+      playerName: extraPlayerName || t("extraTreffer"),
 
       type: "hit",
 
@@ -1556,9 +1561,7 @@ export default function MatchPage() {
               type="button"
               onClick={handleRetrySave}
               className="shrink-0 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-red-200 transition hover:bg-red-400/20"
-            >
-              Erneut versuchen
-            </button>
+            >{t("erneutVersuchen")}</button>
           </div>
         )}
 
@@ -1598,9 +1601,7 @@ export default function MatchPage() {
                 tracking-[0.2em]
                 text-cyan-400
               "
-            >
-              Pong Stats
-            </div>
+            >{t("pongStats")}</div>
 
             <h1
               className="
@@ -1609,9 +1610,7 @@ export default function MatchPage() {
                 font-black
                 uppercase
               "
-            >
-              Freitag Abend
-            </h1>
+            >{t("freitagAbend")}</h1>
           </div>
 
           <div className="flex items-center gap-4">
@@ -1635,17 +1634,13 @@ export default function MatchPage() {
                   bg-cyan-400
                   shadow-[0_0_10px_rgba(34,211,238,0.8)]
                 "
-              />
-              Match Live
-            </div>
+              />{t("matchLive")}</div>
 
             <button
               type="button"
               onClick={() => setShowAbortConfirm(true)}
               className="rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-red-300 transition hover:bg-red-400/20"
-            >
-              Abbruch
-            </button>
+            >{t("abbruch")}</button>
           </div>
         </div>
       </header>
@@ -1653,11 +1648,7 @@ export default function MatchPage() {
       {/* ENDPHASE-HINWEIS */}
 
       {phase.kind === "redemption" && redemptionTeam && finalWinner === null && (
-        <div className="shrink-0 border-b border-yellow-400/20 bg-yellow-400/[0.07] px-5 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.12em] text-yellow-300 lg:text-xs">
-          Endphase · Team {redemptionTeam} wirft auf die letzten {redemptionTargetRemaining} Becher
-          von Team {redemptionWinnerTeam} · {redemptionRound.length}/{redemptionThrowsNeeded}{" "}
-          geworfen
-        </div>
+        <div className="shrink-0 border-b border-yellow-400/20 bg-yellow-400/[0.07] px-5 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.12em] text-yellow-300 lg:text-xs">{t("endphaseTeamWirftAuf", { redemptionTeam, redemptionTargetRemaining, redemptionWinnerTeam: redemptionWinnerTeam ?? "", length: redemptionRound.length, redemptionThrowsNeeded })}</div>
       )}
 
       {/* MOBILE (< lg) */}
@@ -1682,18 +1673,14 @@ export default function MatchPage() {
             <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
               <div className="flex items-center justify-center gap-3">
                 <div className="text-center">
-                  <div className="text-[7px] font-bold uppercase tracking-wider text-white/25">
-                    Team A
-                  </div>
+                  <div className="text-[7px] font-bold uppercase tracking-wider text-white/25">{t("teamA")}</div>
                   <div className="text-lg font-black">{teamAScore}</div>
                 </div>
 
                 <div className="text-sm font-black text-white/15">:</div>
 
                 <div className="text-center">
-                  <div className="text-[7px] font-bold uppercase tracking-wider text-white/25">
-                    Team B
-                  </div>
+                  <div className="text-[7px] font-bold uppercase tracking-wider text-white/25">{t("teamB")}</div>
                   <div className="text-lg font-black">{teamBScore}</div>
                 </div>
               </div>
@@ -1702,13 +1689,11 @@ export default function MatchPage() {
             {/* LETZTE AKTIONEN */}
 
             <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
-              <div className="mb-1 text-[7px] font-black uppercase tracking-[0.18em] text-white/30">
-                Letzte Aktionen
-              </div>
+              <div className="mb-1 text-[7px] font-black uppercase tracking-[0.18em] text-white/30">{t("letzteAktionen")}</div>
 
               <div className="space-y-1">
                 {events.length === 0 ? (
-                  <div className="text-[9px] text-white/20">Noch keine Aktionen.</div>
+                  <div className="text-[9px] text-white/20">{t("nochKeineAktionen")}</div>
                 ) : (
                   events
                     .slice()
@@ -1741,9 +1726,7 @@ export default function MatchPage() {
                 className={`text-[9px] font-black uppercase tracking-[0.15em] ${
                   team === "A" ? "text-cyan-400" : "text-fuchsia-400"
                 }`}
-              >
-                Team {team}
-              </div>
+              >{t("team", { team })}</div>
 
               {startingTeam && activeTeamForDisplay === team && extraOwed === 0 && (
                 <span
@@ -1752,10 +1735,7 @@ export default function MatchPage() {
                       ? "bg-cyan-400/10 text-cyan-300"
                       : "bg-fuchsia-400/10 text-fuchsia-300"
                   }`}
-                >
-                  Am Zug
-                  {getRoundThrowLabel(team) ? ` · ${getRoundThrowLabel(team)}` : ""}
-                </span>
+                >{t("amZug", { v: getRoundThrowLabel(team) ? ` · ${getRoundThrowLabel(team)}` : "" })}</span>
               )}
             </div>
 
@@ -1805,27 +1785,21 @@ export default function MatchPage() {
                           onClick={() => handleMiss(player)}
                           disabled={playerDisabled}
                           className="min-h-7 rounded-lg border border-white/[0.08] bg-white/[0.025] text-[9px] font-black uppercase tracking-[0.1em] text-white/50 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Daneben
-                        </button>
+                        >{t("daneben")}</button>
 
                         <button
                           type="button"
                           onClick={() => handleHit(player)}
                           disabled={playerDisabled}
                           className="min-h-7 rounded-lg bg-cyan-400 text-[9px] font-black uppercase tracking-[0.1em] text-black transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-cyan-400/30"
-                        >
-                          Getroffen
-                        </button>
+                        >{t("getroffen")}</button>
 
                         <button
                           type="button"
                           onClick={() => handleSpecial(player)}
                           disabled={!canUseSpecial}
                           className="min-h-7 rounded-lg border border-yellow-400/30 bg-yellow-400/[0.07] text-[9px] font-black uppercase tracking-[0.1em] text-yellow-300 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Special
-                        </button>
+                        >{t("special")}</button>
                       </div>
                     </div>
                   );
@@ -1842,9 +1816,7 @@ export default function MatchPage() {
             disabled={!canUndo}
             onClick={handleUndo}
             className="w-full rounded-xl border border-yellow-400/40 bg-yellow-400/10 px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-yellow-300 transition hover:bg-yellow-400/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.02] disabled:text-white/20"
-          >
-            ↶ Rückgängig
-          </button>
+          >{t("rueckgaengig")}</button>
         </div>
       </div>
 
@@ -1879,15 +1851,10 @@ export default function MatchPage() {
                 tracking-[0.2em]
                 text-cyan-400
               "
-            >
-              Team A
-            </div>
+            >{t("teamA")}</div>
 
             {startingTeam && activeTeamForDisplay === "A" && extraOwed === 0 && (
-              <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-cyan-300">
-                Am Zug
-                {getRoundThrowLabel("A") ? ` · ${getRoundThrowLabel("A")}` : ""}
-              </span>
+              <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-cyan-300">{t("amZug", { v: getRoundThrowLabel("A") ? ` · ${getRoundThrowLabel("A")}` : "" })}</span>
             )}
           </div>
 
@@ -1928,24 +1895,22 @@ export default function MatchPage() {
                 tracking-[0.18em]
                 text-white/30
               "
-            >
-              Match Statistik
-            </div>
+            >{t("matchStatistik")}</div>
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
                 <div className="text-lg font-black">{teamStats.A.throwsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">Würfe</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("wuerfe")}</div>
               </div>
 
               <div>
                 <div className="text-lg font-black">{teamStats.A.hitsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">Treffer</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("treffer")}</div>
               </div>
 
               <div>
                 <div className="text-lg font-black">{teamStats.A.opponentCupsRemaining}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">Becher</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("becher")}</div>
               </div>
             </div>
           </div>
@@ -1975,13 +1940,11 @@ export default function MatchPage() {
                 tracking-[0.18em]
                 text-white/30
               "
-            >
-              Letzte Aktionen
-            </div>
+            >{t("letzteAktionen")}</div>
 
             <div className="max-h-64 space-y-2 overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
               {events.length === 0 ? (
-                <div className="text-xs text-white/20">Noch keine Aktionen.</div>
+                <div className="text-xs text-white/20">{t("nochKeineAktionen")}</div>
               ) : (
                 events
                   .slice()
@@ -1996,18 +1959,18 @@ export default function MatchPage() {
 
                         <span className="ml-2 text-[10px] text-white/30">
                           {event.type === "miss"
-                            ? "Daneben"
+                            ? t("daneben")
                             : event.shotType === "single"
-                              ? "Einzeltreffer"
+                              ? t("einzeltreffer")
                               : event.shotType === "bounce"
-                                ? "Aufhüpfen"
+                                ? t("aufhuepfen")
                                 : event.shotType === "trickshot"
-                                  ? "Trickshot"
+                                  ? t("trickshot")
                                   : event.shotType === "penalty"
-                                    ? "Strafbecher"
+                                    ? t("strafbecher")
                                     : event.shotType === "knockover"
-                                      ? "Umgeworfen"
-                                      : "Extra Treffer"}
+                                      ? t("umgeworfen")
+                                      : t("extraTreffer")}
                         </span>
                       </div>
 
@@ -2044,15 +2007,10 @@ export default function MatchPage() {
                 tracking-[0.2em]
                 text-fuchsia-400
               "
-            >
-              Team B
-            </div>
+            >{t("teamB")}</div>
 
             {startingTeam && activeTeamForDisplay === "B" && extraOwed === 0 && (
-              <span className="rounded-full bg-fuchsia-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-fuchsia-300">
-                Am Zug
-                {getRoundThrowLabel("B") ? ` · ${getRoundThrowLabel("B")}` : ""}
-              </span>
+              <span className="rounded-full bg-fuchsia-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-fuchsia-300">{t("amZug", { v: getRoundThrowLabel("B") ? ` · ${getRoundThrowLabel("B")}` : "" })}</span>
             )}
           </div>
 
@@ -2093,24 +2051,22 @@ export default function MatchPage() {
                 tracking-[0.18em]
                 text-white/30
               "
-            >
-              Match Statistik
-            </div>
+            >{t("matchStatistik")}</div>
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
                 <div className="text-lg font-black">{teamStats.B.throwsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">Würfe</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("wuerfe")}</div>
               </div>
 
               <div>
                 <div className="text-lg font-black">{teamStats.B.hitsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">Treffer</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("treffer")}</div>
               </div>
 
               <div>
                 <div className="text-lg font-black">{teamStats.B.opponentCupsRemaining}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">Becher</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("becher")}</div>
               </div>
             </div>
           </div>
@@ -2121,18 +2077,14 @@ export default function MatchPage() {
 
           <div className="flex shrink-0 items-center justify-center gap-8">
             <div className="text-center">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-white/25">
-                Team A
-              </div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-white/25">{t("teamA")}</div>
               <div className="text-3xl font-black">{teamAScore}</div>
             </div>
 
             <div className="text-lg font-black text-white/15">:</div>
 
             <div className="text-center">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-white/25">
-                Team B
-              </div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-white/25">{t("teamB")}</div>
               <div className="text-3xl font-black">{teamBScore}</div>
             </div>
           </div>
@@ -2165,9 +2117,7 @@ export default function MatchPage() {
                 disabled:bg-white/[0.02]
                 disabled:text-white/20
               "
-            >
-              ↶ Rückgängig
-            </button>
+            >{t("rueckgaengig")}</button>
           </div>
         </div>
       </div>
@@ -2240,44 +2190,36 @@ export default function MatchPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0c0f16] p-6 text-center">
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-              {overtimeCount > 0 ? "Verlängerung" : "Vor dem Anwurf"}
+              {overtimeCount > 0 ? t("verlaengerung") : t("vorDemAnwurf")}
             </div>
 
-            <h2 className="mt-1 text-lg font-black uppercase">Wer beginnt?</h2>
+            <h2 className="mt-1 text-lg font-black uppercase">{t("werBeginnt")}</h2>
 
             <div className="mt-5 space-y-2">
               <button
                 type="button"
                 onClick={() => setStartingTeam("A")}
                 className="w-full rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-cyan-300 transition hover:bg-cyan-400/20"
-              >
-                Team A
-              </button>
+              >{t("teamA")}</button>
 
               <button
                 type="button"
                 onClick={() => setStartingTeam("B")}
                 className="w-full rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-fuchsia-300 transition hover:bg-fuchsia-400/20"
-              >
-                Team B
-              </button>
+              >{t("teamB")}</button>
 
               <button
                 type="button"
                 onClick={() => setStartingTeam(Math.random() < 0.5 ? "A" : "B")}
                 className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-white/40 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                Zufällig entscheiden
-              </button>
+              >{t("zufaelligEntscheiden")}</button>
             </div>
 
             <button
               type="button"
               onClick={() => setShowAbortConfirm(true)}
               className="mt-4 text-[10px] font-black uppercase tracking-[0.15em] text-white/25 transition hover:text-red-300"
-            >
-              Match abbrechen
-            </button>
+            >{t("matchAbbrechen")}</button>
           </div>
         </div>
       )}
@@ -2287,16 +2229,11 @@ export default function MatchPage() {
       {showAbortConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-5 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0c0f16] p-6 text-center">
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-red-400/70">
-              Achtung
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-red-400/70">{t("achtung")}</div>
 
-            <h2 className="mt-1 text-lg font-black uppercase text-white">Match abbrechen?</h2>
+            <h2 className="mt-1 text-lg font-black uppercase text-white">{t("matchAbbrechen2")}</h2>
 
-            <p className="mt-2 text-xs text-white/40">
-              Das Match wird beendet und es werden keine Statistiken gespeichert. Du kommst zurück
-              ins Hauptmenü.
-            </p>
+            <p className="mt-2 text-xs text-white/40">{t("dasMatchWirdBeendet")}</p>
 
             <div className="mt-5 space-y-2">
               <button
@@ -2305,7 +2242,7 @@ export default function MatchPage() {
                 onClick={handleAbort}
                 className="w-full rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {aborting ? "Wird abgebrochen …" : "Ja, abbrechen"}
+                {aborting ? t("wirdAbgebrochen") : t("jaAbbrechen")}
               </button>
 
               <button
@@ -2313,9 +2250,7 @@ export default function MatchPage() {
                 disabled={aborting}
                 onClick={() => setShowAbortConfirm(false)}
                 className="w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-[10px] font-black uppercase tracking-[0.15em] text-white/40 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Weiterspielen
-              </button>
+              >{t("weiterspielen")}</button>
             </div>
           </div>
         </div>
