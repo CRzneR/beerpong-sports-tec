@@ -80,6 +80,48 @@
     "previewCupsValue": "1,842",
     "previewCups": "Cups"
   },
+  "RulesSection": {
+    "eyebrow": "Rules & gameplay",
+    "title1": "How it's",
+    "title2": "played.",
+    "intro": "Two teams, ten cups, one triangle. The most important rules for fair matches at a glance. You'll find all the rules on the rules page.",
+    "steps": [
+      {
+        "title": "Setup & first throw",
+        "text": "2 vs 2. Each team has 10 cups in a triangle, with the last cup in the middle at the back. The first throw is decided by rock, paper, scissors."
+      },
+      {
+        "title": "Throws",
+        "text": "2 balls, 2 throws per team. Keep your elbow behind the table edge, and remember: drink first, then throw! In 1 vs 1 you throw both balls."
+      },
+      {
+        "title": "Swatting",
+        "text": "After the ball has touched the table or a cup, it may be swatted away. Swatting too early costs a penalty cup. Distraction is allowed, but covering the cup or touching the table is not."
+      },
+      {
+        "title": "Game end",
+        "text": "Once a team has lost all its cups, the opposing team gets a rebuttal. After a hit they keep throwing until a throw misses. If they hit all cups, the game continues with 3 new cups per team."
+      }
+    ],
+    "scoringTitle": "Scoring",
+    "scores": [
+      {
+        "value": "1 cup",
+        "label": "Direct throw"
+      },
+      {
+        "value": "2 cups",
+        "label": "Bounce shot"
+      },
+      {
+        "value": "+2 throws",
+        "label": "Both players hit in one turn"
+      }
+    ],
+    "motto1": "Good players.",
+    "motto2": "Better people.",
+    "cta": "View all rules"
+  },
   "CommunityCta": {
     "eyebrow": "Join the Game",
     "headline1": "Ready for",

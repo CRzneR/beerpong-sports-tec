@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { PlatformSection } from "@/components/landing/PlatformSection";
+import { RulesSection } from "@/components/landing/RulesSection";
 import { CommunityStats } from "@/components/landing/CommunityStats";
 import { CommunitySection } from "@/components/landing/CommunitySection";
 import { Footer } from "@/components/landing/Footer";
@@ -86,6 +87,7 @@ export default async function Home({ params }: PageProps<"/[locale]">) {
       <main>
         <Hero />
         <PlatformSection />
+        <RulesSection />
         <CommunityStats />
         <CommunitySection />
       </main>

@@ -80,6 +80,48 @@
     "previewCupsValue": "1.842",
     "previewCups": "Cups"
   },
+  "RulesSection": {
+    "eyebrow": "Regeln & Spielweise",
+    "title1": "So wird",
+    "title2": "gespielt.",
+    "intro": "Zwei Teams, zehn Becher, ein Dreieck. Die wichtigsten Regeln für faire Matches auf einen Blick. Alle Regeln findest du auf der Regeln-Seite.",
+    "steps": [
+      {
+        "title": "Aufbau & Anwurf",
+        "text": "2 gegen 2. Pro Team 10 Becher in Dreiecksform, der letzte Becher steht mittig am Ende. Den Anwurf entscheidet Schere, Stein, Papier."
+      },
+      {
+        "title": "Würfe",
+        "text": "2 Bälle, 2 Würfe pro Team. Der Ellbogen bleibt hinter der Tischkante, und es gilt: erst trinken, dann werfen! Im 1 gegen 1 wirfst du beide Bälle."
+      },
+      {
+        "title": "Abwehren",
+        "text": "Nach Kontakt mit Tisch oder Becher darf abgewehrt werden. Zu frühes Abwehren kostet einen Strafbecher. Ablenkung ist erlaubt, den Becher verdecken oder den Tisch berühren nicht."
+      },
+      {
+        "title": "Spielende",
+        "text": "Hat ein Team alle Becher verloren, darf das gegnerische Team nachwerfen. Wird getroffen, geht es weiter, bis ein Wurf danebengeht. Trifft es alle Becher, geht das Spiel mit 3 neuen Bechern pro Team weiter."
+      }
+    ],
+    "scoringTitle": "Wertung",
+    "scores": [
+      {
+        "value": "1 Becher",
+        "label": "Direktwurf"
+      },
+      {
+        "value": "2 Becher",
+        "label": "Aufsetzer"
+      },
+      {
+        "value": "+2 Würfe",
+        "label": "Beide treffen in einer Runde"
+      }
+    ],
+    "motto1": "Good players.",
+    "motto2": "Better people.",
+    "cta": "Alle Regeln ansehen"
+  },
   "CommunityCta": {
     "eyebrow": "Join the Game",
     "headline1": "Bereit für",
