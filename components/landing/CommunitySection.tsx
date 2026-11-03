@@ -1,0 +1,106 @@
+import { useTranslations } from "next-intl";
+import Image from "next/image";
+
+import { Link } from "@/i18n/navigation";
+
+export function CommunitySection() {
+  const t = useTranslations("CommunityCta");
+
+  return (
+    <section className="relative overflow-hidden bg-[#050708] py-32 lg:py-44">
+      {/* Foto-Hintergrund */}
+
+      <div className="absolute inset-0">
+        <Image
+          src="/images/landing/community-photo.jpg"
+          alt=""
+          fill
+          className="object-cover object-center"
+        />
+
+        {/*
+          Kräftiger, gleichmäßiger Verlauf - anders als bei Hero.tsx, wo
+          der Text links sitzt und rechts Platz für das Foto bleibt, ist
+          hier der Text zentriert und füllt die ganze Breite. Deshalb
+          rundum abdunkeln statt nur von einer Seite, sonst wird der Text
+          über der ganzen Breite schwer lesbar.
+        */}
+
+        <div className="absolute inset-0 bg-[#050708]/80" />
+
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050708] via-transparent to-[#050708]" />
+      </div>
+
+      {/* Decorative background (bestehend, jetzt übers Foto gelegt) */}
+
+      <div className="absolute inset-0">
+        {/* Main glow */}
+        <div className="absolute left-1/2 top-1/2 h-[450px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/[0.07] blur-[140px]" />
+
+        {/* Top line */}
+        <div className="absolute left-1/2 top-0 h-px w-full max-w-7xl -translate-x-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+        {/* Bottom line */}
+        <div className="absolute bottom-0 left-1/2 h-px w-full max-w-7xl -translate-x-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-5xl px-6 text-center lg:px-8">
+        {/* Eyebrow */}
+        <div className="mb-7 flex items-center justify-center gap-3">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]" />
+
+          <span className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-400">
+            {t("eyebrow")}
+          </span>
+
+          <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.8)]" />
+        </div>
+
+        {/* Headline */}
+        <h2 className="text-5xl font-black uppercase leading-[0.9] tracking-[-0.06em] text-white sm:text-6xl lg:text-8xl">
+          {t("headline1")}
+          <br />
+          {t("headline2")}
+          <br />
+          <span className="text-emerald-400 drop-shadow-[0_0_35px_rgba(52,211,153,0.15)]">
+            {t("headline3")}
+          </span>
+        </h2>
+
+        {/* Description */}
+        <p className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-white/45 sm:text-lg">
+          {t("description")}
+        </p>
+
+        {/* Actions */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <Link
+            href="/login"
+            className="group rounded-full bg-emerald-400 px-8 py-4 text-sm font-bold text-black shadow-[0_0_50px_rgba(52,211,153,0.15)] transition duration-300 hover:-translate-y-1 hover:bg-emerald-300 hover:shadow-[0_0_60px_rgba(52,211,153,0.25)]"
+          >
+            {t("createProfile")}
+            <span className="ml-3 inline-block transition-transform group-hover:translate-x-1">
+              →
+            </span>
+          </Link>
+
+          <Link
+            href="/spieler"
+            className="rounded-full border border-white/15 px-8 py-4 text-sm font-semibold text-white transition duration-300 hover:border-white/30 hover:bg-white/5"
+          >
+            {t("discoverStats")}
+          </Link>
+        </div>
+
+        {/* Bottom statement */}
+        <div className="mt-20">
+          <div className="mx-auto h-px w-16 bg-emerald-400/40" />
+
+          <p className="mt-6 text-xs font-bold uppercase tracking-[0.3em] text-white/20">
+            {t("statement")}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
