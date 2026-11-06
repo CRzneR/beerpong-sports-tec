@@ -94,44 +94,44 @@ interface BeerPongTableProps {
 */
 
 const FORMATION_10_TOP = [
-  { x: 35, y: 15 },
-  { x: 45, y: 15 },
-  { x: 55, y: 15 },
-  { x: 65, y: 15 },
+  { x: 29, y: 13 },
+  { x: 43, y: 13 },
+  { x: 57, y: 13 },
+  { x: 71, y: 13 },
 
-  { x: 40, y: 26 },
-  { x: 50, y: 26 },
-  { x: 60, y: 26 },
+  { x: 36, y: 23.5 },
+  { x: 50, y: 23.5 },
+  { x: 64, y: 23.5 },
 
-  { x: 45, y: 37 },
-  { x: 55, y: 37 },
+  { x: 43, y: 34 },
+  { x: 57, y: 34 },
 
-  { x: 50, y: 47 },
+  { x: 50, y: 44.5 },
 ];
 
 const FORMATION_10_BOTTOM = [
-  { x: 50, y: 53 },
+  { x: 50, y: 55.5 },
 
-  { x: 45, y: 63 },
-  { x: 55, y: 63 },
+  { x: 43, y: 66 },
+  { x: 57, y: 66 },
 
-  { x: 40, y: 74 },
-  { x: 50, y: 74 },
-  { x: 60, y: 74 },
+  { x: 36, y: 76.5 },
+  { x: 50, y: 76.5 },
+  { x: 64, y: 76.5 },
 
-  { x: 35, y: 85 },
-  { x: 45, y: 85 },
-  { x: 55, y: 85 },
-  { x: 65, y: 85 },
+  { x: 29, y: 87 },
+  { x: 43, y: 87 },
+  { x: 57, y: 87 },
+  { x: 71, y: 87 },
 ];
 
 const FORMATION_6_TOP = [
-  { x: 40, y: 19 },
+  { x: 36, y: 19 },
   { x: 50, y: 19 },
-  { x: 60, y: 19 },
+  { x: 64, y: 19 },
 
-  { x: 45, y: 31 },
-  { x: 55, y: 31 },
+  { x: 43, y: 31 },
+  { x: 57, y: 31 },
 
   { x: 50, y: 43 },
 ];
@@ -139,17 +139,17 @@ const FORMATION_6_TOP = [
 const FORMATION_6_BOTTOM = [
   { x: 50, y: 57 },
 
-  { x: 45, y: 69 },
-  { x: 55, y: 69 },
+  { x: 43, y: 69 },
+  { x: 57, y: 69 },
 
-  { x: 40, y: 81 },
+  { x: 36, y: 81 },
   { x: 50, y: 81 },
-  { x: 60, y: 81 },
+  { x: 64, y: 81 },
 ];
 
 const FORMATION_3_TOP = [
-  { x: 45, y: 25 },
-  { x: 55, y: 25 },
+  { x: 43, y: 25 },
+  { x: 57, y: 25 },
 
   { x: 50, y: 40 },
 ];
@@ -157,18 +157,18 @@ const FORMATION_3_TOP = [
 const FORMATION_3_BOTTOM = [
   { x: 50, y: 60 },
 
-  { x: 45, y: 75 },
-  { x: 55, y: 75 },
+  { x: 43, y: 75 },
+  { x: 57, y: 75 },
 ];
 
 const FORMATION_1_TOP = {
   x: 50,
-  y: 47,
+  y: 45,
 };
 
 const FORMATION_1_BOTTOM = {
   x: 50,
-  y: 53,
+  y: 55,
 };
 
 /*
@@ -178,17 +178,17 @@ const FORMATION_1_BOTTOM = {
 */
 
 const FORMATION_10_SINGLE_TOP = [
-  { x: 35, y: 15 },
-  { x: 45, y: 15 },
-  { x: 55, y: 15 },
-  { x: 65, y: 15 },
+  { x: 29, y: 15 },
+  { x: 43, y: 15 },
+  { x: 57, y: 15 },
+  { x: 71, y: 15 },
 
-  { x: 40, y: 39 },
+  { x: 36, y: 39 },
   { x: 50, y: 39 },
-  { x: 60, y: 39 },
+  { x: 64, y: 39 },
 
-  { x: 45, y: 63 },
-  { x: 55, y: 63 },
+  { x: 43, y: 63 },
+  { x: 57, y: 63 },
 
   { x: 50, y: 85 },
 ];
@@ -196,26 +196,26 @@ const FORMATION_10_SINGLE_TOP = [
 const FORMATION_10_SINGLE_BOTTOM = [
   { x: 50, y: 15 },
 
-  { x: 45, y: 39 },
-  { x: 55, y: 39 },
+  { x: 43, y: 39 },
+  { x: 57, y: 39 },
 
-  { x: 40, y: 63 },
+  { x: 36, y: 63 },
   { x: 50, y: 63 },
-  { x: 60, y: 63 },
+  { x: 64, y: 63 },
 
-  { x: 35, y: 85 },
-  { x: 45, y: 85 },
-  { x: 55, y: 85 },
-  { x: 65, y: 85 },
+  { x: 29, y: 85 },
+  { x: 43, y: 85 },
+  { x: 57, y: 85 },
+  { x: 71, y: 85 },
 ];
 
 const FORMATION_6_SINGLE_TOP = [
-  { x: 40, y: 15 },
+  { x: 36, y: 15 },
   { x: 50, y: 15 },
-  { x: 60, y: 15 },
+  { x: 64, y: 15 },
 
-  { x: 45, y: 50 },
-  { x: 55, y: 50 },
+  { x: 43, y: 50 },
+  { x: 57, y: 50 },
 
   { x: 50, y: 85 },
 ];
@@ -223,17 +223,17 @@ const FORMATION_6_SINGLE_TOP = [
 const FORMATION_6_SINGLE_BOTTOM = [
   { x: 50, y: 15 },
 
-  { x: 45, y: 50 },
-  { x: 55, y: 50 },
+  { x: 43, y: 50 },
+  { x: 57, y: 50 },
 
-  { x: 40, y: 85 },
+  { x: 36, y: 85 },
   { x: 50, y: 85 },
-  { x: 60, y: 85 },
+  { x: 64, y: 85 },
 ];
 
 const FORMATION_3_SINGLE_TOP = [
-  { x: 45, y: 15 },
-  { x: 55, y: 15 },
+  { x: 43, y: 15 },
+  { x: 57, y: 15 },
 
   { x: 50, y: 85 },
 ];
@@ -241,8 +241,8 @@ const FORMATION_3_SINGLE_TOP = [
 const FORMATION_3_SINGLE_BOTTOM = [
   { x: 50, y: 15 },
 
-  { x: 45, y: 85 },
-  { x: 55, y: 85 },
+  { x: 43, y: 85 },
+  { x: 57, y: 85 },
 ];
 
 const FORMATION_1_SINGLE = {
@@ -257,35 +257,35 @@ const FORMATION_1_SINGLE = {
 */
 
 const FORMATION_10_TOP_NARROW = [
-  { x: 25, y: 15 },
-  { x: 42, y: 15 },
-  { x: 58, y: 15 },
-  { x: 75, y: 15 },
+  { x: 25, y: 13 },
+  { x: 42, y: 13 },
+  { x: 58, y: 13 },
+  { x: 75, y: 13 },
 
-  { x: 33, y: 26 },
-  { x: 50, y: 26 },
-  { x: 67, y: 26 },
+  { x: 33, y: 23.5 },
+  { x: 50, y: 23.5 },
+  { x: 67, y: 23.5 },
 
-  { x: 42, y: 37 },
-  { x: 58, y: 37 },
+  { x: 42, y: 34 },
+  { x: 58, y: 34 },
 
-  { x: 50, y: 47 },
+  { x: 50, y: 44.5 },
 ];
 
 const FORMATION_10_BOTTOM_NARROW = [
-  { x: 50, y: 53 },
+  { x: 50, y: 55.5 },
 
-  { x: 42, y: 63 },
-  { x: 58, y: 63 },
+  { x: 42, y: 66 },
+  { x: 58, y: 66 },
 
-  { x: 33, y: 74 },
-  { x: 50, y: 74 },
-  { x: 67, y: 74 },
+  { x: 33, y: 76.5 },
+  { x: 50, y: 76.5 },
+  { x: 67, y: 76.5 },
 
-  { x: 25, y: 85 },
-  { x: 42, y: 85 },
-  { x: 58, y: 85 },
-  { x: 75, y: 85 },
+  { x: 25, y: 87 },
+  { x: 42, y: 87 },
+  { x: 58, y: 87 },
+  { x: 75, y: 87 },
 ];
 
 const FORMATION_6_TOP_NARROW = [
@@ -326,12 +326,12 @@ const FORMATION_3_BOTTOM_NARROW = [
 
 const FORMATION_1_TOP_NARROW = {
   x: 50,
-  y: 47,
+  y: 45,
 };
 
 const FORMATION_1_BOTTOM_NARROW = {
   x: 50,
-  y: 53,
+  y: 55,
 };
 
 /*
@@ -734,7 +734,9 @@ export default function BeerPongTable({
               tracking-[0.2em]
               text-blue-400/50
             "
-          >{t("teamA")}</div>
+          >
+            {t("teamA")}
+          </div>
         )}
 
         {showTeamB && (
@@ -750,7 +752,9 @@ export default function BeerPongTable({
               tracking-[0.2em]
               text-red-400/50
             "
-          >{t("teamB")}</div>
+          >
+            {t("teamB")}
+          </div>
         )}
 
         {showTeamA && (
@@ -809,7 +813,9 @@ export default function BeerPongTable({
               tracking-wider
               text-blue-400/50
             "
-          >{t("a", { length: teamACups.filter((cup) => !cup.hit).length })}</div>
+          >
+            {t("a", { length: teamACups.filter((cup) => !cup.hit).length })}
+          </div>
 
           <div
             className="
@@ -825,7 +831,9 @@ export default function BeerPongTable({
               tracking-wider
               text-red-400/50
             "
-          >{t("b", { length: teamBCups.filter((cup) => !cup.hit).length })}</div>
+          >
+            {t("b", { length: teamBCups.filter((cup) => !cup.hit).length })}
+          </div>
         </div>
       )}
     </div>
