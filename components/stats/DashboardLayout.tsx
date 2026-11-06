@@ -21,6 +21,7 @@ export type DashboardCardId =
   | "flow"
   | "matchup"
   | "achievements"
+  | "progress"
   | "history"
   | "ranking"
   | "tournament";
@@ -38,6 +39,7 @@ export const DASHBOARD_CARDS: {
   { id: "flow", pro: true },
   { id: "matchup", pro: true },
   { id: "achievements", pro: true },
+  { id: "progress", pro: true },
   { id: "history", pro: true },
   { id: "ranking", pro: true },
   { id: "tournament", pro: true },

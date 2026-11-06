@@ -20,6 +20,7 @@ import { AchievementsSection } from "@/components/stats/AchievementsSection";
 import { CupPositionStats } from "@/components/stats/CupPositionStats";
 import { MatchupStats } from "@/components/stats/MatchupStats";
 import { ComebackStats } from "@/components/stats/ComebackStats";
+import { ProfileProgressCompact } from "@/components/stats/ProfileProgressCompact";
 import { SkillRating } from "@/components/stats/SkillRating";
 import { TournamentCard } from "@/components/stats/TournamentCard";
 import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
@@ -537,6 +538,20 @@ function SpielerPageInner() {
                               <MatchHistory onSelectMatch={setSelectedMatch} />
                             )}
                           </div>
+                        </ProLock>
+                      </section>
+                    )}
+
+                    {layout.isVisible("progress") && userEmail && (
+                      <section className="mt-6 md:mt-8">
+                        {/* Pro-Funktion: ohne Pro unscharf mit "Freischalten". */}
+                        <ProLock
+                          isPro={isPro}
+                          loggedIn={Boolean(userEmail)}
+                          onUpgrade={openProPreview}
+                          upgrading={upgrading}
+                        >
+                          <ProfileProgressCompact />
                         </ProLock>
                       </section>
                     )}

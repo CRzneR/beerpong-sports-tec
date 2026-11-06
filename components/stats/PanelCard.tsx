@@ -32,10 +32,13 @@ export function PanelModal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** Breiteres Fenster (für große Inhalte wie den Profilfortschritt). */
+  wide?: boolean;
 }) {
   const t = useTranslations("Stats.PanelCard");
 
@@ -66,7 +69,9 @@ export function PanelModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-3xl border border-white/[0.1] bg-[#0c0f16] p-5 shadow-2xl sm:p-7"
+        className={`flex max-h-[85vh] w-full flex-col rounded-3xl border border-white/[0.1] bg-[#0c0f16] p-5 shadow-2xl sm:p-7 ${
+          wide ? "max-w-5xl" : "max-w-3xl"
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
