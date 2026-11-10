@@ -723,7 +723,7 @@ export default function TurnierDetailPage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#0b0d12]/70 px-5 py-4 backdrop-blur">
+          <div className="rounded-2xl border border-white/10 bg-[#0b0d12]/70 px-4 py-3 backdrop-blur md:px-5 md:py-4">
             <div className="flex items-start justify-between gap-4">
               <div className="text-lg font-black">{t("progressTitle")}</div>
 
@@ -768,7 +768,7 @@ export default function TurnierDetailPage() {
                   role="tab"
                   aria-selected={active}
                   onClick={() => setTab(id)}
-                  className={`relative inline-flex shrink-0 items-center gap-2.5 px-4 py-4 text-base font-semibold transition md:px-6 ${
+                  className={`relative inline-flex shrink-0 items-center gap-2.5 px-3.5 py-3 text-sm font-semibold transition md:px-6 md:py-4 md:text-base ${
                     active ? "text-yellow-400" : "text-white/60 hover:text-white"
                   }`}
                 >
@@ -1574,7 +1574,7 @@ function FilterPills({
             type="button"
             aria-pressed={selected}
             onClick={() => onChange(item.key)}
-            className={`rounded-full border px-5 py-2.5 text-sm font-bold transition ${
+            className={`rounded-full border px-3.5 py-1.5 text-[13px] font-bold transition md:px-5 md:py-2.5 md:text-sm ${
               selected
                 ? "border-yellow-400 bg-yellow-400 text-black shadow-[0_0_24px_rgba(250,204,21,0.2)]"
                 : "border-white/10 bg-white/[0.02] text-white/80 hover:border-white/25 hover:text-white"
@@ -1662,7 +1662,7 @@ function NextMatchCard({ info, onOpen }: { info: NextMatchInfo; onOpen: () => vo
             type="button"
             onClick={onOpen}
             aria-label={info.kind === "ko" ? t("nextMatchOpenKo") : t("nextMatchOpen")}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-yellow-400 text-yellow-400 transition hover:bg-yellow-400 hover:text-black"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-yellow-400 text-yellow-400 transition hover:bg-yellow-400 hover:text-black md:h-12 md:w-12"
           >
             <ArrowRight size={22} strokeWidth={2.25} aria-hidden="true" />
           </button>

@@ -134,7 +134,7 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute -right-32 top-10 h-[460px] w-[640px] rounded-full bg-emerald-400/[0.07] blur-[130px]" />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-14 lg:grid-cols-[1fr_1.1fr] lg:gap-14 lg:px-8 lg:py-20">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-6 py-10 sm:py-14 lg:grid-cols-[1fr_1.1fr] lg:gap-14 lg:px-8 lg:py-20">
             <div>
               <Link
                 href="/"
@@ -154,12 +154,12 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
                 </time>
               </div>
 
-              <h1 className="mt-6 text-4xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-5xl lg:text-[3.4rem]">
+              <h1 className="mt-5 text-3xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-5xl lg:text-[3.4rem]">
                 {t("title1")}
                 <span className="mt-1 block text-emerald-400">{t("title2")}</span>
               </h1>
 
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-white/50 lg:text-lg">
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/50 md:mt-6 md:text-base lg:text-lg">
                 {t("intro")}
               </p>
             </div>
@@ -180,16 +180,16 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
 
         {/* HIGHLIGHT */}
         <section className="border-t border-white/[0.06]">
-          <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1fr_1.35fr] lg:items-center lg:gap-14 lg:px-8 lg:py-24">
+          <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[1fr_1.35fr] lg:items-center lg:gap-14 lg:px-8 lg:py-24">
             <div>
               <Eyebrow>{t("highlight.eyebrow")}</Eyebrow>
 
-              <h2 className="text-3xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
+              <h2 className="text-2xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
                 {t("highlight.title1")}
                 <span className="block text-white/35">{t("highlight.title2")}</span>
               </h2>
 
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-white/45">
+              <p className="mt-4 max-w-lg text-sm md:mt-6 md:text-base leading-relaxed text-white/45">
                 {t("highlight.text")}
               </p>
             </div>
@@ -223,15 +223,15 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
         <section className="relative overflow-hidden border-t border-white/[0.06]">
           <div className="pointer-events-none absolute right-0 top-1/2 h-[420px] w-[560px] -translate-y-1/2 rounded-full bg-emerald-400/[0.06] blur-[120px]" />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-6 py-12 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
             <div>
               <Eyebrow>{t("rings.eyebrow")}</Eyebrow>
 
-              <h2 className="text-3xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
+              <h2 className="text-2xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
                 {t("rings.title")}
               </h2>
 
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-white/45">{t("rings.text")}</p>
+              <p className="mt-4 max-w-lg text-sm md:mt-6 md:text-base leading-relaxed text-white/45">{t("rings.text")}</p>
 
               <CheckList items={ringBullets} />
             </div>
@@ -251,7 +251,7 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
 
         {/* POKALE */}
         <section className="border-t border-white/[0.06]">
-          <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
+          <div className="mx-auto grid max-w-7xl items-center gap-8 px-6 py-12 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
             <div
               className="relative order-2 overflow-hidden rounded-3xl border border-emerald-400/15 bg-gradient-to-b from-emerald-400/[0.07] to-white/[0.01] px-6 pb-6 pt-10 lg:order-1"
               role="img"
@@ -269,11 +269,11 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
             <div className="order-1 lg:order-2">
               <Eyebrow>{t("trophies.eyebrow")}</Eyebrow>
 
-              <h2 className="text-3xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
+              <h2 className="text-2xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
                 {t("trophies.title")}
               </h2>
 
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-white/45">
+              <p className="mt-4 max-w-lg text-sm md:mt-6 md:text-base leading-relaxed text-white/45">
                 {t("trophies.text")}
               </p>
 
@@ -284,14 +284,14 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
 
         {/* SO FUNKTIONIERT'S */}
         <section className="border-t border-white/[0.06]">
-          <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
+          <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-24">
             <Eyebrow>{t("how.eyebrow")}</Eyebrow>
 
-            <h2 className="text-3xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
+            <h2 className="text-2xl font-black uppercase leading-[0.98] tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
               {t("how.title")}
             </h2>
 
-            <ol className="mt-10 grid gap-4 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-3 lg:gap-5">
+            <ol className="mt-7 grid gap-3 md:mt-10 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-3 lg:gap-5">
               {steps.flatMap((step, index) => {
                 const item = (
                   <li
@@ -350,18 +350,18 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
               />
             </div>
 
-            <div className="relative flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between md:p-12">
+            <div className="relative flex flex-col gap-5 p-6 md:flex-row md:gap-8 md:items-center md:justify-between md:p-12">
               <div className="max-w-xl">
-                <h2 className="text-2xl font-black uppercase leading-tight tracking-[-0.03em] text-white sm:text-3xl lg:text-4xl">
+                <h2 className="text-xl font-black uppercase leading-tight tracking-[-0.03em] text-white sm:text-3xl lg:text-4xl">
                   {t("cta.title")}
                 </h2>
 
-                <p className="mt-4 text-base leading-relaxed text-white/55">{t("cta.text")}</p>
+                <p className="mt-3 text-sm leading-relaxed text-white/55 md:mt-4 md:text-base">{t("cta.text")}</p>
               </div>
 
               <Link
                 href="/turniere/neu"
-                className="group inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-emerald-400 px-6 py-3.5 text-sm font-black uppercase tracking-wide text-black shadow-[0_0_25px_rgba(52,211,153,0.18)] transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-300 hover:shadow-[0_0_35px_rgba(52,211,153,0.3)] md:self-auto"
+                className="group inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-emerald-400 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-black shadow-[0_0_25px_rgba(52,211,153,0.18)] transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-300 hover:shadow-[0_0_35px_rgba(52,211,153,0.3)] md:self-auto md:px-6 md:py-3.5 md:text-sm"
               >
                 {t("cta.button")}
 

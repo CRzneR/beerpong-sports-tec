@@ -229,7 +229,7 @@ export default function TurnierePage() {
         </header>
 
         {/* 3. Kennzahlen + Neues Turnier */}
-        <div className="mt-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
+        <div className="mt-7 flex flex-col gap-3 md:mt-10 md:flex-row md:items-center md:justify-between md:gap-6">
           <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4">
             {stats.map((stat) => (
               <StatCard
@@ -243,15 +243,15 @@ export default function TurnierePage() {
 
           <Link
             href="/turniere/neu"
-            className="inline-flex shrink-0 items-center justify-center rounded-full bg-yellow-400 px-8 py-4 text-base font-black text-black shadow-[0_0_35px_rgba(250,204,21,0.28)] transition hover:bg-yellow-300 md:px-9"
+            className="inline-flex shrink-0 items-center justify-center rounded-full bg-yellow-400 px-6 py-2.5 text-sm font-black text-black shadow-[0_0_30px_rgba(250,204,21,0.25)] transition hover:bg-yellow-300 md:px-9 md:py-4 md:text-base md:shadow-[0_0_35px_rgba(250,204,21,0.28)]"
           >
             {t("neuesTurnier")}
           </Link>
         </div>
 
         {/* 4. Filter + Ansicht */}
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-2.5">
+        <div className="mt-6 flex items-center justify-between gap-3 md:mt-8 md:flex-wrap md:gap-4">
+          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,#000_88%,transparent)] [scrollbar-width:none] md:flex-none md:flex-wrap md:gap-2.5 md:overflow-visible md:pr-0 md:[mask-image:none] [&::-webkit-scrollbar]:hidden">
             {filters.map((item) => {
               const selected = filter === item.key;
 
@@ -261,7 +261,7 @@ export default function TurnierePage() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setFilter(item.key)}
-                  className={`inline-flex items-center gap-2.5 rounded-full border px-5 py-2.5 text-sm font-bold transition ${
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-bold transition md:gap-2.5 md:px-5 md:py-2.5 md:text-sm ${
                     selected
                       ? "border-yellow-400 bg-yellow-400 text-black shadow-[0_0_24px_rgba(250,204,21,0.2)]"
                       : "border-white/10 bg-white/[0.02] text-white/80 hover:border-white/25 hover:text-white"
@@ -270,7 +270,7 @@ export default function TurnierePage() {
                   {item.label}
 
                   <span
-                    className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-black ${
+                    className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-black md:min-w-6 md:text-xs ${
                       selected ? "bg-black/15 text-black" : "bg-white/10 text-white/80"
                     }`}
                   >
@@ -281,7 +281,7 @@ export default function TurnierePage() {
             })}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-1.5 md:gap-2">
             <ViewButton
               icon={LayoutGrid}
               label={t("viewGrid")}
@@ -359,14 +359,14 @@ export default function TurnierePage() {
 
 function StatCard({ icon: Icon, value, label }: { icon: LucideIcon; value: string; label: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3.5 md:gap-4 md:px-5 md:py-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400 md:h-12 md:w-12">
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5 md:gap-4 md:px-5 md:py-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400 md:h-12 md:w-12">
         <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
       </span>
 
       <div className="min-w-0">
-        <div className="text-2xl font-black leading-none">{value}</div>
-        <div className="mt-1.5 text-xs text-white/50 md:text-[13px]">{label}</div>
+        <div className="text-xl font-black leading-none md:text-2xl">{value}</div>
+        <div className="mt-1 text-[11px] leading-tight md:mt-1.5 md:text-xs text-white/50 md:text-[13px]">{label}</div>
       </div>
     </div>
   );
@@ -390,7 +390,7 @@ function ViewButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`flex h-11 w-12 items-center justify-center rounded-xl border transition ${
+      className={`flex h-9 w-10 items-center justify-center rounded-xl border transition md:h-11 md:w-12 ${
         selected
           ? "border-yellow-400 bg-yellow-400 text-black"
           : "border-white/10 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white"
@@ -593,7 +593,7 @@ function TournamentCard({
       onClick={() => setConfirming(true)}
       aria-label={t("loeschen")}
       title={t("loeschen")}
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/40 transition hover:border-red-400/40 hover:bg-red-400/[0.06] hover:text-red-400"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white/40 transition hover:border-red-400/40 md:h-10 md:w-10 hover:bg-red-400/[0.06] hover:text-red-400"
     >
       <Trash2 size={17} strokeWidth={1.75} aria-hidden="true" />
     </button>
@@ -602,7 +602,7 @@ function TournamentCard({
   const arrow = (
     <span
       className={`flex shrink-0 items-center justify-center rounded-full border-2 transition group-hover:bg-yellow-400 group-hover:text-black ${
-        list ? "h-10 w-10" : "h-12 w-12"
+        list ? "h-9 w-9 md:h-10 md:w-10" : "h-10 w-10 md:h-12 md:w-12"
       } ${isActive ? "border-yellow-400 text-yellow-400" : "border-white/25 text-white/60 group-hover:border-yellow-400"}`}
       aria-hidden="true"
     >
