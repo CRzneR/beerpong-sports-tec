@@ -33,7 +33,7 @@ import { absoluteUrl, languageUrls } from "@/lib/seo";
 
 type BilingualPath = Parameters<typeof languageUrls>[0];
 
-const BILINGUAL: BilingualPath[] = ["/", "/regeln", "/about", "/kontakt"];
+const BILINGUAL: BilingualPath[] = ["/", "/regeln", "/about", "/kontakt", "/pokale-ringe"];
 
 const GERMAN_ONLY: BilingualPath[] = [
   "/spieler", // Pong Stats

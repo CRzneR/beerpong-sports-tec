@@ -263,6 +263,106 @@ export async function getTournaments(): Promise<Tournament[]> {
 
 /*
 |--------------------------------------------------------------------------
+| SPIELFORTSCHRITT FÜR DIE TURNIER-ÜBERSICHT
+|--------------------------------------------------------------------------
+|
+| Pro Turnier: wie viele Gruppenspiele und K.-o.-Spiele gibt es, wie viele
+| davon sind gespielt. Freilose zählen nicht mit. Es werden nur zwei
+| Spalten geladen, in Seiten zu je 1000 Zeilen (Supabase-Limit), damit
+| auch viele Turniere vollständig gezählt werden.
+|
+*/
+
+export type TournamentProgress = {
+  groupDone: number;
+  groupTotal: number;
+  koDone: number;
+  koTotal: number;
+};
+
+const PROGRESS_PAGE_SIZE = 1000;
+
+async function loadStatusRows(
+  table: "tournament_matches" | "tournament_ko_matches",
+  tournamentIds: string[],
+): Promise<{ tournament_id: string; status: string }[]> {
+  const supabase = createClient();
+  const rows: { tournament_id: string; status: string }[] = [];
+
+  for (let from = 0; ; from += PROGRESS_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("tournament_id, status")
+      .in("tournament_id", tournamentIds)
+      .order("id", { ascending: true })
+      .range(from, from + PROGRESS_PAGE_SIZE - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    rows.push(...((data ?? []) as { tournament_id: string; status: string }[]));
+
+    if (!data || data.length < PROGRESS_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return rows;
+}
+
+export async function getTournamentProgress(
+  tournamentIds: string[],
+): Promise<Record<string, TournamentProgress>> {
+  if (tournamentIds.length === 0) {
+    return {};
+  }
+
+  const [groupRows, koRows] = await Promise.all([
+    loadStatusRows("tournament_matches", tournamentIds),
+    loadStatusRows("tournament_ko_matches", tournamentIds),
+  ]);
+
+  const result: Record<string, TournamentProgress> = {};
+
+  for (const id of tournamentIds) {
+    result[id] = { groupDone: 0, groupTotal: 0, koDone: 0, koTotal: 0 };
+  }
+
+  for (const row of groupRows) {
+    const entry = result[row.tournament_id];
+
+    if (!entry) {
+      continue;
+    }
+
+    entry.groupTotal += 1;
+
+    if (row.status === "finished") {
+      entry.groupDone += 1;
+    }
+  }
+
+  for (const row of koRows) {
+    const entry = result[row.tournament_id];
+
+    /* Freilose ("bye") sind keine echten Spiele. */
+    if (!entry || row.status === "bye") {
+      continue;
+    }
+
+    entry.koTotal += 1;
+
+    if (row.status === "finished") {
+      entry.koDone += 1;
+    }
+  }
+
+  return result;
+}
+
+/*
+|--------------------------------------------------------------------------
 | EIN TURNIER MIT TEAMS + SPIELPLAN LADEN
 |--------------------------------------------------------------------------
 */

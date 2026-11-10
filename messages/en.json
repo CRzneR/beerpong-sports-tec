@@ -7,7 +7,9 @@
     "rulesDescription": "All the important beer pong rules at a glance: cup setup, elbow rule, bounce shots, multiple hits, swatting and rebuttal. For fair matches and a shared understanding of the game.",
     "aboutTitle": "About us – BeerPong Sports Tec",
     "aboutDescription": "BeerPong Sports Tec brings real play, competition and data together on one digital platform: track matches, make performance visible and compare players.",
-    "contactTitle": "Contact | BeerPong Sports Tec"
+    "contactTitle": "Contact | BeerPong Sports Tec",
+    "trophiesTitle": "Trophies & Championship Rings for Tournaments – BeerPong Sports Tec",
+    "trophiesDescription": "Give your private beer pong tournaments character: exclusive trophies and Championship Rings for tournament winners, awarded automatically and shown in your tournament and profile."
   },
   "Common": {
     "backHome": "Back to home page",
@@ -1169,7 +1171,28 @@
       "loeschen": "Delete",
       "turnierePageLoadError": "Tournaments could not be loaded.",
       "deleteFailed": "Deleting failed.",
-      "teamsGroups": "{teamCount, plural, one {# team} other {# teams}} · {groupCount, plural, one {# group} other {# groups}}"
+      "teamsGroups": "{teamCount, plural, one {# team} other {# teams}} · {groupCount, plural, one {# group} other {# groups}}",
+      "subtitle": "Create, manage and follow all your tournaments in one place.",
+      "statActive": "{count, plural, one {Active tournament} other {Active tournaments}}",
+      "statPlanned": "{count, plural, one {Planned tournament} other {Planned tournaments}}",
+      "statFinished": "{count, plural, one {Completed tournament} other {Completed tournaments}}",
+      "statTeams": "{count, plural, one {Team in total} other {Teams in total}}",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterPlanned": "Planned",
+      "filterFinished": "Completed",
+      "viewGrid": "Card view",
+      "viewList": "List view",
+      "badgeActive": "Active",
+      "badgePlanned": "Planned",
+      "badgeFinished": "Completed",
+      "phaseGroup": "Group stage · {done} / {total, plural, one {# match} other {# matches}}",
+      "phaseKo": "Knockout stage · {done} / {total, plural, one {# match} other {# matches}}",
+      "phaseDone": "Tournament finished",
+      "progressLabel": "Match progress",
+      "emptyFilter": "No tournaments in this view.",
+      "openTournament": "Open tournament: {name}",
+      "confirmDelete": "Delete “{name}” permanently?"
     },
     "NewPage": {
       "lade": "Loading …",
@@ -1347,7 +1370,111 @@
       "optBracketTitle": "With byes for the top seeds",
       "optBracketText": "If the number of teams isn't 2, 4, 8 or 16 (for example 6), the best teams get a bye in round 1 — with 6 teams, the top two. There are equally many teams on the left and right of the bracket, so only even team counts work.",
       "koTag": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} in Group {group}",
-      "spiele": "Played"
+      "spiele": "Played",
+      "progressTitle": "Tournament progress",
+      "progressGames": "{done} / {total, plural, one {# match} other {# matches}}",
+      "filterAllGroups": "All groups",
+      "filterAllMatches": "All matches",
+      "sortLabel": "Sort order",
+      "sortByGroup": "By group",
+      "sortOpenFirst": "Open first",
+      "legendToggle": "Explain columns",
+      "diff": "Diff",
+      "diffTitle": "Hit difference",
+      "nextMatch": "Next match",
+      "nextMatchOpen": "Open schedule",
+      "nextMatchOpenKo": "Go to knockout stage",
+      "nextMatchGroupsDone": "All group matches have been played.",
+      "nextMatchFinished": "The tournament is over.",
+      "infoGroupsTitle": "Group info",
+      "infoGroups": "{count, plural, one {Group} other {Groups}}",
+      "infoTeamsPerGroup": "Teams per group",
+      "infoAdvancePerGroup": "Advancing per group",
+      "infoAdvanceOverall": "Advancing overall",
+      "detailsTitle": "Tournament details",
+      "detailTeams": "{count, plural, one {Team} other {Teams}}",
+      "detailFormat": "Format",
+      "formatGroup": "Group stage",
+      "formatGroupKo": "Group stage + knockout"
+    }
+  },
+  "Trophies": {
+    "badge": "Feature",
+    "dateIso": "2026-11-10",
+    "imageAlt": "White and gold trophy next to a silver Championship Ring engraved “Beerpong Champions 2025”",
+    "title1": "Trophies & Championship Rings",
+    "title2": "for your private tournaments",
+    "intro": "Give your tournaments a character of their own and make your achievements last. With exclusive trophies and Championship Rings, your wins become real milestones.",
+    "highlight": {
+      "eyebrow": "Highlight",
+      "title1": "A special highlight",
+      "title2": "for tournament winners",
+      "text": "Whether it’s a legendary tournament win, a seasonal competition or your own beer pong event – trophies and Championship Rings reward the best teams and create unforgettable moments.",
+      "cards": [
+        {
+          "title": "Exclusive trophies",
+          "text": "For tournament winners and special placements."
+        },
+        {
+          "title": "Championship Rings",
+          "text": "The ultimate symbol of a tournament win."
+        },
+        {
+          "title": "Individual & unique",
+          "text": "Perfect for your private tournaments on BeerPongSportsTec."
+        }
+      ]
+    },
+    "rings": {
+      "eyebrow": "Award",
+      "title": "The Championship Rings",
+      "text": "More than just an award: the Championship Ring stands for performance, team spirit and the triumph in your tournament.",
+      "bullets": [
+        "High-quality, iconic design",
+        "Exclusive to tournament winners",
+        "With tournament name and year",
+        "Linked digitally to your profile and tournament"
+      ],
+      "imageAlt": "Silver Championship Ring with a golden crest"
+    },
+    "trophies": {
+      "eyebrow": "Trophies",
+      "title": "The trophies",
+      "text": "Classic, high-quality and a real eye-catcher: our trophies make your tournament wins something special to look at.",
+      "bullets": [
+        "Different designs and placements",
+        "Awarded automatically when the tournament ends",
+        "Visible in your tournament and profile"
+      ],
+      "imageAlt": "Three trophies in gold, silver and bronze",
+      "places": [
+        "2nd place",
+        "1st place",
+        "3rd place"
+      ]
+    },
+    "how": {
+      "eyebrow": "Process",
+      "title": "How it works",
+      "steps": [
+        {
+          "title": "Create a tournament",
+          "text": "Start your tournament as usual on BeerPongSportsTec."
+        },
+        {
+          "title": "Play the tournament",
+          "text": "Compete with your teams and find the winner."
+        },
+        {
+          "title": "Receive your award",
+          "text": "The trophy and (optionally) the Championship Ring are awarded automatically and shown in the tournament."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Ready for your next tournament?",
+      "text": "Create a tournament now, compete for the trophy and secure your Championship Ring.",
+      "button": "Create a tournament now"
     }
   }
 }

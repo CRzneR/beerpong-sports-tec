@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { User } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { getOwnProfile, resetPlayerStats } from "@/app/[locale]/spieler/match/playerProfiles";
@@ -25,6 +26,10 @@ import { useLocale, useTranslations } from "next-intl";
  * Turniere. Ist sie größer als 0, weist der Dialog darauf hin, dass sie
  * nach dem Löschen nicht mehr verwaltet werden können.
  *
+ * variant (optional): "league" zeigt den Bereich als breite Zeile im Stil der
+ * Pong-League-Übersicht (Symbol, Text, Button rechts). Standard ist die
+ * schlichte Variante der Spielerseite.
+ *
  * Zum Bestätigen muss der eigene Benutzername eingetippt werden - ein
  * versehentlicher Klick reicht nicht. Die Löschung selbst passiert
  * serverseitig (POST /api/account/delete), weil der Login nur mit dem
@@ -35,9 +40,11 @@ import { useLocale, useTranslations } from "next-intl";
 export function DeleteAccountSection({
   tournamentCount = 0,
   showResetStats = false,
+  variant = "default",
 }: {
   tournamentCount?: number;
   showResetStats?: boolean;
+  variant?: "default" | "league";
 }) {
   const t = useTranslations("Stats.DeleteAccountSection");
   const locale = useLocale();
@@ -133,38 +140,80 @@ export function DeleteAccountSection({
   };
 
   return (
-    <section className="border-t border-white/[0.06] pb-16 pt-8">
-      <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">{t("konto")}</div>
+    <section
+      className={
+        variant === "league"
+          ? "relative pb-16 pt-10"
+          : "border-t border-white/[0.06] pb-16 pt-8"
+      }
+    >
+      {variant === "league" ? (
+        <>
+          {/* Trennlinie, die zu den Seiten hin ausläuft */}
+          <div
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
+            aria-hidden="true"
+          />
 
-      <div className={`mt-4 grid gap-6 ${showResetStats ? "md:grid-cols-2 md:gap-0" : ""}`}>
-        {showResetStats && (
-          <div className="flex flex-col gap-3 md:items-start md:pr-8">
-            <p className="max-w-md text-xs font-semibold text-white/35">{t("entferntDeineBisherigenMatches")}</p>
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between md:gap-8">
+            <div className="flex items-center gap-4 md:gap-5">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/70 md:h-16 md:w-16">
+                <User size={26} strokeWidth={1.6} aria-hidden="true" />
+              </span>
+
+              <div className="min-w-0">
+                <div className="text-lg font-black text-white">{t("konto")}</div>
+
+                <p className="mt-1 max-w-2xl text-sm font-medium leading-relaxed text-white/50">
+                  {t("loeschtDeinenLoginUnd")}
+                </p>
+              </div>
+            </div>
 
             <button
               type="button"
-              onClick={() => setResetOpen(true)}
-              className="self-start rounded-full border border-red-400/20 bg-red-400/[0.05] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400/80 transition hover:bg-red-400/[0.12] hover:text-red-400"
-            >{t("statistikenZuruecksetzen")}</button>
+              onClick={() => setOpen(true)}
+              className="shrink-0 self-start rounded-xl border border-red-400/30 bg-red-400/[0.06] px-6 py-3.5 text-xs font-black uppercase tracking-wider text-red-400 transition hover:bg-red-400/[0.14] md:self-auto"
+            >
+              {t("kontoLoeschen")}
+            </button>
           </div>
-        )}
+        </>
+      ) : (
+        <>
+          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">{t("konto")}</div>
 
-        <div
-          className={`flex flex-col gap-3 md:items-start ${
-            showResetStats
-              ? "border-t border-white/[0.06] pt-6 md:border-l md:border-t-0 md:pl-8 md:pt-0"
-              : ""
-          }`}
-        >
-          <p className="max-w-md text-xs font-semibold text-white/35">{t("loeschtDeinenLoginUnd")}</p>
+          <div className={`mt-4 grid gap-6 ${showResetStats ? "md:grid-cols-2 md:gap-0" : ""}`}>
+            {showResetStats && (
+              <div className="flex flex-col gap-3 md:items-start md:pr-8">
+                <p className="max-w-md text-xs font-semibold text-white/35">{t("entferntDeineBisherigenMatches")}</p>
 
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="self-start rounded-full border border-red-400/20 bg-red-400/[0.05] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400/80 transition hover:bg-red-400/[0.12] hover:text-red-400"
-          >{t("kontoLoeschen")}</button>
-        </div>
-      </div>
+                <button
+                  type="button"
+                  onClick={() => setResetOpen(true)}
+                  className="self-start rounded-full border border-red-400/20 bg-red-400/[0.05] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400/80 transition hover:bg-red-400/[0.12] hover:text-red-400"
+                >{t("statistikenZuruecksetzen")}</button>
+              </div>
+            )}
+
+            <div
+              className={`flex flex-col gap-3 md:items-start ${
+                showResetStats
+                  ? "border-t border-white/[0.06] pt-6 md:border-l md:border-t-0 md:pl-8 md:pt-0"
+                  : ""
+              }`}
+            >
+              <p className="max-w-md text-xs font-semibold text-white/35">{t("loeschtDeinenLoginUnd")}</p>
+
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="self-start rounded-full border border-red-400/20 bg-red-400/[0.05] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400/80 transition hover:bg-red-400/[0.12] hover:text-red-400"
+              >{t("kontoLoeschen")}</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {resetOpen && (
         <div

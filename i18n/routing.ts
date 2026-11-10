@@ -46,6 +46,7 @@ export const routing = defineRouting({
     "/impressum": { de: "/impressum", en: "/legal-notice" },
     "/datenschutz": { de: "/datenschutz", en: "/privacy" },
     "/agb": { de: "/agb", en: "/terms" },
+    "/pokale-ringe": { de: "/pokale-ringe", en: "/trophies-and-rings" },
 
     /* Pong Stats */
     "/spieler": { de: "/spieler", en: "/pong-stats" },

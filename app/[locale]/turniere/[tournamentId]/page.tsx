@@ -1,10 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import { localizePath } from "@/lib/localizePath";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Info,
+  Settings,
+  Trophy,
+  Users,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   deleteTournament,
@@ -45,6 +56,8 @@ import { getOwnProStatus, getOwnProfile } from "@/app/[locale]/spieler/match/pla
 import { createClient } from "@/lib/supabase/client";
 import { useLocale, useTranslations } from "next-intl";
 import { useRoundText } from "../useRoundText";
+import { LeagueBanner } from "@/components/league/LeagueArt";
+import { StatusBadge } from "@/components/league/LeagueBits";
 import type { Locale } from "@/i18n/routing";
 
 type TabId = "gruppen" | "spielplan" | "ko" | "teams" | "verwaltung";
@@ -108,6 +121,11 @@ export default function TurnierDetailPage() {
    */
 
   const [tab, setTab] = useState<TabId>("gruppen");
+
+  /* Filter der Tabs "Gruppen" und "Spielplan" ("all" oder ein Gruppenbuchstabe) und Sortierung des Spielplans. */
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [planFilter, setPlanFilter] = useState("all");
+  const [planSort, setPlanSort] = useState<"group" | "open">("group");
 
   const [copied, setCopied] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -542,177 +560,344 @@ export default function TurnierDetailPage() {
     );
   }
 
+  /*
+   * ABGELEITETE WERTE FÜR DIE NEUE OBERFLÄCHE
+   */
+
+  /* Spielfortschritt: läuft die K.-o.-Phase, zählt sie (ohne Freilose), sonst die Gruppenphase. */
+  const koReal = koMatches.filter((match) => match.status !== "bye");
+  const inKoPhase = koStarted && koReal.length > 0;
+  const progressDone = inKoPhase
+    ? koReal.filter((match) => match.status === "finished").length
+    : matches.filter((match) => match.status === "finished").length;
+  const progressTotal = inKoPhase ? koReal.length : matches.length;
+  const progressPercent =
+    tournament.status === "finished"
+      ? 100
+      : progressTotal > 0
+        ? Math.round((progressDone / progressTotal) * 100)
+        : 0;
+
+  /* Nächstes Spiel: erstes offenes Gruppenspiel, danach das erste spielbare K.-o.-Spiel. */
+  const nextGroupMatch = matches.find((match) => match.status !== "finished");
+  const nextKoMatch = nextGroupMatch
+    ? undefined
+    : koMatches
+        .filter((match) => match.status === "pending" && match.teamAId && match.teamBId)
+        .sort((a, b) => a.round - b.round || a.slot - b.slot)[0];
+
+  const nextMatch: NextMatchInfo = nextGroupMatch
+    ? {
+        kind: "group",
+        label: t("gruppe2", { groupLabel: nextGroupMatch.groupLabel }),
+        teamA: teamById(nextGroupMatch.teamAId)?.name ?? "?",
+        teamB: teamById(nextGroupMatch.teamBId)?.name ?? "?",
+      }
+    : nextKoMatch
+      ? {
+          kind: "ko",
+          label: roundOf(koRoundCode(nextKoMatch.round, koTotal)),
+          teamA: teamById(nextKoMatch.teamAId ?? "")?.name ?? "?",
+          teamB: teamById(nextKoMatch.teamBId ?? "")?.name ?? "?",
+        }
+      : {
+          kind: tournament.status === "finished" ? "finished" : "groupsDone",
+        };
+
+  const handleOpenNextMatch = () => {
+    if (nextGroupMatch) {
+      setPlanFilter("all");
+      setTab("spielplan");
+    } else {
+      setTab("ko");
+    }
+  };
+
+  /* Gruppen-Infos */
+  const teamsPerGroup = groupLabels.map(
+    (label) => teams.filter((team) => team.groupLabel === label).length,
+  );
+  const minTeams = teamsPerGroup.length ? Math.min(...teamsPerGroup) : 0;
+  const maxTeams = teamsPerGroup.length ? Math.max(...teamsPerGroup) : 0;
+  const teamsPerGroupText = minTeams === maxTeams ? String(minTeams) : `${minTeams}–${maxTeams}`;
+  const advanceOverall = tournament.koSelect === "overall";
+  const advanceText = tournament.koPerGroup !== null ? String(tournament.koPerGroup) : "–";
+
+  const tabs: { id: TabId; icon: LucideIcon }[] = [
+    { id: "gruppen", icon: Users },
+    { id: "spielplan", icon: CalendarDays },
+    { id: "ko", icon: Trophy },
+    { id: "teams", icon: UsersRound },
+    { id: "verwaltung", icon: Settings },
+  ];
+
+  const groupFilterItems = [
+    { key: "all", label: t("filterAllGroups") },
+    ...groupLabels.map((label) => ({ key: label, label: t("gruppe2", { groupLabel: label }) })),
+  ];
+
+  const planFilterItems = [
+    { key: "all", label: t("filterAllMatches") },
+    ...groupLabels.map((label) => ({ key: label, label: t("gruppe2", { groupLabel: label }) })),
+  ];
+
+  const shownGroupLabels = groupFilter === "all" ? groupLabels : groupLabels.filter((label) => label === groupFilter);
+  const shownPlanLabels = planFilter === "all" ? groupLabels : groupLabels.filter((label) => label === planFilter);
+
+  /* Eine Spielzeile: Veranstalter trägt ein, alle anderen sehen nur. */
+  const renderMatch = (match: TournamentMatch, groupTag?: string) =>
+    isOwner ? (
+      <MatchRow
+        key={match.id}
+        match={match}
+        teamAName={teamById(match.teamAId)?.name ?? "?"}
+        teamBName={teamById(match.teamBId)?.name ?? "?"}
+        groupTag={groupTag}
+        onSave={handleSaveResult}
+      />
+    ) : (
+      <MatchRowReadOnly
+        key={match.id}
+        match={match}
+        teamAName={teamById(match.teamAId)?.name ?? "?"}
+        teamBName={teamById(match.teamBId)?.name ?? "?"}
+        groupTag={groupTag}
+        highlight={match.teamAId === myTeamId || match.teamBId === myTeamId}
+      />
+    );
+
+  /* Spielplan "Offene zuerst": alle gefilterten Spiele in einer Liste, offene oben. */
+  const openFirstMatches = matches
+    .filter((match) => shownPlanLabels.includes(match.groupLabel))
+    .map((match, index) => ({ match, index }))
+    .sort(
+      (a, b) =>
+        Number(a.match.status === "finished") - Number(b.match.status === "finished") ||
+        a.index - b.index,
+    )
+    .map((entry) => entry.match);
+
   return (
-    <main className="min-h-screen bg-[#07090d] px-5 py-10 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
+    <main className="relative min-h-screen overflow-hidden bg-[#07090d] text-white">
+      <LeagueBanner compact />
+
+      <div className="relative mx-auto max-w-[1464px] px-5 py-8 md:px-8 md:py-10">
         <Link
           href="/turniere"
-          className="group mb-8 inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
+          className="group inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white"
         >
-          <span className="transition-transform group-hover:-translate-x-1">←</span>{t("zurueckZuTurnieren")}</Link>
+          <ArrowLeft
+            size={16}
+            strokeWidth={2}
+            className="transition-transform group-hover:-translate-x-1"
+            aria-hidden="true"
+          />
+          {t("zurueckZuTurnieren")}
+        </Link>
 
-        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("pongLeague")}</div>
+        {/* KOPF: Name, Status und Turnierfortschritt */}
 
-        <h1 className="mt-1 text-2xl font-black uppercase tracking-tight">{tournament.name}</h1>
+        <header className="mt-10 grid gap-6 md:mt-12 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
+          <div className="min-w-0">
+            <div className="text-xs font-black uppercase tracking-[0.3em] text-yellow-400">{t("pongLeague")}</div>
 
-        <div className="mt-1 text-xs font-bold text-white/30">
-          {t("teamsGruppen", { teams: tournament.teamCount, groups: tournament.groupCount })}
-        </div>
+            <h1 className="mt-3 break-words text-4xl font-black uppercase tracking-tight md:text-5xl">
+              {tournament.name}
+            </h1>
 
-        {championTeam && (
-          <div className="mr-2 mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-400/[0.12] px-4 py-2 text-[11px] font-black uppercase tracking-wider text-yellow-300">{t("turniersieger", { name: championTeam.name })}</div>
-        )}
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/60">
+              <span className="inline-flex items-center gap-2">
+                <Users size={16} strokeWidth={1.75} aria-hidden="true" />
+                {t("teamsGruppen", { teams: tournament.teamCount, groups: tournament.groupCount })}
+              </span>
 
-        {myTeam && (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">{t("duSpielstFuer", { name: myTeam.name })}</div>
-        )}
+              <StatusBadge status={tournament.status} />
+            </div>
+
+            {championTeam && (
+              <div className="mr-2 mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-400/[0.12] px-4 py-2 text-[11px] font-black uppercase tracking-wider text-yellow-300">{t("turniersieger", { name: championTeam.name })}</div>
+            )}
+
+            {myTeam && (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">{t("duSpielstFuer", { name: myTeam.name })}</div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[#0b0d12]/70 px-5 py-4 backdrop-blur">
+            <div className="flex items-start justify-between gap-4">
+              <div className="text-lg font-black">{t("progressTitle")}</div>
+
+              <div className="text-right text-sm text-white/60">
+                <div>{t("progressGames", { done: progressDone, total: progressTotal })}</div>
+                <div className="mt-0.5 font-black text-white">{progressPercent} %</div>
+              </div>
+            </div>
+
+            <div
+              className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-white/10"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPercent}
+              aria-label={t("progressTitle")}
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  tournament.status === "finished"
+                    ? "bg-emerald-400"
+                    : "bg-gradient-to-r from-yellow-500 to-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.5)]"
+                }`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </header>
 
         {/* MENÜ */}
 
-        <div className="mt-8 flex gap-2 overflow-x-auto border-b border-white/[0.08]">
-          {TAB_IDS.filter((id) => id !== "verwaltung" || isOwner).map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`shrink-0 px-4 py-3 text-xs font-black uppercase tracking-wider transition ${
-                tab === id
-                  ? "border-b-2 border-yellow-400 text-yellow-400"
-                  : "text-white/30 hover:text-white"
-              }`}
-            >
-              {t(`tab_${id}`)}
+        <nav className="mt-8 flex gap-1 overflow-x-auto border-b border-white/10" role="tablist">
+          {tabs
+            .filter(({ id }) => id !== "verwaltung" || isOwner)
+            .map(({ id, icon: Icon }) => {
+              const active = tab === id;
 
-              {id === "ko" && isOwner && isPro === false && !koStarted && (
-                <span className="ml-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-1.5 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">{t("pro")}</span>
-              )}
-            </button>
-          ))}
-        </div>
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(id)}
+                  className={`relative inline-flex shrink-0 items-center gap-2.5 px-4 py-4 text-base font-semibold transition md:px-6 ${
+                    active ? "text-yellow-400" : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+
+                  {t(`tab_${id}`)}
+
+                  {id === "ko" && isOwner && isPro === false && !koStarted && (
+                    <span className="rounded-full border border-yellow-400/30 bg-yellow-400/[0.08] px-1.5 py-0.5 text-[8px] font-black tracking-wider text-yellow-400">{t("pro")}</span>
+                  )}
+
+                  {active && (
+                    <span
+                      className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.6)]"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              );
+            })}
+        </nav>
 
         {/* GRUPPEN */}
 
         {tab === "gruppen" && (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {groupLabels.map((groupLabel) => {
-              const groupTeams = teams.filter((team) => team.groupLabel === groupLabel);
-              const groupMatches = matches.filter((match) => match.groupLabel === groupLabel);
-              const standings = computeGroupStandings(groupTeams, groupMatches);
+          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
+            <div className="min-w-0">
+              <FilterPills items={groupFilterItems} value={groupFilter} onChange={setGroupFilter} />
 
-              return (
-                <div
-                  key={groupLabel}
-                  className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
-                >
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("gruppe2", { groupLabel })}</div>
+              <div className="mt-5 space-y-5">
+                {shownGroupLabels.map((groupLabel) => (
+                  <GroupCard
+                    key={groupLabel}
+                    groupLabel={groupLabel}
+                    teams={teams.filter((team) => team.groupLabel === groupLabel)}
+                    matches={matches.filter((match) => match.groupLabel === groupLabel)}
+                    myTeamId={myTeamId}
+                  />
+                ))}
+              </div>
+            </div>
 
-                  <table className="mt-4 w-full text-left">
-                    <thead>
-                      <tr className="text-[9px] font-black uppercase tracking-wider text-white/30">
-                        <th className="pb-2">{t("team")}</th>
-                        <th className="pb-2 text-center" title={t("spiele")}>{t("sp")}</th>
-                        <th className="pb-2 text-center" title={t("siege")}>{t("s")}</th>
-                        <th className="pb-2 text-center" title={t("niederlagen")}>{t("n")}</th>
-                        <th
-                          className="pb-2 text-center"
-                          title={t("trefferverhaeltnisErzieltKassiert")}
-                        >{t("treffer")}</th>
-                        <th className="pb-2 text-center" title={t("punkte")}>{t("pkt")}</th>
-                        <th className="pb-2 pl-2 text-right" title={t("formLetzte3Spiele")}>{t("form")}</th>
-                      </tr>
-                    </thead>
+            <aside className="space-y-5">
+              <NextMatchCard info={nextMatch} onOpen={handleOpenNextMatch} />
 
-                    <tbody>
-                      {standings.map((row) => (
-                        <tr
-                          key={row.team.id}
-                          className={`border-t border-white/[0.06] ${
-                            row.team.id === myTeamId ? "bg-yellow-400/[0.07]" : ""
-                          }`}
-                        >
-                          <td className="py-2 pr-2 text-sm font-bold text-white">
-                            {row.team.id === myTeamId && (
-                              <span
-                                className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-yellow-400 align-middle"
-                                aria-label={t("deinTeam")}
-                              />
-                            )}
-                            {row.team.name}
-                          </td>
-                          <td className="py-2 text-center text-sm text-white/50">{row.played}</td>
-                          <td className="py-2 text-center text-sm text-white/50">{row.wins}</td>
-                          <td className="py-2 text-center text-sm text-white/50">{row.losses}</td>
-                          <td className="py-2 text-center text-sm whitespace-nowrap text-white/50">
-                            {row.scoredTotal}:{row.concededTotal}
-                          </td>
-                          <td className="py-2 text-center text-sm font-black text-yellow-400">
-                            {row.points}
-                          </td>
-                          <td className="py-2 pl-2">
-                            <div className="flex justify-end gap-1">
-                              {row.form.length === 0 ? (
-                                <span className="text-[9px] text-white/20">–</span>
-                              ) : (
-                                row.form.map((result, index) => (
-                                  <span
-                                    key={index}
-                                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] text-[8px] font-black ${
-                                      result === "S"
-                                        ? "bg-green-400/20 text-green-400"
-                                        : result === "N"
-                                          ? "bg-red-400/20 text-red-400"
-                                          : "bg-white/10 text-white/40"
-                                    }`}
-                                  >
-                                    {result}
-                                  </span>
-                                ))
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
+              <SideCard icon={Info} title={t("infoGroupsTitle")}>
+                <StatTriple
+                  items={[
+                    {
+                      value: String(groupLabels.length),
+                      label: t("infoGroups", { count: groupLabels.length }),
+                    },
+                    { value: teamsPerGroupText, label: t("infoTeamsPerGroup") },
+                    {
+                      value: advanceText,
+                      label: advanceOverall ? t("infoAdvanceOverall") : t("infoAdvancePerGroup"),
+                    },
+                  ]}
+                />
+              </SideCard>
+            </aside>
           </div>
         )}
 
-        {/* SPIELPLAN */}
+        {/* SPIELPLAN (ohne Uhrzeiten) */}
 
         {tab === "spielplan" && (
-          <div className="mt-6 space-y-6">
-            {groupLabels.map((groupLabel) => (
-              <div key={groupLabel}>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("gruppe2", { groupLabel })}</div>
+          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
+            <div className="min-w-0 rounded-3xl border border-white/10 bg-white/[0.02] p-4 md:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <FilterPills items={planFilterItems} value={planFilter} onChange={setPlanFilter} />
 
-                <div className="mt-3 space-y-2">
-                  {matches
-                    .filter((match) => match.groupLabel === groupLabel)
-                    .map((match) =>
-                      isOwner ? (
-                        <MatchRow
-                          key={match.id}
-                          match={match}
-                          teamAName={teamById(match.teamAId)?.name ?? "?"}
-                          teamBName={teamById(match.teamBId)?.name ?? "?"}
-                          onSave={handleSaveResult}
-                        />
-                      ) : (
-                        <MatchRowReadOnly
-                          key={match.id}
-                          match={match}
-                          teamAName={teamById(match.teamAId)?.name ?? "?"}
-                          teamBName={teamById(match.teamBId)?.name ?? "?"}
-                          highlight={match.teamAId === myTeamId || match.teamBId === myTeamId}
-                        />
-                      ),
-                    )}
-                </div>
+                <select
+                  value={planSort}
+                  onChange={(event) => setPlanSort(event.target.value as "group" | "open")}
+                  aria-label={t("sortLabel")}
+                  className="rounded-xl border border-white/10 bg-[#0b0f14] px-4 py-2.5 text-sm font-semibold text-white focus:border-yellow-400/40 focus:outline-none"
+                >
+                  <option value="group">{t("sortByGroup")}</option>
+                  <option value="open">{t("sortOpenFirst")}</option>
+                </select>
               </div>
-            ))}
+
+              {planSort === "group" ? (
+                <div className="mt-6 space-y-6">
+                  {shownPlanLabels.map((groupLabel) => (
+                    <div key={groupLabel}>
+                      <div className="text-xl font-black text-yellow-400">{t("gruppe2", { groupLabel })}</div>
+
+                      <div className="mt-3 divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+                        {matches
+                          .filter((match) => match.groupLabel === groupLabel)
+                          .map((match) => renderMatch(match))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-6 divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+                  {openFirstMatches.map((match) =>
+                    renderMatch(match, t("gruppe2", { groupLabel: match.groupLabel })),
+                  )}
+                </div>
+              )}
+            </div>
+
+            <aside className="space-y-5">
+              <NextMatchCard info={nextMatch} onOpen={handleOpenNextMatch} />
+
+              <SideCard icon={Info} title={t("detailsTitle")}>
+                <StatTriple
+                  items={[
+                    {
+                      value: String(teams.length),
+                      label: t("detailTeams", { count: teams.length }),
+                    },
+                    {
+                      value: String(groupLabels.length),
+                      label: t("infoGroups", { count: groupLabels.length }),
+                    },
+                    {
+                      value: koStarted ? t("formatGroupKo") : t("formatGroup"),
+                      label: t("detailFormat"),
+                      small: true,
+                    },
+                  ]}
+                />
+              </SideCard>
+            </aside>
           </div>
         )}
 
@@ -1102,7 +1287,7 @@ export default function TurnierDetailPage() {
         {/* TEAMS */}
 
         {tab === "teams" && (
-          <div className="mt-6 space-y-6">
+          <div className="mt-6 max-w-5xl space-y-6">
             {isOwner && inviteUrl && (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">{t("spielerEinladen")}</div>
@@ -1276,7 +1461,7 @@ export default function TurnierDetailPage() {
         {/* VERWALTUNG */}
 
         {tab === "verwaltung" && isOwner && (
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 max-w-5xl space-y-4">
             {koStarted && (
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t("kOPhase")}</div>
@@ -1357,6 +1542,308 @@ export default function TurnierDetailPage() {
 
 /*
 |--------------------------------------------------------------------------
+| BAUSTEINE DER TURNIERSEITE
+|--------------------------------------------------------------------------
+*/
+
+type NextMatchInfo = {
+  kind: "group" | "ko" | "groupsDone" | "finished";
+  label?: string;
+  teamA?: string;
+  teamB?: string;
+};
+
+/* Filter als Pillen ("Alle Gruppen", "Gruppe A", ...). */
+function FilterPills({
+  items,
+  value,
+  onChange,
+}: {
+  items: { key: string; label: string }[];
+  value: string;
+  onChange: (key: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2.5">
+      {items.map((item) => {
+        const selected = value === item.key;
+
+        return (
+          <button
+            key={item.key}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(item.key)}
+            className={`rounded-full border px-5 py-2.5 text-sm font-bold transition ${
+              selected
+                ? "border-yellow-400 bg-yellow-400 text-black shadow-[0_0_24px_rgba(250,204,21,0.2)]"
+                : "border-white/10 bg-white/[0.02] text-white/80 hover:border-white/25 hover:text-white"
+            }`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* Karte der rechten Spalte: Symbol + Titel, darunter der Inhalt. */
+function SideCard({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 md:p-6">
+      <div className="flex items-center gap-3 text-lg font-black">
+        <Icon size={22} strokeWidth={1.75} className="text-yellow-400" aria-hidden="true" />
+        {title}
+      </div>
+
+      <div className="mt-4 border-t border-white/10 pt-5">{children}</div>
+    </section>
+  );
+}
+
+/* Drei Kennzahlen nebeneinander, durch feine Linien getrennt. */
+function StatTriple({ items }: { items: { value: string; label: string; small?: boolean }[] }) {
+  return (
+    <div className="grid grid-cols-3 divide-x divide-white/10">
+      {items.map((item) => (
+        <div key={item.label} className="px-2 text-center">
+          <div
+            className={`font-black text-yellow-400 ${
+              item.small ? "text-base leading-9" : "text-3xl leading-9"
+            }`}
+          >
+            {item.value}
+          </div>
+
+          <div className="mt-1 text-sm text-white/60">{item.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* "Nächstes Spiel": goldene Karte mit Pfeil zum Spielplan bzw. zur K.-o.-Phase. */
+function NextMatchCard({ info, onOpen }: { info: NextMatchInfo; onOpen: () => void }) {
+  const t = useTranslations("League.DetailPage");
+
+  const playable = info.kind === "group" || info.kind === "ko";
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl border border-yellow-400/70 bg-gradient-to-br from-yellow-400/[0.1] via-[#0b0d12] to-[#0b0d12] p-5 shadow-[0_0_40px_rgba(250,204,21,0.1)] md:p-6">
+      <div className="flex items-center gap-3 text-lg font-black">
+        <CalendarDays size={22} strokeWidth={1.75} className="text-yellow-400" aria-hidden="true" />
+        {t("nextMatch")}
+      </div>
+
+      {playable ? (
+        <div className="mt-4 flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-sm text-white/70">{info.label}</div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 text-xl font-black md:text-2xl">
+              <span className="break-words">{info.teamA}</span>
+              <span className="text-white/40" aria-hidden="true">
+                —
+              </span>
+              <span className="break-words">{info.teamB}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label={info.kind === "ko" ? t("nextMatchOpenKo") : t("nextMatchOpen")}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-yellow-400 text-yellow-400 transition hover:bg-yellow-400 hover:text-black"
+          >
+            <ArrowRight size={22} strokeWidth={2.25} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <p className="mt-4 text-sm font-semibold text-white/60">
+          {info.kind === "finished" ? t("nextMatchFinished") : t("nextMatchGroupsDone")}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| GRUPPENKARTE: TABELLE MIT FORM
+|--------------------------------------------------------------------------
+*/
+
+function GroupCard({
+  groupLabel,
+  teams,
+  matches,
+  myTeamId,
+}: {
+  groupLabel: string;
+  teams: TournamentTeam[];
+  matches: TournamentMatch[];
+  myTeamId: string | null;
+}) {
+  const t = useTranslations("League.DetailPage");
+
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  const standings = computeGroupStandings(teams, matches);
+  const done = matches.filter((match) => match.status === "finished").length;
+  const total = matches.length;
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  const legend = [
+    `${t("sp")} = ${t("spiele")}`,
+    `${t("s")} = ${t("siege")}`,
+    `${t("n")} = ${t("niederlagen")}`,
+    `${t("treffer")} = ${t("trefferverhaeltnisErzieltKassiert")}`,
+    `${t("diff")} = ${t("diffTitle")}`,
+    `${t("pkt")} = ${t("punkte")}`,
+    `${t("form")} = ${t("formLetzte3Spiele")}`,
+  ].join(" · ");
+
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 text-xl font-black text-yellow-400">
+          <Users size={22} strokeWidth={1.75} aria-hidden="true" />
+          {t("gruppe2", { groupLabel })}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-white/70">{t("progressGames", { done, total })}</span>
+
+          <div
+            className="h-2 w-24 overflow-hidden rounded-full bg-white/10 md:w-32"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+            aria-label={t("progressTitle")}
+          >
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-yellow-500 to-yellow-300"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setLegendOpen((open) => !open)}
+            aria-expanded={legendOpen}
+            aria-label={t("legendToggle")}
+            title={t("legendToggle")}
+            className="text-white/70 transition hover:text-white"
+          >
+            <Info size={20} strokeWidth={1.75} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {legendOpen && <p className="mt-3 text-xs font-semibold leading-relaxed text-white/50">{legend}</p>}
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-left sm:min-w-[640px]">
+          <thead>
+            <tr className="text-[11px] font-bold uppercase tracking-wider text-white/45">
+              <th className="w-10 pb-3 pl-1">#</th>
+              <th className="pb-3">{t("team")}</th>
+              <th className="pb-3 text-center" title={t("spiele")}>{t("sp")}</th>
+              <th className="pb-3 text-center" title={t("siege")}>{t("s")}</th>
+              <th className="pb-3 text-center" title={t("niederlagen")}>{t("n")}</th>
+              <th className="hidden pb-3 text-center sm:table-cell" title={t("trefferverhaeltnisErzieltKassiert")}>{t("treffer")}</th>
+              <th className="hidden pb-3 text-center sm:table-cell" title={t("diffTitle")}>{t("diff")}</th>
+              <th className="pb-3 text-center" title={t("punkte")}>{t("pkt")}</th>
+              <th className="pb-3 text-center" title={t("formLetzte3Spiele")}>{t("form")}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {standings.map((row, index) => {
+              const mine = row.team.id === myTeamId;
+              const diff = row.scoredTotal - row.concededTotal;
+              const form = [
+                ...Array.from({ length: Math.max(0, 3 - row.form.length) }, () => null),
+                ...row.form,
+              ];
+
+              return (
+                <tr
+                  key={row.team.id}
+                  className={`border-t border-white/[0.06] ${mine ? "bg-yellow-400/[0.07]" : ""}`}
+                >
+                  <td className="py-2.5 pl-1 text-sm font-bold text-white/80">{index + 1}</td>
+
+                  <td className="py-2.5 pr-3">
+                    <div className="flex items-center gap-3">
+                      <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-white/70 sm:flex">
+                        <Users size={16} strokeWidth={1.75} aria-hidden="true" />
+                      </span>
+
+                      <span className="break-words text-sm font-black text-white sm:text-base">{row.team.name}</span>
+
+                      {mine && (
+                        <span
+                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-400"
+                          aria-label={t("deinTeam")}
+                        />
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="py-2.5 text-center text-sm text-white/80">{row.played}</td>
+                  <td className="py-2.5 text-center text-sm text-white/80">{row.wins}</td>
+                  <td className="py-2.5 text-center text-sm text-white/80">{row.losses}</td>
+                  <td className="hidden whitespace-nowrap py-2.5 text-center text-sm text-white/80 sm:table-cell">
+                    {row.scoredTotal}:{row.concededTotal}
+                  </td>
+                  <td className="hidden py-2.5 text-center text-sm text-white/80 sm:table-cell">
+                    {diff > 0 ? `+${diff}` : diff}
+                  </td>
+                  <td className="py-2.5 text-center text-lg font-black text-yellow-400">{row.points}</td>
+
+                  <td className="py-2.5">
+                    <div className="flex justify-center gap-1 sm:gap-1.5">
+                      {form.map((result, formIndex) => (
+                        <span
+                          key={formIndex}
+                          className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-black sm:w-8 ${
+                            result === "S"
+                              ? "bg-green-400/20 text-green-400"
+                              : result === "N"
+                                ? "bg-red-400/20 text-red-400"
+                                : result === "U"
+                                  ? "bg-white/10 text-white/60"
+                                  : "bg-white/[0.08] text-white/40"
+                          }`}
+                        >
+                          {result === "S" ? t("s") : result === "N" ? t("n") : (result ?? "–")}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
 | SPIEL-ZEILE MIT ERGEBNIS-EINGABE
 |--------------------------------------------------------------------------
 |
@@ -1365,17 +1852,51 @@ export default function TurnierDetailPage() {
 | gesperrt - "Bearbeiten" öffnet sie wieder zum Korrigieren, danach
 | wird erneut gespeichert und wieder gesperrt.
 |
+| Ohne Datum und Uhrzeit: Die Zeile zeigt nur die beiden Teams und das
+| Ergebnis. groupTag erscheint nur in der Sortierung "Offene zuerst".
+|
 */
+
+function TeamCell({ name, className = "" }: { name: string; className?: string }) {
+  return (
+    <div className={`flex min-w-0 items-center gap-3 ${className}`}>
+      <span
+        className="h-3 w-3 shrink-0 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+        aria-hidden="true"
+      />
+
+      <span className="min-w-0 truncate text-base font-bold text-white">{name}</span>
+    </div>
+  );
+}
+
+/*
+ * Raster einer Spielzeile. Mobil stehen die Teams untereinander, das Ergebnis
+ * jeweils rechts daneben. Ab md steht alles in einer Reihe:
+ * Team A, Ergebnis A : Ergebnis B, Team B.
+ */
+const ROW_GRID_CLASS =
+  "grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)] md:gap-x-4";
+const CELL_A_CLASS = "col-start-1 row-start-1 md:col-auto md:row-auto";
+const SCORE_A_CLASS = "col-start-2 row-start-1 md:col-auto md:row-auto";
+const COLON_CLASS = "hidden text-white/30 md:block";
+const SCORE_B_CLASS = "col-start-2 row-start-2 md:col-auto md:row-auto";
+const CELL_B_CLASS = "col-start-1 row-start-2 md:col-auto md:row-auto";
+
+const SCORE_INPUT_CLASS =
+  "h-11 w-16 shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-1 text-center text-base font-black text-white focus:border-yellow-400/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40";
 
 function MatchRow({
   match,
   teamAName,
   teamBName,
+  groupTag,
   onSave,
 }: {
   match: TournamentMatch;
   teamAName: string;
   teamBName: string;
+  groupTag?: string;
   onSave: (
     matchId: string,
     teamAScore: number,
@@ -1422,50 +1943,56 @@ function MatchRow({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-        <div className="min-w-0 flex-1 truncate text-sm font-bold text-white">{teamAName}</div>
+      <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:gap-6 md:px-5">
+        {groupTag && (
+          <span className="shrink-0 text-[11px] font-black uppercase tracking-wider text-yellow-400/80 md:w-24">
+            {groupTag}
+          </span>
+        )}
 
-        <input
-          type="number"
-          min={0}
-          value={scoreA}
-          onChange={(event) => setScoreA(event.target.value)}
-          disabled={isLocked}
-          className="w-14 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-2 text-center text-sm font-black text-white focus:border-yellow-400/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-        />
+        <div className={ROW_GRID_CLASS}>
+          <TeamCell name={teamAName} className={CELL_A_CLASS} />
 
-        <span className="shrink-0 text-white/20">:</span>
+          <input
+            type="number"
+            min={0}
+            value={scoreA}
+            onChange={(event) => setScoreA(event.target.value)}
+            disabled={isLocked}
+            aria-label={teamAName}
+            className={`${SCORE_INPUT_CLASS} ${SCORE_A_CLASS}`}
+          />
 
-        <input
-          type="number"
-          min={0}
-          value={scoreB}
-          onChange={(event) => setScoreB(event.target.value)}
-          disabled={isLocked}
-          className="w-14 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-2 text-center text-sm font-black text-white focus:border-yellow-400/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-        />
+          <span className={COLON_CLASS}>:</span>
 
-        <div className="min-w-0 flex-1 truncate text-right text-sm font-bold text-white">
-          {teamBName}
+          <input
+            type="number"
+            min={0}
+            value={scoreB}
+            onChange={(event) => setScoreB(event.target.value)}
+            disabled={isLocked}
+            aria-label={teamBName}
+            className={`${SCORE_INPUT_CLASS} ${SCORE_B_CLASS}`}
+          />
+
+          <TeamCell name={teamBName} className={CELL_B_CLASS} />
         </div>
 
         <button
           type="button"
           onClick={isLocked ? handleEdit : handleSave}
           disabled={saving}
-          className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          className={`w-full shrink-0 rounded-full px-5 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 md:w-32 ${
             isLocked
-              ? "border border-white/[0.08] text-white/30 hover:text-white"
-              : "bg-yellow-400 text-black hover:bg-yellow-300"
+              ? "border border-white/15 text-white/60 hover:border-white/30 hover:text-white"
+              : "bg-yellow-400 text-black shadow-[0_0_20px_rgba(250,204,21,0.18)] hover:bg-yellow-300"
           }`}
         >
           {saving ? t("speichert") : isLocked ? t("bearbeiten") : t("speichern")}
         </button>
       </div>
 
-      {saveError && (
-        <div className="mt-1.5 px-1 text-[10px] font-bold text-red-400/70">{saveError}</div>
-      )}
+      {saveError && <div className="px-5 pb-3 text-xs font-bold text-red-400/70">{saveError}</div>}
     </div>
   );
 }
@@ -1480,34 +2007,45 @@ function MatchRowReadOnly({
   match,
   teamAName,
   teamBName,
+  groupTag,
   highlight,
 }: {
   match: TournamentMatch;
   teamAName: string;
   teamBName: string;
+  groupTag?: string;
   highlight: boolean;
 }) {
   const finished =
     match.status === "finished" && match.teamAScore !== null && match.teamBScore !== null;
 
+  const scoreBoxClass = (extra: string) =>
+    `flex h-11 w-16 items-center justify-center rounded-xl text-base font-black ${
+      finished ? "bg-white/[0.06] text-white" : "text-white/30"
+    } ${extra}`;
+
   return (
     <div
-      className={`flex items-center gap-3 rounded-2xl border p-4 ${
-        highlight ? "border-yellow-400/40 bg-yellow-400/[0.05]" : "border-white/10 bg-white/[0.02]"
+      className={`flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:gap-6 md:px-5 ${
+        highlight ? "bg-yellow-400/[0.06]" : ""
       }`}
     >
-      <div className="min-w-0 flex-1 truncate text-sm font-bold text-white">{teamAName}</div>
+      {groupTag && (
+        <span className="shrink-0 text-[11px] font-black uppercase tracking-wider text-yellow-400/80 md:w-24">
+          {groupTag}
+        </span>
+      )}
 
-      <div
-        className={`shrink-0 rounded-lg px-3 py-1.5 text-center text-sm font-black ${
-          finished ? "bg-white/[0.06] text-white" : "text-white/25"
-        }`}
-      >
-        {finished ? `${match.teamAScore} : ${match.teamBScore}` : "– : –"}
-      </div>
+      <div className={ROW_GRID_CLASS}>
+        <TeamCell name={teamAName} className={CELL_A_CLASS} />
 
-      <div className="min-w-0 flex-1 truncate text-right text-sm font-bold text-white">
-        {teamBName}
+        <div className={scoreBoxClass(SCORE_A_CLASS)}>{finished ? match.teamAScore : "–"}</div>
+
+        <span className={COLON_CLASS}>:</span>
+
+        <div className={scoreBoxClass(SCORE_B_CLASS)}>{finished ? match.teamBScore : "–"}</div>
+
+        <TeamCell name={teamBName} className={CELL_B_CLASS} />
       </div>
     </div>
   );

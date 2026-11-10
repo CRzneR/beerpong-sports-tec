@@ -7,7 +7,9 @@
     "rulesDescription": "Alle wichtigen Beer-Pong-Regeln auf einen Blick: Aufstellung, Ellenbogenregel, Aufsetzer, Mehrfachtreffer, Abwehren und Spielende. Für faire Matches und ein einheitliches Spielverständnis.",
     "aboutTitle": "Über uns – BeerPong Sports Tec",
     "aboutDescription": "BeerPong Sports Tec verbindet echtes Spiel, Wettbewerb und Daten in einer digitalen Plattform: Matches erfassen, Leistungen sichtbar machen und Spieler vergleichen.",
-    "contactTitle": "Kontakt | BeerPong Sports Tec"
+    "contactTitle": "Kontakt | BeerPong Sports Tec",
+    "trophiesTitle": "Pokale & Championship Rings für Turniere – BeerPong Sports Tec",
+    "trophiesDescription": "Verleihe deinen privaten Beer-Pong-Turnieren Charakter: exklusive Pokale und Championship Rings für Turniersieger, automatisch vergeben und in Turnier und Profil sichtbar."
   },
   "Common": {
     "backHome": "Zurück zur Startseite",
@@ -1169,7 +1171,28 @@
       "loeschen": "Löschen",
       "turnierePageLoadError": "Turniere konnten nicht geladen werden.",
       "deleteFailed": "Löschen fehlgeschlagen.",
-      "teamsGroups": "{teamCount, plural, one {# Team} other {# Teams}} · {groupCount, plural, one {# Gruppe} other {# Gruppen}}"
+      "teamsGroups": "{teamCount, plural, one {# Team} other {# Teams}} · {groupCount, plural, one {# Gruppe} other {# Gruppen}}",
+      "subtitle": "Erstelle, verwalte und verfolge all deine Turniere an einem Ort.",
+      "statActive": "{count, plural, one {Aktives Turnier} other {Aktive Turniere}}",
+      "statPlanned": "{count, plural, one {Geplantes Turnier} other {Geplante Turniere}}",
+      "statFinished": "{count, plural, one {Abgeschlossenes Turnier} other {Abgeschlossene Turniere}}",
+      "statTeams": "{count, plural, one {Team insgesamt} other {Teams insgesamt}}",
+      "filterAll": "Alle",
+      "filterActive": "Aktiv",
+      "filterPlanned": "Geplant",
+      "filterFinished": "Abgeschlossen",
+      "viewGrid": "Kartenansicht",
+      "viewList": "Listenansicht",
+      "badgeActive": "Aktiv",
+      "badgePlanned": "Geplant",
+      "badgeFinished": "Abgeschlossen",
+      "phaseGroup": "Gruppenphase · {done} / {total, plural, one {# Spiel} other {# Spiele}}",
+      "phaseKo": "K.-o.-Phase · {done} / {total, plural, one {# Spiel} other {# Spiele}}",
+      "phaseDone": "Turnier beendet",
+      "progressLabel": "Spielfortschritt",
+      "emptyFilter": "Keine Turniere in dieser Ansicht.",
+      "openTournament": "Turnier öffnen: {name}",
+      "confirmDelete": "Turnier „{name}“ endgültig löschen?"
     },
     "NewPage": {
       "lade": "Lade …",
@@ -1347,7 +1370,111 @@
       "optBracketTitle": "Mit Freilos für die Besten",
       "optBracketText": "Passt die Teamzahl nicht auf 2, 4, 8 oder 16 (zum Beispiel 6), haben die besten Teams in Runde 1 frei, bei 6 Teams die beiden besten. Links und rechts im Baum stehen gleich viele Teams, deshalb nur gerade Teamzahlen.",
       "koTag": "{rank}. Gruppe {group}",
-      "spiele": "Spiele"
+      "spiele": "Spiele",
+      "progressTitle": "Turnierfortschritt",
+      "progressGames": "{done} / {total, plural, one {# Spiel} other {# Spiele}}",
+      "filterAllGroups": "Alle Gruppen",
+      "filterAllMatches": "Alle Spiele",
+      "sortLabel": "Sortierung",
+      "sortByGroup": "Nach Gruppe",
+      "sortOpenFirst": "Offene zuerst",
+      "legendToggle": "Spalten erklären",
+      "diff": "Diff",
+      "diffTitle": "Trefferdifferenz",
+      "nextMatch": "Nächstes Spiel",
+      "nextMatchOpen": "Spielplan öffnen",
+      "nextMatchOpenKo": "Zur K.-o.-Phase",
+      "nextMatchGroupsDone": "Alle Gruppenspiele sind gespielt.",
+      "nextMatchFinished": "Das Turnier ist beendet.",
+      "infoGroupsTitle": "Gruppen-Infos",
+      "infoGroups": "{count, plural, one {Gruppe} other {Gruppen}}",
+      "infoTeamsPerGroup": "Teams pro Gruppe",
+      "infoAdvancePerGroup": "Weiter pro Gruppe",
+      "infoAdvanceOverall": "Weiter insgesamt",
+      "detailsTitle": "Turnierdetails",
+      "detailTeams": "{count, plural, one {Team} other {Teams}}",
+      "detailFormat": "Format",
+      "formatGroup": "Gruppenphase",
+      "formatGroupKo": "Gruppenphase + K.-o."
+    }
+  },
+  "Trophies": {
+    "badge": "Feature",
+    "dateIso": "2026-11-10",
+    "imageAlt": "Weißgoldener Pokal und silberner Championship Ring mit der Gravur „Beerpong Champions 2025“",
+    "title1": "Pokale & Championship Rings",
+    "title2": "für deine privaten Turniere",
+    "intro": "Verleihe deinen Turnieren einen besonderen Charakter und halte deine Erfolge dauerhaft fest. Mit exklusiven Pokalen und Championship Rings werden deine Siege zu echten Meilensteinen.",
+    "highlight": {
+      "eyebrow": "Highlight",
+      "title1": "Ein besonderes Highlight",
+      "title2": "für Turniersieger",
+      "text": "Ob legendäre Turniersiege, saisonale Wettkämpfe oder dein eigenes BeerPong-Event – mit Pokalen und Championship Rings belohnst du die besten Teams und schaffst unvergessliche Momente.",
+      "cards": [
+        {
+          "title": "Exklusive Pokale",
+          "text": "Für Turniersieger und besondere Platzierungen."
+        },
+        {
+          "title": "Championship Rings",
+          "text": "Das ultimative Symbol für den Turniersieg."
+        },
+        {
+          "title": "Individuell & einzigartig",
+          "text": "Perfekt für deine privaten Turniere auf BeerPongSportsTec."
+        }
+      ]
+    },
+    "rings": {
+      "eyebrow": "Auszeichnung",
+      "title": "Die Championship Rings",
+      "text": "Mehr als nur eine Auszeichnung: Der Championship Ring steht für Leistung, Teamgeist und den Triumph in deinem Turnier.",
+      "bullets": [
+        "Hochwertiges, ikonisches Design",
+        "Exklusiv für Turniersieger",
+        "Mit Turniername und Jahr",
+        "Digital in deinem Profil und Turnier verknüpft"
+      ],
+      "imageAlt": "Silberner Championship Ring mit goldenem Wappen"
+    },
+    "trophies": {
+      "eyebrow": "Pokale",
+      "title": "Die Pokale",
+      "text": "Klassisch, hochwertig und ein echter Blickfang: Unsere Pokale machen deine Turniersiege auch visuell zu etwas Besonderem.",
+      "bullets": [
+        "Verschiedene Designs und Platzierungen",
+        "Automatische Vergabe nach Turnierende",
+        "In deinem Turnier und Profil sichtbar"
+      ],
+      "imageAlt": "Drei Pokale in Gold, Silber und Bronze",
+      "places": [
+        "2. Platz",
+        "1. Platz",
+        "3. Platz"
+      ]
+    },
+    "how": {
+      "eyebrow": "Ablauf",
+      "title": "So funktioniert’s",
+      "steps": [
+        {
+          "title": "Turnier erstellen",
+          "text": "Starte dein Turnier wie gewohnt auf BeerPongSportsTec."
+        },
+        {
+          "title": "Turnier spielen",
+          "text": "Tritt mit deinen Teams an und ermittle den Sieger."
+        },
+        {
+          "title": "Auszeichnung erhalten",
+          "text": "Der Pokal und (optional) der Championship Ring werden automatisch vergeben und im Turnier angezeigt."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Bereit für dein nächstes Turnier?",
+      "text": "Erstelle jetzt ein Turnier, kämpfe um den Pokal und sichere dir den Championship Ring.",
+      "button": "Jetzt Turnier erstellen"
     }
   }
 }
