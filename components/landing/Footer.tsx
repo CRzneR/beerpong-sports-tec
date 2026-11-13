@@ -65,7 +65,7 @@ export function Footer() {
 
               <FooterLink href="/kontakt">{t("contact")}</FooterLink>
 
-              <FooterLink href="/community">{t("community")}</FooterLink>
+              <FooterLink href="/news">{t("news")}</FooterLink>
             </nav>
           </div>
         </div>
@@ -109,7 +109,7 @@ function FooterLink({
   href,
   children,
 }: {
-  href: "/turniere" | "/spieler" | "/about" | "/kontakt" | "/community";
+  href: "/turniere" | "/spieler" | "/about" | "/kontakt" | "/news";
   children: React.ReactNode;
 }) {
   return (

@@ -9,7 +9,9 @@
     "aboutDescription": "BeerPong Sports Tec brings real play, competition and data together on one digital platform: track matches, make performance visible and compare players.",
     "contactTitle": "Contact | BeerPong Sports Tec",
     "trophiesTitle": "Trophies & Championship Rings for Tournaments – BeerPong Sports Tec",
-    "trophiesDescription": "Give your private beer pong tournaments character: exclusive trophies and Championship Rings for tournament winners, awarded automatically and shown in your tournament and profile."
+    "trophiesDescription": "Give your private beer pong tournaments character: exclusive trophies and Championship Rings for tournament winners, awarded automatically and shown in your tournament and profile.",
+    "newsTitle": "News – BeerPong Sports Tec",
+    "newsDescription": "New features, updates and stories around Pong Stats and Pong League from BeerPong Sports Tec."
   },
   "Common": {
     "backHome": "Back to home page",
@@ -23,7 +25,8 @@
     "about": "About us",
     "login": "Log in",
     "logoAlt": "Logo",
-    "mainNavigation": "Main navigation"
+    "mainNavigation": "Main navigation",
+    "news": "News"
   },
   "LanguageSwitcher": {
     "label": "Language",
@@ -145,7 +148,8 @@
     "imprint": "Legal notice",
     "privacy": "Privacy policy",
     "terms": "Terms",
-    "rights": "© {year} Beerpong Sports Tec. All rights reserved."
+    "rights": "© {year} Beerpong Sports Tec. All rights reserved.",
+    "news": "News"
   },
   "About": {
     "eyebrow": "More than a game",
@@ -1476,5 +1480,18 @@
       "text": "Create a tournament now, compete for the trophy and secure your Championship Ring.",
       "button": "Create a tournament now"
     }
+  },
+  "News": {
+    "eyebrow": "News",
+    "sectionTitle1": "Latest news",
+    "sectionTitle2": "from BeerPong Sports Tec",
+    "pageTitle1": "Latest news",
+    "pageTitle2": "from BeerPong Sports Tec",
+    "subtitle": "New features, updates and stories around Pong Stats and Pong League.",
+    "readMore": "Read more",
+    "allNews": "All news",
+    "backToNews": "Back to news",
+    "moreNews": "More posts",
+    "empty": "No posts yet. Check back soon."
   }
 }

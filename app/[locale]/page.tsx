@@ -8,7 +8,7 @@ import { Hero } from "@/components/landing/Hero";
 import { PlatformSection } from "@/components/landing/PlatformSection";
 import { RulesSection } from "@/components/landing/RulesSection";
 import { CommunityStats } from "@/components/landing/CommunityStats";
-import { CommunitySection } from "@/components/landing/CommunitySection";
+import { NewsSection } from "@/components/landing/NewsSection";
 import { Footer } from "@/components/landing/Footer";
 import { routing, type Locale } from "@/i18n/routing";
 import { SITE_URL, absoluteUrl, pageAlternates } from "@/lib/seo";
@@ -89,7 +89,7 @@ export default async function Home({ params }: PageProps<"/[locale]">) {
         <PlatformSection />
         <RulesSection />
         <CommunityStats />
-        <CommunitySection />
+        <NewsSection />
       </main>
 
       <Footer />

@@ -20,6 +20,14 @@ const UNTRANSLATED_EN_PATHS = [
 ];
 
 const nextConfig: NextConfig = {
+  /* Die frühere Community-Seite ist jetzt News. */
+  async redirects() {
+    return [
+      { source: "/community", destination: "/news", permanent: true },
+      { source: "/en/community", destination: "/en/news", permanent: true },
+    ];
+  },
+
   async headers() {
     return UNTRANSLATED_EN_PATHS.map((path) => ({
       source: `${path}/:rest*`,

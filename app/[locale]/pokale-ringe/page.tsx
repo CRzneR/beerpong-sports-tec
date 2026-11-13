@@ -93,7 +93,7 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
 
   const t = await getTranslations({ locale, namespace: "Trophies" });
   const meta = await getTranslations({ locale, namespace: "Meta" });
-  const common = await getTranslations({ locale, namespace: "Common" });
+  const news = await getTranslations({ locale, namespace: "News" });
 
   const cards = t.raw("highlight.cards") as TextCard[];
   const ringBullets = t.raw("rings.bullets") as string[];
@@ -137,11 +137,11 @@ export default async function PokaleRingePage({ params }: PageProps<"/[locale]/p
           <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-6 py-10 sm:py-14 lg:grid-cols-[1fr_1.1fr] lg:gap-14 lg:px-8 lg:py-20">
             <div>
               <Link
-                href="/"
+                href="/news"
                 className="group inline-flex items-center gap-2 text-xs font-semibold text-white/35 transition hover:text-white"
               >
                 <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
-                {common("backHome")}
+                {news("backToNews")}
               </Link>
 
               <div className="mt-8 flex items-center gap-4">

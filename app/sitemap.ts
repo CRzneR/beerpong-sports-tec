@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { routing } from "@/i18n/routing";
+import { getAllPosts, getPostLocales } from "@/lib/news";
 import { absoluteUrl, languageUrls } from "@/lib/seo";
 
 /*
@@ -26,14 +27,16 @@ import { absoluteUrl, languageUrls } from "@/lib/seo";
  * priority/changeFrequency, und ein lastModified, das bei jedem Build auf
  * "jetzt" steht, wird als unzuverlässig eingestuft.
  *
+ * News-Beiträge (content/news) werden automatisch ergänzt - nichts zu pflegen.
+ *
  * Nicht eingetragen, weil es die Seiten (noch) nicht gibt und sie 404
- * liefern würden: /community, /agb, /faq. Sobald angelegt, hier ergänzen.
+ * liefern würden: /agb, /faq. Sobald angelegt, hier ergänzen.
  * --------------------------------------------------------------------------
  */
 
 type BilingualPath = Parameters<typeof languageUrls>[0];
 
-const BILINGUAL: BilingualPath[] = ["/", "/regeln", "/about", "/kontakt", "/pokale-ringe"];
+const BILINGUAL: BilingualPath[] = ["/", "/regeln", "/about", "/kontakt", "/pokale-ringe", "/news"];
 
 const GERMAN_ONLY: BilingualPath[] = [
   "/spieler", // Pong Stats
@@ -54,5 +57,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: absoluteUrl(routing.defaultLocale, path),
   }));
 
-  return [...bilingual, ...germanOnly];
+  /* Beiträge: eine Adresse pro vorhandener Sprache, hreflang nur auf vorhandene Sprachen.
+     Beiträge mit eigener Seite ("page:") stehen schon oben bzw. oben in der Liste. */
+  const seen = new Set<string>();
+  const posts = routing.locales.flatMap((locale) =>
+    getAllPosts(locale)
+      .filter((post) => !post.page && !seen.has(`${locale}:${post.slug}`))
+      .map((post) => {
+        seen.add(`${locale}:${post.slug}`);
+
+        const href = { pathname: "/news/[slug]", params: { slug: post.slug } } as const;
+        const available = getPostLocales(post.slug);
+        const languages: Record<string, string> = {};
+
+        for (const code of available) {
+          languages[code] = absoluteUrl(code, href);
+        }
+
+        languages["x-default"] = absoluteUrl(
+          available.includes(routing.defaultLocale) ? routing.defaultLocale : available[0],
+          href,
+        );
+
+        return { url: absoluteUrl(locale, href), alternates: { languages } };
+      }),
+  );
+
+  return [...bilingual, ...germanOnly, ...posts];
 }

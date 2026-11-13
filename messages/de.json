@@ -9,7 +9,9 @@
     "aboutDescription": "BeerPong Sports Tec verbindet echtes Spiel, Wettbewerb und Daten in einer digitalen Plattform: Matches erfassen, Leistungen sichtbar machen und Spieler vergleichen.",
     "contactTitle": "Kontakt | BeerPong Sports Tec",
     "trophiesTitle": "Pokale & Championship Rings für Turniere – BeerPong Sports Tec",
-    "trophiesDescription": "Verleihe deinen privaten Beer-Pong-Turnieren Charakter: exklusive Pokale und Championship Rings für Turniersieger, automatisch vergeben und in Turnier und Profil sichtbar."
+    "trophiesDescription": "Verleihe deinen privaten Beer-Pong-Turnieren Charakter: exklusive Pokale und Championship Rings für Turniersieger, automatisch vergeben und in Turnier und Profil sichtbar.",
+    "newsTitle": "News – BeerPong Sports Tec",
+    "newsDescription": "Neue Features, Updates und Geschichten rund um Pong Stats und Pong League von BeerPong Sports Tec."
   },
   "Common": {
     "backHome": "Zurück zur Startseite",
@@ -23,7 +25,8 @@
     "about": "Über uns",
     "login": "Login",
     "logoAlt": "Logo",
-    "mainNavigation": "Hauptnavigation"
+    "mainNavigation": "Hauptnavigation",
+    "news": "News"
   },
   "LanguageSwitcher": {
     "label": "Sprache",
@@ -145,7 +148,8 @@
     "imprint": "Impressum",
     "privacy": "Datenschutz",
     "terms": "AGB",
-    "rights": "© {year} Beerpong Sports Tec. All rights reserved."
+    "rights": "© {year} Beerpong Sports Tec. All rights reserved.",
+    "news": "News"
   },
   "About": {
     "eyebrow": "Mehr als ein Spiel",
@@ -1476,5 +1480,18 @@
       "text": "Erstelle jetzt ein Turnier, kämpfe um den Pokal und sichere dir den Championship Ring.",
       "button": "Jetzt Turnier erstellen"
     }
+  },
+  "News": {
+    "eyebrow": "News",
+    "sectionTitle1": "Neuigkeiten",
+    "sectionTitle2": "von BeerPong Sports Tec",
+    "pageTitle1": "Neuigkeiten",
+    "pageTitle2": "von BeerPong Sports Tec",
+    "subtitle": "Neue Features, Updates und Geschichten rund um Pong Stats und Pong League.",
+    "readMore": "Weiterlesen",
+    "allNews": "Alle News",
+    "backToNews": "Zurück zu News",
+    "moreNews": "Weitere Beiträge",
+    "empty": "Noch keine Beiträge. Schau bald wieder vorbei."
   }
 }

@@ -14,7 +14,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 const navItems = [
   { key: "home", href: "/" },
   { key: "playerStats", href: "/spieler" },
-  { key: "community", href: "/community" },
+  { key: "news", href: "/news" },
   { key: "contact", href: "/kontakt" },
   { key: "about", href: "/about" },
 ] as const;
