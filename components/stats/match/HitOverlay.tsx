@@ -263,9 +263,9 @@ export default function HitOverlay({
           overflow-hidden
           rounded-[28px]
           border
-          border-white/10
-          bg-[#111419]
-          shadow-[0_30px_100px_rgba(0,0,0,0.7)]
+          border-blue-400/25
+          bg-[#0a1124]/95
+          shadow-[0_30px_100px_rgba(0,0,0,0.7),0_0_50px_rgba(59,130,246,0.15)]
         "
       >
         {/* HEADER */}
@@ -291,7 +291,7 @@ export default function HitOverlay({
                 font-black
                 uppercase
                 tracking-[0.2em]
-                text-cyan-400
+                text-blue-400
                 lg:text-[10px]
               "
             >
@@ -364,13 +364,13 @@ export default function HitOverlay({
                     onClick={() => handleShotTypeChange(type.id)}
                     className={`rounded-xl border p-1.5 text-center transition ${
                       active
-                        ? "border-cyan-400 bg-cyan-400/[0.08]"
+                        ? "border-blue-400 bg-blue-500/[0.12] shadow-[0_0_14px_rgba(59,130,246,0.3)]"
                         : "border-white/[0.08] bg-white/[0.015]"
                     }`}
                   >
                     <div
                       className={`text-[9px] font-black uppercase leading-tight ${
-                        active ? "text-cyan-400" : "text-white"
+                        active ? "text-blue-400" : "text-white"
                       }`}
                     >
                       {t(`shot_${type.id}_title`)}
@@ -391,7 +391,7 @@ export default function HitOverlay({
             <div className="flex shrink-0 items-center justify-between">
               <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">{t("t02GetroffenerBecher")}</div>
 
-              <div className="text-xs font-black text-cyan-400">{t("ausgewaehlt", { length: selectedCups.length, selectionLimit })}</div>
+              <div className="text-xs font-black text-blue-400">{t("ausgewaehlt", { length: selectedCups.length, selectionLimit })}</div>
             </div>
 
             <div className="mt-2 min-h-0 flex-1 rounded-2xl border border-white/[0.06] bg-black/20 p-2">
@@ -419,16 +419,18 @@ export default function HitOverlay({
               className="
                 w-full
                 rounded-xl
-                bg-cyan-400
+                bg-blue-500
+                shadow-[0_0_18px_rgba(59,130,246,0.5)]
+                disabled:shadow-none
                 px-4
                 py-3
                 text-xs
                 font-black
                 uppercase
                 tracking-[0.12em]
-                text-black
+                text-white
                 transition
-                hover:bg-cyan-300
+                hover:bg-blue-400
                 disabled:cursor-not-allowed
                 disabled:bg-white/[0.05]
                 disabled:text-white/20
@@ -511,8 +513,8 @@ export default function HitOverlay({
                         ${
                           active
                             ? `
-                              border-cyan-400
-                              bg-cyan-400/[0.08]
+                              border-blue-400
+                              bg-blue-500/[0.12]
                               shadow-[0_0_30px_rgba(34,211,238,0.08)]
                             `
                             : `
@@ -530,7 +532,7 @@ export default function HitOverlay({
                           font-black
                           uppercase
 
-                          ${active ? "text-cyan-400" : "text-white"}
+                          ${active ? "text-blue-400" : "text-white"}
                         `}
                     >
                       {t(`shot_${type.id}_title`)}
@@ -583,7 +585,7 @@ export default function HitOverlay({
                 className="
                   text-sm
                   font-black
-                  text-cyan-400
+                  text-blue-400
                 "
               >{t("ausgewaehlt", { length: selectedCups.length, selectionLimit })}</div>
             </div>
@@ -621,16 +623,18 @@ export default function HitOverlay({
                 mt-5
                 w-full
                 rounded-2xl
-                bg-cyan-400
+                bg-blue-500
+                shadow-[0_0_18px_rgba(59,130,246,0.5)]
+                disabled:shadow-none
                 px-6
                 py-5
                 text-sm
                 font-black
                 uppercase
                 tracking-[0.12em]
-                text-black
+                text-white
                 transition
-                hover:bg-cyan-300
+                hover:bg-blue-400
                 disabled:cursor-not-allowed
                 disabled:bg-white/[0.05]
                 disabled:text-white/20

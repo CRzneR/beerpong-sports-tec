@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 export type Cup = {
@@ -541,6 +541,7 @@ function CupFormation({
             onClick={() => onCupClick?.(cup.id)}
             aria-label={t("becher", { id: cup.id })}
             className={`
+              group/cup
               absolute
               flex
               ${selectable ? "h-6 w-6" : "h-4 w-4"}
@@ -559,26 +560,26 @@ function CupFormation({
                 isSelected
                   ? `
                     scale-110
-                    border-cyan-400
-                    bg-cyan-400
-                    shadow-[0_0_25px_rgba(34,211,238,0.45)]
+                    border-cyan-300
+                    bg-cyan-400/70
+                    shadow-[0_0_22px_rgba(34,211,238,0.75),inset_0_0_10px_rgba(255,255,255,0.35)]
                   `
                   : isPending
                     ? `
-                      border-yellow-400
-                      bg-yellow-400/40
-                      shadow-[0_0_18px_rgba(250,204,21,0.35)]
+                      border-yellow-300
+                      bg-yellow-400/25
+                      shadow-[0_0_16px_rgba(250,204,21,0.6),inset_0_0_9px_rgba(250,204,21,0.35)]
                     `
                     : side === "top"
                       ? `
-                        border-blue-500
-                        bg-white
-                        shadow-[0_0_18px_rgba(59,130,246,0.20)]
+                        border-blue-300
+                        bg-[#0a1f4a]/90
+                        shadow-[0_0_16px_rgba(59,130,246,0.9),inset_0_0_10px_rgba(59,130,246,0.55)]
                       `
                       : `
-                        border-red-500
-                        bg-white
-                        shadow-[0_0_18px_rgba(239,68,68,0.20)]
+                        border-rose-100
+                        bg-red-600/90
+                        shadow-[0_0_18px_rgba(239,68,68,0.95),inset_0_0_10px_rgba(255,130,130,0.55)]
                       `
               }
 
@@ -587,7 +588,7 @@ function CupFormation({
                   ? `
                     cursor-pointer
                     hover:scale-110
-                    ${side === "top" ? "hover:border-blue-400" : "hover:border-red-400"}
+                    ${side === "top" ? "hover:border-white" : "hover:border-white"}
                   `
                   : `
                     cursor-default
@@ -599,34 +600,38 @@ function CupFormation({
               top: `${position.y}%`,
             }}
           >
+            {/* Becherkörper: weicher Schatten, der vom Rand Richtung Tischmitte wegläuft (nur Optik) */}
             <span
+              aria-hidden="true"
+              className={`
+                pointer-events-none
+                absolute
+                left-1/2
+                -z-10
+                h-[130%]
+                w-[88%]
+                -translate-x-1/2
+                ${side === "top" ? "top-1/2 rounded-b-[999px] bg-gradient-to-b from-blue-400/25 to-transparent" : "bottom-1/2 rounded-t-[999px] bg-gradient-to-t from-red-400/25 to-transparent"}
+              `}
+            />
+
+            {/* Becheröffnung (Innenfläche) */}
+            <span
+              aria-hidden="true"
               className={`
                 ${selectable ? "h-4 w-4" : "h-2.5 w-2.5"}
                 rounded-full
-                border
                 lg:h-8
                 lg:w-8
 
                 ${
                   isSelected
-                    ? `
-                      border-cyan-300
-                      bg-cyan-400
-                    `
+                    ? "bg-[radial-gradient(circle_at_35%_30%,#ecfeff,#22d3ee_70%)]"
                     : isPending
-                      ? `
-                        border-yellow-300
-                        bg-yellow-400/50
-                      `
+                      ? "bg-[radial-gradient(circle_at_35%_30%,rgba(254,240,138,0.55),rgba(250,204,21,0.2)_70%)]"
                       : side === "top"
-                        ? `
-                          border-blue-500
-                          bg-blue-500/15
-                        `
-                        : `
-                          border-red-500
-                          bg-red-500/15
-                        `
+                        ? "bg-[radial-gradient(circle_at_35%_30%,rgba(147,197,253,0.3),rgba(23,37,84,0.6)_70%)]"
+                        : "bg-[radial-gradient(circle_at_35%_30%,rgba(255,175,175,0.55),rgba(220,38,38,0.35)_70%)]"
                 }
               `}
             />
@@ -658,6 +663,9 @@ export default function BeerPongTable({
 }: BeerPongTableProps) {
   const t = useTranslations("Match.BeerPongTable");
 
+  /* Eindeutige Gradient-IDs: mehrere Tische auf einer Seite (Mobile + Desktop + Overlay) dürfen sich nicht überschreiben. */
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+
   const showTeamA = displayTeam === "both" || displayTeam === "A";
 
   const showTeamB = displayTeam === "both" || displayTeam === "B";
@@ -679,82 +687,172 @@ export default function BeerPongTable({
         className={`
           relative
           w-full
-          overflow-hidden
-          rounded-[24px]
-          border
-          border-white/10
-          bg-[#101318]
-          shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]
 
           ${isSingleTeamView ? "aspect-[1.3]" : "aspect-[0.72]"}
         `}
       >
-        {/* Spielfeldstruktur */}
+        {isSingleTeamView ? (
+          /* Einzel-Team-Ansicht: abgerundete Platte mit Neonrand */
+          <div
+            className={`
+              pointer-events-none
+              absolute
+              inset-0
+              rounded-[24px]
+              border
+              ${
+                displayTeam === "B"
+                  ? "border-red-400/55 shadow-[0_0_28px_rgba(239,68,68,0.3),inset_0_0_60px_rgba(0,0,0,0.55)]"
+                  : "border-blue-400/55 shadow-[0_0_28px_rgba(59,130,246,0.3),inset_0_0_60px_rgba(0,0,0,0.55)]"
+              }
+              bg-[linear-gradient(180deg,#0b1a3c_0%,#070b18_100%)]
+            `}
+          />
+        ) : (
+          /* Beide Teams: Tisch in leichter Perspektive (unten breiter) */
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <defs>
+              <linearGradient id={`${uid}-surface`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#0b1d42" />
+                <stop offset="0.5" stopColor="#070f24" />
+                <stop offset="1" stopColor="#14091a" />
+              </linearGradient>
+
+              <linearGradient id={`${uid}-edge`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#3b82f6" stopOpacity="0.85" />
+                <stop offset="0.6" stopColor="#60a5fa" stopOpacity="0.95" />
+                <stop offset="0.82" stopColor="#ef4444" stopOpacity="0.95" />
+                <stop offset="1" stopColor="#fca5a5" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+
+            {/* Vorderkante des Tisches */}
+            <path
+              d="M1.2 90 Q0.8 95 6 95 H94 Q99.2 95 98.8 90 L99.6 96 Q99.6 99.2 95 99.2 H5 Q0.4 99.2 0.4 96 Z"
+              fill="#0a1118"
+              stroke="#f87171"
+              strokeOpacity="0.55"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+
+            {/* Tischplatte */}
+            <path
+              d="M17 1.5 H83 Q87 1.5 87.6 5 L98.8 90 Q99.2 95 94 95 H6 Q0.8 95 1.2 90 L12.4 5 Q13 1.5 17 1.5 Z"
+              fill={`url(#${uid}-surface)`}
+              stroke={`url(#${uid}-edge)`}
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+              style={{ filter: "drop-shadow(0 0 7px rgba(59,130,246,0.65)) drop-shadow(0 8px 10px rgba(239,68,68,0.3))" }}
+            />
+          </svg>
+        )}
+
+        {/* Spielfeldstruktur (Textur, nur innerhalb der Tischplatte) */}
 
         <div
           className="
             pointer-events-none
             absolute
             inset-0
-            opacity-20
+            opacity-30
             bg-[repeating-linear-gradient(
               0deg,
               transparent,
-              transparent 7px,
-              rgba(255,255,255,0.025) 8px
+              transparent 3px,
+              rgba(255,255,255,0.03) 4px
             )]
           "
+          style={
+            isSingleTeamView
+              ? { borderRadius: 24 }
+              : { clipPath: "polygon(14% 2%, 86% 2%, 98% 94%, 2% 94%)" }
+          }
         />
+
+        {/* Mittellinie mit Becher-Symbol */}
 
         {!isSingleTeamView && (
           <div
             className="
               pointer-events-none
               absolute
-              left-[10%]
-              right-[10%]
+              left-[11%]
+              right-[11%]
               top-1/2
-              border-t
-              border-dashed
-              border-white/10
+              flex
+              -translate-y-1/2
+              items-center
+              gap-2
             "
-          />
+            aria-hidden="true"
+          >
+            <div className="flex-1 border-t border-dashed border-white/20" />
+
+            <svg viewBox="0 0 24 28" className="h-4 w-4 shrink-0 text-blue-200/50 lg:h-8 lg:w-8" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="2.6" />
+              <path d="M3.4 6.5 L6.6 24.5 Q12 27.2 17.4 24.5 L20.6 6.5" />
+              <path d="M5 13 Q12 15.8 19 13" opacity="0.6" />
+            </svg>
+
+            <div className="flex-1 border-t border-dashed border-white/20" />
+          </div>
         )}
+
+        {/* Team-Schilder */}
 
         {showTeamA && (
           <div
-            className="
+            className={`
               pointer-events-none
               absolute
-              left-4
-              top-4
-              text-[9px]
+              ${isSingleTeamView ? "left-3 top-3" : "left-1/2 top-[1.5%] -translate-x-1/2"}
+              rounded-full
+              border
+              border-blue-400/60
+              bg-[#06143a]/90
+              ${narrow ? "px-1.5 text-[6px]" : "px-2 text-[7px]"}
+              py-px
               font-black
               uppercase
-              tracking-[0.2em]
-              text-blue-400/50
-            "
-          >
-            {t("teamA")}
-          </div>
+              tracking-[0.18em]
+              text-white
+              shadow-[0_0_12px_rgba(59,130,246,0.55)]
+              lg:px-5
+              lg:py-1.5
+              lg:text-[11px]
+            `}
+          >{t("teamA")}</div>
         )}
 
         {showTeamB && (
           <div
-            className="
+            className={`
               pointer-events-none
               absolute
-              bottom-4
-              right-4
-              text-[9px]
+              ${isSingleTeamView ? "bottom-3 right-3" : "bottom-[1.2%] left-1/2 -translate-x-1/2"}
+              rounded-full
+              border
+              border-red-400/60
+              bg-[#2a0710]/90
+              ${narrow ? "px-1.5 text-[6px]" : "px-2 text-[7px]"}
+              py-px
               font-black
               uppercase
-              tracking-[0.2em]
-              text-red-400/50
-            "
-          >
-            {t("teamB")}
-          </div>
+              tracking-[0.18em]
+              text-white
+              shadow-[0_0_12px_rgba(239,68,68,0.55)]
+              lg:px-5
+              lg:py-1.5
+              lg:text-[11px]
+            `}
+          >{t("teamB")}</div>
         )}
 
         {showTeamA && (
@@ -803,37 +901,33 @@ export default function BeerPongTable({
             className="
               rounded-full
               border
-              border-blue-400/10
-              bg-blue-400/[0.03]
+              border-blue-400/35
+              bg-blue-500/10
               px-3
               py-1.5
               text-[9px]
               font-bold
               uppercase
               tracking-wider
-              text-blue-400/50
+              text-blue-200
             "
-          >
-            {t("a", { length: teamACups.filter((cup) => !cup.hit).length })}
-          </div>
+          >{t("a", { length: teamACups.filter((cup) => !cup.hit).length })}</div>
 
           <div
             className="
               rounded-full
               border
-              border-red-400/10
-              bg-red-400/[0.03]
+              border-red-400/35
+              bg-red-500/10
               px-3
               py-1.5
               text-[9px]
               font-bold
               uppercase
               tracking-wider
-              text-red-400/50
+              text-red-200
             "
-          >
-            {t("b", { length: teamBCups.filter((cup) => !cup.hit).length })}
-          </div>
+          >{t("b", { length: teamBCups.filter((cup) => !cup.hit).length })}</div>
         </div>
       )}
     </div>

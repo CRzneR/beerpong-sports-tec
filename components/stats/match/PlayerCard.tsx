@@ -59,12 +59,17 @@ export default function PlayerCard({
         overflow-hidden
         rounded-2xl
         border
-        border-white/[0.08]
-        bg-[#111419]
         p-2.5
+        backdrop-blur-md
         transition-colors
         transition-opacity
         lg:p-4
+
+        ${
+          player.team === "A"
+            ? "border-blue-400/40 bg-gradient-to-br from-blue-500/[0.14] via-[#0a1226]/80 to-[#0a1226]/60 shadow-[0_0_26px_rgba(59,130,246,0.2),inset_0_1px_0_rgba(255,255,255,0.07)]"
+            : "border-red-400/40 bg-gradient-to-br from-red-500/[0.14] via-[#190b12]/80 to-[#190b12]/60 shadow-[0_0_26px_rgba(239,68,68,0.2),inset_0_1px_0_rgba(255,255,255,0.07)]"
+        }
       `}
     >
       {/* Team indicator */}
@@ -77,7 +82,11 @@ export default function PlayerCard({
           h-full
           w-1
 
-          ${player.team === "A" ? "bg-cyan-400" : "bg-fuchsia-400"}
+          ${
+            player.team === "A"
+              ? "bg-blue-500 shadow-[0_0_14px_rgba(59,130,246,0.95)]"
+              : "bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.95)]"
+          }
         `}
       />
 
@@ -97,7 +106,8 @@ export default function PlayerCard({
               shrink-0
               items-center
               justify-center
-              rounded-xl
+              rounded-full
+              border-2
               text-[10px]
               font-black
               lg:h-11
@@ -106,8 +116,8 @@ export default function PlayerCard({
 
               ${
                 player.team === "A"
-                  ? "bg-cyan-400/10 text-cyan-400"
-                  : "bg-fuchsia-400/10 text-fuchsia-400"
+                  ? "border-blue-400 bg-blue-500/10 text-blue-300 shadow-[0_0_14px_rgba(59,130,246,0.45),inset_0_0_8px_rgba(59,130,246,0.25)]"
+                  : "border-red-400 bg-red-500/10 text-red-300 shadow-[0_0_14px_rgba(239,68,68,0.45),inset_0_0_8px_rgba(239,68,68,0.25)]"
               }
             `}
           >
@@ -168,23 +178,23 @@ export default function PlayerCard({
             min-h-9
             rounded-xl
             border
-            border-white/[0.08]
-            bg-white/[0.025]
+            border-white/[0.12]
+            bg-white/[0.07]
             text-[10px]
             font-black
             uppercase
             tracking-[0.12em]
-            text-white/50
+            text-white/75
             transition-all
-            hover:border-white/[0.16]
-            hover:bg-white/[0.05]
+            hover:border-white/[0.25]
+            hover:bg-white/[0.12]
             hover:text-white
             active:scale-[0.98]
             disabled:cursor-not-allowed
             disabled:opacity-45
-            disabled:hover:border-white/[0.08]
-            disabled:hover:bg-white/[0.025]
-            disabled:hover:text-white/50
+            disabled:hover:border-white/[0.12]
+            disabled:hover:bg-white/[0.07]
+            disabled:hover:text-white/75
             disabled:active:scale-100
             lg:min-h-12
           "
@@ -197,21 +207,30 @@ export default function PlayerCard({
           className="
             min-h-9
             rounded-xl
-            bg-cyan-400
+            border
+            border-blue-300/50
+            bg-gradient-to-b
+            from-blue-400
+            to-blue-600
             text-[10px]
             font-black
             uppercase
             tracking-[0.12em]
-            text-black
-            shadow-[0_0_20px_rgba(34,211,238,0.08)]
+            text-white
+            shadow-[0_0_18px_rgba(59,130,246,0.55),inset_0_1px_0_rgba(255,255,255,0.35)]
             transition-all
-            hover:bg-cyan-300
-            hover:shadow-[0_0_25px_rgba(34,211,238,0.15)]
+            hover:from-blue-300
+            hover:to-blue-500
+            hover:shadow-[0_0_26px_rgba(59,130,246,0.75),inset_0_1px_0_rgba(255,255,255,0.4)]
             active:scale-[0.98]
             disabled:cursor-not-allowed
-            disabled:bg-cyan-400/30
+            disabled:border-blue-400/20
+            disabled:from-blue-500/25
+            disabled:to-blue-600/25
+            disabled:text-white/45
             disabled:shadow-none
-            disabled:hover:bg-cyan-400/30
+            disabled:hover:from-blue-500/25
+            disabled:hover:to-blue-600/25
             disabled:active:scale-100
             lg:min-h-12
           "
@@ -225,8 +244,8 @@ export default function PlayerCard({
             min-h-9
             rounded-xl
             border
-            border-yellow-400/30
-            bg-yellow-400/[0.07]
+            border-yellow-400/50
+            bg-yellow-400/[0.08]
             text-[10px]
             font-black
             uppercase

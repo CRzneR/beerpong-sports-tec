@@ -295,6 +295,48 @@ const createCups = (): Cup[] =>
     }),
   );
 
+/*
+ * Kleine Symbole für die Match-Statistik (nur Optik).
+ */
+
+function StatIcon({ kind }: { kind: "throws" | "hits" | "cups"; team?: "A" | "B" }) {
+  const color = "text-blue-400";
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`mx-auto h-5 w-5 ${color} drop-shadow-[0_0_6px_rgba(59,130,246,0.8)]`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {kind === "throws" && (
+        <>
+          <path d="M12 21V8" />
+          <path d="M7 12l5-5 5 5" />
+        </>
+      )}
+      {kind === "hits" && (
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="12" cy="12" r="0.8" fill="currentColor" />
+        </>
+      )}
+      {kind === "cups" && (
+        <>
+          <path d="M4.5 5h15l-1.8 14.2a2 2 0 0 1-2 1.8H8.3a2 2 0 0 1-2-1.8z" />
+          <path d="M5.2 10h13.6" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function MatchPage() {
   const t = useTranslations("Match.LivePage");
 
@@ -1571,16 +1613,29 @@ export default function MatchPage() {
   }
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-[#07090d] text-white">
+    <main className="relative isolate flex h-dvh flex-col overflow-hidden bg-[#050813] text-white">
+      {/* Hintergrund: blauer Schein links, roter rechts (nur Optik) */}
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 60% 45% at 15% 0%, rgba(37,99,235,0.30), transparent 70%), radial-gradient(ellipse 55% 45% at 90% 25%, rgba(220,38,38,0.22), transparent 70%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(37,99,235,0.16), transparent 70%)",
+        }}
+      />
+
       {/* HEADER */}
 
       <header
         className="
           shrink-0
           border-b
-          border-white/[0.06]
+          border-blue-400/15
+          bg-black/30
           px-5
           py-3
+          backdrop-blur-xl
         "
       >
         <div
@@ -1599,7 +1654,7 @@ export default function MatchPage() {
                 font-bold
                 uppercase
                 tracking-[0.2em]
-                text-cyan-400
+                text-blue-400
               "
             >{t("pongStats")}</div>
 
@@ -1623,7 +1678,7 @@ export default function MatchPage() {
                 font-bold
                 uppercase
                 tracking-wider
-                text-white/40
+                text-blue-300
               "
             >
               <span
@@ -1631,15 +1686,15 @@ export default function MatchPage() {
                   h-2
                   w-2
                   rounded-full
-                  bg-cyan-400
-                  shadow-[0_0_10px_rgba(34,211,238,0.8)]
+                  bg-blue-400
+                  shadow-[0_0_10px_rgba(96,165,250,0.95)]
                 "
               />{t("matchLive")}</div>
 
             <button
               type="button"
               onClick={() => setShowAbortConfirm(true)}
-              className="rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-red-300 transition hover:bg-red-400/20"
+              className="rounded-full border border-red-500/60 bg-red-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-red-200 shadow-[0_0_14px_rgba(239,68,68,0.35)] transition hover:bg-red-500/20"
             >{t("abbruch")}</button>
           </div>
         </div>
@@ -1670,17 +1725,17 @@ export default function MatchPage() {
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             {/* SCORE */}
 
-            <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
+            <div className="shrink-0 rounded-xl border border-blue-400/40 bg-gradient-to-r from-blue-600/30 via-[#080b16]/70 to-red-600/30 p-2 shadow-[0_0_16px_rgba(59,130,246,0.22)] backdrop-blur-md">
               <div className="flex items-center justify-center gap-3">
                 <div className="text-center">
-                  <div className="text-[7px] font-bold uppercase tracking-wider text-white/25">{t("teamA")}</div>
+                  <div className="text-[7px] font-bold uppercase tracking-wider text-blue-300">{t("teamA")}</div>
                   <div className="text-lg font-black">{teamAScore}</div>
                 </div>
 
-                <div className="text-sm font-black text-white/15">:</div>
+                <div className="text-sm font-black text-white/60">:</div>
 
                 <div className="text-center">
-                  <div className="text-[7px] font-bold uppercase tracking-wider text-white/25">{t("teamB")}</div>
+                  <div className="text-[7px] font-bold uppercase tracking-wider text-red-300">{t("teamB")}</div>
                   <div className="text-lg font-black">{teamBScore}</div>
                 </div>
               </div>
@@ -1688,7 +1743,7 @@ export default function MatchPage() {
 
             {/* LETZTE AKTIONEN */}
 
-            <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
+            <div className="shrink-0 rounded-xl border border-blue-400/20 bg-white/[0.03] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md">
               <div className="mb-1 text-[7px] font-black uppercase tracking-[0.18em] text-white/30">{t("letzteAktionen")}</div>
 
               <div className="space-y-1">
@@ -1724,7 +1779,9 @@ export default function MatchPage() {
             <div className="flex items-center gap-2">
               <div
                 className={`text-[9px] font-black uppercase tracking-[0.15em] ${
-                  team === "A" ? "text-cyan-400" : "text-fuchsia-400"
+                  team === "A"
+                    ? "text-blue-400 [text-shadow:0_0_12px_rgba(59,130,246,0.7)]"
+                    : "text-red-500 [text-shadow:0_0_12px_rgba(239,68,68,0.7)]"
                 }`}
               >{t("team", { team })}</div>
 
@@ -1732,14 +1789,20 @@ export default function MatchPage() {
                 <span
                   className={`rounded-full px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.15em] ${
                     team === "A"
-                      ? "bg-cyan-400/10 text-cyan-300"
-                      : "bg-fuchsia-400/10 text-fuchsia-300"
+                      ? "border border-blue-400/40 bg-blue-500/15 text-blue-200"
+                      : "border border-red-400/40 bg-red-500/15 text-red-200"
                   }`}
                 >{t("amZug", { v: getRoundThrowLabel(team) ? ` · ${getRoundThrowLabel(team)}` : "" })}</span>
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/[0.08] bg-[#111419] p-2.5">
+            <div
+              className={`rounded-2xl border p-2.5 backdrop-blur-md ${
+                team === "A"
+                  ? "border-blue-400/35 bg-gradient-to-br from-blue-500/[0.12] to-[#0a1226]/70 shadow-[0_0_18px_rgba(59,130,246,0.18)]"
+                  : "border-red-400/35 bg-gradient-to-br from-red-500/[0.12] to-[#190b12]/70 shadow-[0_0_18px_rgba(239,68,68,0.18)]"
+              }`}
+            >
               {players
                 .filter((player) => player.team === team)
                 .map((player, index) => {
@@ -1762,8 +1825,8 @@ export default function MatchPage() {
                           <div
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-black ${
                               team === "A"
-                                ? "bg-cyan-400/10 text-cyan-400"
-                                : "bg-fuchsia-400/10 text-fuchsia-400"
+                                ? "bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/70 shadow-[0_0_10px_rgba(59,130,246,0.4)]"
+                                : "bg-red-500/15 text-red-300 ring-1 ring-red-400/70 shadow-[0_0_10px_rgba(239,68,68,0.4)]"
                             }`}
                           >
                             {player.initials}
@@ -1784,21 +1847,21 @@ export default function MatchPage() {
                           type="button"
                           onClick={() => handleMiss(player)}
                           disabled={playerDisabled}
-                          className="min-h-7 rounded-lg border border-white/[0.08] bg-white/[0.025] text-[9px] font-black uppercase tracking-[0.1em] text-white/50 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                          className="min-h-7 rounded-lg border border-white/[0.12] bg-white/[0.07] text-[9px] font-black uppercase tracking-[0.1em] text-white/75 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                         >{t("daneben")}</button>
 
                         <button
                           type="button"
                           onClick={() => handleHit(player)}
                           disabled={playerDisabled}
-                          className="min-h-7 rounded-lg bg-cyan-400 text-[9px] font-black uppercase tracking-[0.1em] text-black transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-cyan-400/30"
+                          className="min-h-7 rounded-lg border border-blue-300/50 bg-gradient-to-b from-blue-400 to-blue-600 text-[9px] font-black uppercase tracking-[0.1em] text-white shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:border-blue-400/20 disabled:from-blue-500/25 disabled:to-blue-600/25 disabled:text-white/45 disabled:shadow-none"
                         >{t("getroffen")}</button>
 
                         <button
                           type="button"
                           onClick={() => handleSpecial(player)}
                           disabled={!canUseSpecial}
-                          className="min-h-7 rounded-lg border border-yellow-400/30 bg-yellow-400/[0.07] text-[9px] font-black uppercase tracking-[0.1em] text-yellow-300 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                          className="min-h-7 rounded-lg border border-yellow-400/50 bg-yellow-400/[0.08] text-[9px] font-black uppercase tracking-[0.1em] text-yellow-300 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                         >{t("special")}</button>
                       </div>
                     </div>
@@ -1815,7 +1878,7 @@ export default function MatchPage() {
             type="button"
             disabled={!canUndo}
             onClick={handleUndo}
-            className="w-full rounded-xl border border-yellow-400/40 bg-yellow-400/10 px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-yellow-300 transition hover:bg-yellow-400/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.02] disabled:text-white/20"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.09] px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md transition hover:bg-white/[0.15] active:scale-[0.98] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.02] disabled:text-white/20"
           >{t("rueckgaengig")}</button>
         </div>
       </div>
@@ -1849,12 +1912,13 @@ export default function MatchPage() {
                 font-black
                 uppercase
                 tracking-[0.2em]
-                text-cyan-400
+                text-blue-400
+                [text-shadow:0_0_14px_rgba(59,130,246,0.7)]
               "
             >{t("teamA")}</div>
 
             {startingTeam && activeTeamForDisplay === "A" && extraOwed === 0 && (
-              <span className="rounded-full bg-cyan-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-cyan-300">{t("amZug", { v: getRoundThrowLabel("A") ? ` · ${getRoundThrowLabel("A")}` : "" })}</span>
+              <span className="rounded-full border border-blue-400/40 bg-blue-500/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-blue-200">{t("amZug", { v: getRoundThrowLabel("A") ? ` · ${getRoundThrowLabel("A")}` : "" })}</span>
             )}
           </div>
 
@@ -1881,9 +1945,13 @@ export default function MatchPage() {
               shrink-0
               rounded-2xl
               border
-              border-white/[0.06]
-              bg-white/[0.02]
+              border-blue-400/30
+              bg-gradient-to-br
+              from-blue-500/[0.08]
+              to-white/[0.02]
               p-4
+              shadow-[0_0_18px_rgba(59,130,246,0.12),inset_0_1px_0_rgba(255,255,255,0.05)]
+              backdrop-blur-md
             "
           >
             <div
@@ -1893,24 +1961,27 @@ export default function MatchPage() {
                 font-black
                 uppercase
                 tracking-[0.18em]
-                text-white/30
+                text-white/60
               "
             >{t("matchStatistik")}</div>
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <div className="text-lg font-black">{teamStats.A.throwsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("wuerfe")}</div>
+                <StatIcon kind="throws" team="A" />
+                <div className="mt-1 text-xl font-black">{teamStats.A.throwsCount}</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/45">{t("wuerfe")}</div>
               </div>
 
               <div>
-                <div className="text-lg font-black">{teamStats.A.hitsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("treffer")}</div>
+                <StatIcon kind="hits" team="A" />
+                <div className="mt-1 text-xl font-black">{teamStats.A.hitsCount}</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/45">{t("treffer")}</div>
               </div>
 
               <div>
-                <div className="text-lg font-black">{teamStats.A.opponentCupsRemaining}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("becher")}</div>
+                <StatIcon kind="cups" team="A" />
+                <div className="mt-1 text-xl font-black">{teamStats.A.opponentCupsRemaining}</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/45">{t("becher")}</div>
               </div>
             </div>
           </div>
@@ -1923,9 +1994,11 @@ export default function MatchPage() {
               flex-col
               rounded-2xl
               border
-              border-white/[0.06]
-              bg-white/[0.02]
+              border-blue-400/20
+              bg-white/[0.03]
               p-4
+              shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
+              backdrop-blur-md
               lg:min-h-0
               lg:flex-1
             "
@@ -1938,7 +2011,7 @@ export default function MatchPage() {
                 font-black
                 uppercase
                 tracking-[0.18em]
-                text-white/30
+                text-white/60
               "
             >{t("letzteAktionen")}</div>
 
@@ -2005,12 +2078,13 @@ export default function MatchPage() {
                 font-black
                 uppercase
                 tracking-[0.2em]
-                text-fuchsia-400
+                text-red-500
+                [text-shadow:0_0_14px_rgba(239,68,68,0.7)]
               "
             >{t("teamB")}</div>
 
             {startingTeam && activeTeamForDisplay === "B" && extraOwed === 0 && (
-              <span className="rounded-full bg-fuchsia-400/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-fuchsia-300">{t("amZug", { v: getRoundThrowLabel("B") ? ` · ${getRoundThrowLabel("B")}` : "" })}</span>
+              <span className="rounded-full border border-red-400/40 bg-red-500/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-red-200">{t("amZug", { v: getRoundThrowLabel("B") ? ` · ${getRoundThrowLabel("B")}` : "" })}</span>
             )}
           </div>
 
@@ -2037,9 +2111,13 @@ export default function MatchPage() {
               shrink-0
               rounded-2xl
               border
-              border-white/[0.06]
-              bg-white/[0.02]
+              border-red-400/30
+              bg-gradient-to-br
+              from-red-500/[0.08]
+              to-white/[0.02]
               p-4
+              shadow-[0_0_18px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.05)]
+              backdrop-blur-md
             "
           >
             <div
@@ -2049,24 +2127,27 @@ export default function MatchPage() {
                 font-black
                 uppercase
                 tracking-[0.18em]
-                text-white/30
+                text-white/60
               "
             >{t("matchStatistik")}</div>
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <div className="text-lg font-black">{teamStats.B.throwsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("wuerfe")}</div>
+                <StatIcon kind="throws" team="B" />
+                <div className="mt-1 text-xl font-black">{teamStats.B.throwsCount}</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/45">{t("wuerfe")}</div>
               </div>
 
               <div>
-                <div className="text-lg font-black">{teamStats.B.hitsCount}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("treffer")}</div>
+                <StatIcon kind="hits" team="B" />
+                <div className="mt-1 text-xl font-black">{teamStats.B.hitsCount}</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/45">{t("treffer")}</div>
               </div>
 
               <div>
-                <div className="text-lg font-black">{teamStats.B.opponentCupsRemaining}</div>
-                <div className="text-[8px] uppercase tracking-wider text-white/25">{t("becher")}</div>
+                <StatIcon kind="cups" team="B" />
+                <div className="mt-1 text-xl font-black">{teamStats.B.opponentCupsRemaining}</div>
+                <div className="text-[8px] uppercase tracking-wider text-white/45">{t("becher")}</div>
               </div>
             </div>
           </div>
@@ -2075,17 +2156,17 @@ export default function MatchPage() {
 
           {/* SCORE */}
 
-          <div className="flex shrink-0 items-center justify-center gap-8">
+          <div className="flex shrink-0 items-center justify-around gap-6 rounded-2xl border border-blue-400/50 bg-gradient-to-r from-blue-600/35 via-[#080b16]/80 to-red-600/35 px-6 py-3 shadow-[0_0_22px_rgba(59,130,246,0.25),0_0_22px_rgba(239,68,68,0.18),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md">
             <div className="text-center">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-white/25">{t("teamA")}</div>
-              <div className="text-3xl font-black">{teamAScore}</div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-blue-300">{t("teamA")}</div>
+              <div className="text-4xl font-black [text-shadow:0_0_16px_rgba(59,130,246,0.8)]">{teamAScore}</div>
             </div>
 
-            <div className="text-lg font-black text-white/15">:</div>
+            <div className="text-2xl font-black text-white/70">:</div>
 
             <div className="text-center">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-white/25">{t("teamB")}</div>
-              <div className="text-3xl font-black">{teamBScore}</div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-red-300">{t("teamB")}</div>
+              <div className="text-4xl font-black [text-shadow:0_0_16px_rgba(239,68,68,0.8)]">{teamBScore}</div>
             </div>
           </div>
 
@@ -2097,20 +2178,26 @@ export default function MatchPage() {
               disabled={!canUndo}
               onClick={handleUndo}
               className="
+                flex
                 w-full
+                items-center
+                justify-center
+                gap-2.5
                 rounded-xl
                 border
-                border-yellow-400/40
-                bg-yellow-400/10
+                border-white/20
+                bg-white/[0.09]
                 px-6
                 py-3.5
                 text-xs
                 font-black
                 uppercase
                 tracking-[0.15em]
-                text-yellow-300
+                text-white
+                shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]
+                backdrop-blur-md
                 transition
-                hover:bg-yellow-400/20
+                hover:bg-white/[0.15]
                 active:scale-[0.98]
                 disabled:cursor-not-allowed
                 disabled:border-white/[0.06]
@@ -2188,7 +2275,7 @@ export default function MatchPage() {
 
       {!startingTeam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0c0f16] p-6 text-center">
+          <div className="w-full max-w-sm rounded-2xl border border-blue-400/25 bg-[#0a1124]/95 p-6 text-center shadow-[0_0_40px_rgba(59,130,246,0.18)]">
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
               {overtimeCount > 0 ? t("verlaengerung") : t("vorDemAnwurf")}
             </div>
@@ -2199,13 +2286,13 @@ export default function MatchPage() {
               <button
                 type="button"
                 onClick={() => setStartingTeam("A")}
-                className="w-full rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-cyan-300 transition hover:bg-cyan-400/20"
+                className="w-full rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-3 text-sm font-black uppercase tracking-wider text-blue-200 shadow-[0_0_16px_rgba(59,130,246,0.3)] transition hover:bg-blue-500/25"
               >{t("teamA")}</button>
 
               <button
                 type="button"
                 onClick={() => setStartingTeam("B")}
-                className="w-full rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/10 px-4 py-3 text-sm font-black uppercase tracking-wider text-fuchsia-300 transition hover:bg-fuchsia-400/20"
+                className="w-full rounded-xl border border-red-400/50 bg-red-500/15 px-4 py-3 text-sm font-black uppercase tracking-wider text-red-200 shadow-[0_0_16px_rgba(239,68,68,0.3)] transition hover:bg-red-500/25"
               >{t("teamB")}</button>
 
               <button
