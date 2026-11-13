@@ -1,7 +1,8 @@
 import { FORMATION_CUP_COUNT, getShooterViewSlot, isNonThrowAction } from "./matchLogic";
 import type { MatchState, Team, HitType, RecordedFormation } from "./matchLogic";
 import { isAgainstRegisteredOpponents } from "./matchEligibility";
-import { getSavedMatches } from "./matchStorage";
+import { getMatchDigests, type MatchDigest } from "./matchDigest";
+import { getSavedMatchesForPlayer } from "./matchStorage";
 import {
   getRatedOpponentIds,
   getRegisteredPlayerIds,
@@ -126,6 +127,39 @@ export function getPlayerMatchStats(state: MatchState, playerId: string): Player
 }
 
 /*
+ * Wie getPlayerMatchStats, aber aus der Match-Zusammenfassung der Datenbank
+ * (matchDigest.ts) statt aus allen einzelnen Würfen. Gleiches Ergebnis.
+ */
+export function digestPlayerStats(digest: MatchDigest, playerId: string): PlayerMatchStats | null {
+  const player = digest.players.find((item) => item.id === playerId);
+
+  if (!player) return null;
+
+  const stats = emptyStats({ id: player.id, name: player.name, team: player.team });
+
+  stats.matches = 1;
+  stats.throws = player.throws;
+  stats.hits = player.hits;
+  stats.misses = player.misses;
+  stats.cupsRemoved = player.cupsRemoved;
+  stats.singleHits = player.singleHits;
+  stats.bounceHits = player.bounceHits;
+  stats.trickshotHits = player.trickshotHits;
+  stats.penaltyCups = player.penaltyCups;
+  stats.knockedOverCups = player.knockedOverCups;
+
+  if (digest.winner === player.team) {
+    stats.wins = 1;
+  } else if (digest.winner) {
+    stats.losses = 1;
+  }
+
+  stats.hitRate = stats.throws > 0 ? Math.round((stats.hits / stats.throws) * 100) : 0;
+
+  return stats;
+}
+
+/*
  * --------------------------------------------------------------------------
  * | STATS-RESET BERÜCKSICHTIGEN
  * --------------------------------------------------------------------------
@@ -223,8 +257,9 @@ export async function getPlayerMatchHistory(
   playerId: string,
   range: StatsRange = "all",
 ): Promise<PlayerMatchHistoryEntry[]> {
+  /* Nur die Matches dieses Spielers laden, nicht die ganze Datenbank. */
   const [matches, resetTimestamps, ratedIds] = await Promise.all([
-    getSavedMatches(),
+    getSavedMatchesForPlayer(playerId),
     getStatsResetTimestamps(),
     getRatedOpponentIds(),
   ]);
@@ -300,18 +335,21 @@ export async function getPlayerOverallStats(
   return result;
 }
 
-export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> {
-  const [matches, resetTimestamps, registeredIds, ratedIds] = await Promise.all([
-    getSavedMatches(),
-    getStatsResetTimestamps(),
-    getRegisteredPlayerIds(),
-    getRatedOpponentIds(),
-  ]);
-
+/*
+ * Rangliste aus den Match-Zusammenfassungen. Reine Berechnung ohne
+ * Datenbankzugriff (deshalb einzeln testbar): Gäste fehlen, nur Matches nach
+ * dem eigenen Reset und nur Matches gegen registrierte Gegner zählen.
+ */
+export function aggregateOverallStats(
+  digests: MatchDigest[],
+  resetTimestamps: Map<string, string | null>,
+  registeredIds: Set<string>,
+  ratedIds: Set<string>,
+): PlayerOverallStats[] {
   const byPlayer = new Map<string, PlayerOverallStats>();
 
-  for (const savedMatch of matches) {
-    for (const player of savedMatch.state.players) {
+  for (const digest of digests) {
+    for (const player of digest.players) {
       /*
        * Gäste (kein verknüpfter Account) tauchen in der öffentlichen
        * Rangliste nicht auf - nur registrierte Spieler.
@@ -322,16 +360,16 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
 
       const resetAt = resetTimestamps.get(player.id) ?? null;
 
-      if (!isAfterReset(savedMatch.savedAt, resetAt)) {
+      if (!isAfterReset(digest.savedAt, resetAt)) {
         continue;
       }
 
       /* Wie im Profil: nur Matches gegen registrierte Gegner zählen. */
-      if (!isAgainstRegisteredOpponents(savedMatch.state, player.id, ratedIds)) {
+      if (!isAgainstRegisteredOpponents(digest, player.id, ratedIds)) {
         continue;
       }
 
-      const matchStats = getPlayerMatchStats(savedMatch.state, player.id);
+      const matchStats = digestPlayerStats(digest, player.id);
       if (!matchStats) continue;
 
       const existing = byPlayer.get(player.id);
@@ -367,6 +405,18 @@ export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> 
     if (b.hitRate !== a.hitRate) return b.hitRate - a.hitRate;
     return b.hits - a.hits;
   });
+}
+
+export async function getAllPlayerOverallStats(): Promise<PlayerOverallStats[]> {
+  /* Match-Zusammenfassungen aus der Datenbank statt aller einzelnen Würfe. */
+  const [digests, resetTimestamps, registeredIds, ratedIds] = await Promise.all([
+    getMatchDigests(),
+    getStatsResetTimestamps(),
+    getRegisteredPlayerIds(),
+    getRatedOpponentIds(),
+  ]);
+
+  return aggregateOverallStats(digests, resetTimestamps, registeredIds, ratedIds);
 }
 
 /*
@@ -525,48 +575,40 @@ export type SkillRatingOverview = {
   history: RatingStep[];
 };
 
-function toRatingInput(
-  savedMatch: Awaited<ReturnType<typeof getSavedMatches>>[number],
+export function toRatingInput(
+  digest: MatchDigest,
   resetTimestamps: Map<string, string | null>,
   ratedIds: Set<string>,
 ): RatingMatchInput {
-  const { state } = savedMatch;
-  const removedBy: Record<Team, Set<number>> = { A: new Set(), B: new Set() };
-
-  for (const action of state.actions) {
-    if (action.type === "hit") {
-      action.cupIds.forEach((cupId) => removedBy[action.team].add(cupId));
-    }
-  }
-
   return {
-    matchId: savedMatch.id,
-    savedAt: savedMatch.savedAt,
-    winner: state.winner ?? null,
-    cups: { A: removedBy.A.size, B: removedBy.B.size },
-    players: state.players.map((player) => ({
+    matchId: digest.id,
+    savedAt: digest.savedAt,
+    winner: digest.winner,
+    /* Becher, die jedes Team dem Gegner entfernt hat (verschiedene Becher-IDs). */
+    cups: { A: digest.cupsA.length, B: digest.cupsB.length },
+    players: digest.players.map((player) => ({
       id: player.id,
       name: player.name,
       team: player.team,
       counts:
-        isAfterReset(savedMatch.savedAt, resetTimestamps.get(player.id) ?? null) &&
-        isAgainstRegisteredOpponents(state, player.id, ratedIds),
+        isAfterReset(digest.savedAt, resetTimestamps.get(player.id) ?? null) &&
+        isAgainstRegisteredOpponents(digest, player.id, ratedIds),
     })),
   };
 }
 
 export async function getPlayerSkillRating(playerId: string): Promise<SkillRatingOverview | null> {
-  const [matches, resetTimestamps, registeredIds, ratedIds] = await Promise.all([
-    getSavedMatches(),
+  const [digests, resetTimestamps, registeredIds, ratedIds] = await Promise.all([
+    getMatchDigests(),
     getStatsResetTimestamps(),
     getRegisteredPlayerIds(),
     getRatedOpponentIds(),
   ]);
 
-  /* getSavedMatches liefert neueste zuerst, das Rating braucht älteste zuerst. */
-  const inputs = [...matches]
+  /* getMatchDigests liefert neueste zuerst, das Rating braucht älteste zuerst. */
+  const inputs = [...digests]
     .reverse()
-    .map((match) => toRatingInput(match, resetTimestamps, ratedIds));
+    .map((digest) => toRatingInput(digest, resetTimestamps, ratedIds));
 
   const ratings = computeRatings(inputs);
   const own = ratings.get(playerId);

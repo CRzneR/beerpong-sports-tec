@@ -4,6 +4,7 @@ import { matchCountsForAnyone } from "./matchEligibility";
 import { getRatedOpponentIds, getRegisteredPlayerIds } from "./playerProfiles";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllByIds, fetchAllPages } from "@/lib/supabase/fetchAll";
+import { cachedQuery, invalidateStatsCaches } from "@/lib/supabase/queryCache";
 
 /*
  * --------------------------------------------------------------------------
@@ -291,20 +292,73 @@ async function buildSavedMatches(matches: MatchRow[]): Promise<SavedMatch[]> {
   }));
 }
 
-export async function getSavedMatches(): Promise<SavedMatch[]> {
-  const supabase = createClient();
+/*
+ * ACHTUNG: Lädt ALLE Matches mit ALLEN Würfen - bei vielen Daten teuer.
+ * Für Rangliste, Rating und Match-Liste stattdessen getMatchDigests()
+ * (matchDigest.ts) und für ein Profil getSavedMatchesForPlayer() verwenden.
+ * Diese Funktion bleibt nur als Fallback, falls die SQL-Funktion fehlt.
+ */
+export function getSavedMatches(): Promise<SavedMatch[]> {
+  return cachedQuery("saved-matches:all", async () => {
+    const supabase = createClient();
 
-  /* created_at ist nicht eindeutig - id als zweites Kriterium hält das Blättern stabil. */
-  const matches = await fetchAllPages<MatchRow>((from, to) =>
-    supabase
-      .from("matches")
-      .select(MATCH_COLUMNS)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .range(from, to),
-  );
+    /* created_at ist nicht eindeutig - id als zweites Kriterium hält das Blättern stabil. */
+    const matches = await fetchAllPages<MatchRow>((from, to) =>
+      supabase
+        .from("matches")
+        .select(MATCH_COLUMNS)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    );
 
-  return buildSavedMatches(matches);
+    return buildSavedMatches(matches);
+  });
+}
+
+/*
+ * Alle Matches, an denen EIN Spieler beteiligt war, mit allen Würfen,
+ * NEUESTE ZUERST. Statt der ganzen Datenbank wird nur das geladen, was dieser
+ * Spieler für seine Profil-Statistiken, Achievements und Fortschritt braucht.
+ * Das zurückgegebene Array nicht verändern (vorher kopieren).
+ */
+export function getSavedMatchesForPlayer(playerId: string): Promise<SavedMatch[]> {
+  return cachedQuery(`saved-matches:player:${playerId}`, async () => {
+    const supabase = createClient();
+
+    const participations = await fetchAllPages<{ match_id: string }>((from, to) =>
+      supabase
+        .from("match_players")
+        .select("match_id")
+        .eq("player_id", playerId)
+        .order("match_id", { ascending: true })
+        .range(from, to),
+    );
+
+    const matchIds = Array.from(new Set(participations.map((row) => row.match_id)));
+
+    const matches = await fetchAllByIds<MatchRow>(matchIds, (ids, from, to) =>
+      supabase
+        .from("matches")
+        .select(MATCH_COLUMNS)
+        .in("id", ids)
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+
+    /* Mehrere Pakete (siehe fetchAllByIds) ergeben keine Gesamt-Reihenfolge, deshalb hier sortieren. */
+    matches.sort((a, b) => {
+      const diff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+      if (diff !== 0) {
+        return diff;
+      }
+
+      return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+    });
+
+    return buildSavedMatches(matches);
+  });
 }
 
 /*
@@ -368,7 +422,16 @@ async function shouldPersistMatch(state: MatchState): Promise<boolean> {
   }
 }
 
+/* Zwischengespeicherte Statistik-Daten verwerfen, auch wenn das Speichern nur halb gelang. */
 export async function saveMatch(state: MatchState): Promise<SavedMatch> {
+  try {
+    return await persistMatch(state);
+  } finally {
+    invalidateStatsCaches();
+  }
+}
+
+async function persistMatch(state: MatchState): Promise<SavedMatch> {
   if (!(await shouldPersistMatch(state))) {
     return {
       id: `local-${crypto.randomUUID()}`,
@@ -523,6 +586,8 @@ export async function deleteSavedMatch(matchId: string): Promise<boolean> {
 
   const { error } = await supabase.from("matches").delete().eq("id", matchId);
 
+  invalidateStatsCaches();
+
   if (error) {
     throw error;
   }
@@ -540,6 +605,8 @@ export async function clearSavedMatches(): Promise<void> {
   const supabase = createClient();
 
   const { error } = await supabase.from("matches").delete().not("id", "is", null);
+
+  invalidateStatsCaches();
 
   if (error) {
     throw error;

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { getSavedMatches } from "@/app/[locale]/spieler/match/matchStorage";
+import { getMatchDigests, type MatchDigest } from "@/app/[locale]/spieler/match/matchDigest";
+import { getSavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
 import type { SavedMatch } from "@/app/[locale]/spieler/match/matchStorage";
 import { getOwnProfile, getRegisteredPlayerIds } from "@/app/[locale]/spieler/match/playerProfiles";
 import { PanelModal, PanelTitle } from "@/components/stats/PanelCard";
@@ -75,26 +76,27 @@ function MatchRow({
   ownId,
   onClick,
 }: {
-  match: SavedMatch;
+  match: MatchDigest;
   ownId: string | null;
   onClick: () => void;
 }) {
   const t = useTranslations("Stats.MatchHistory");
   const locale = useLocale();
-  const state = match.state;
 
   const names = (team: "A" | "B") =>
-    state.players
-      .filter((player: { team: string }) => player.team === team)
-      .map((player: { name: string }) => player.name)
+    match.players
+      .filter((player) => player.team === team)
+      .map((player) => player.name)
       .join(", ") || "–";
 
-  /* Gespielte Becher: wie viele gegnerische Becher ein Team getroffen hat. */
+  /*
+   * Gespielte Becher: wie viele gegnerische Becher ein Team getroffen hat.
+   * Es zählen nur die Becher 1 bis 10 (wie in der Becher-Anzeige des Matches).
+   */
   const cupsHitBy = (team: "A" | "B") =>
-    (team === "A" ? state.teamBCups : state.teamACups).filter((cup: { hit: boolean }) => cup.hit)
-      .length;
+    (team === "A" ? match.cupsA : match.cupsB).filter((cupId) => cupId >= 1 && cupId <= 10).length;
 
-  const own = ownId ? state.players.find((player: { id: string }) => player.id === ownId) : null;
+  const own = ownId ? match.players.find((player) => player.id === ownId) : null;
 
   let title: string;
   let score: string;
@@ -102,19 +104,19 @@ function MatchRow({
   let avatarText: string;
 
   if (own) {
-    const ownTeam = own.team as "A" | "B";
+    const ownTeam = own.team;
     const otherTeam = ownTeam === "A" ? "B" : "A";
-    const opponents = state.players.filter((player: { team: string }) => player.team === otherTeam);
+    const opponents = match.players.filter((player) => player.team === otherTeam);
 
     title = t("vsNames", { names: names(otherTeam) });
     score = `${cupsHitBy(ownTeam)}:${cupsHitBy(otherTeam)}`;
-    outcome = !state.winner ? "draw" : state.winner === ownTeam ? "win" : "loss";
+    outcome = !match.winner ? "draw" : match.winner === ownTeam ? "win" : "loss";
     avatarText = initialsOf(opponents[0]?.name ?? "?");
   } else {
     title = t("teamsVs", { a: names("A"), b: names("B") });
     score = `${cupsHitBy("A")}:${cupsHitBy("B")}`;
-    outcome = !state.winner ? "draw" : state.winner === "A" ? "teamA" : "teamB";
-    avatarText = state.winner ?? "–";
+    outcome = !match.winner ? "draw" : match.winner === "A" ? "teamA" : "teamB";
+    avatarText = match.winner ?? "–";
   }
 
   const style = OUTCOME_STYLE[outcome];
@@ -150,7 +152,7 @@ function MatchRow({
 export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
   const t = useTranslations("Stats.MatchHistory");
 
-  const [matches, setMatches] = useState<SavedMatch[]>([]);
+  const [matches, setMatches] = useState<MatchDigest[]>([]);
   const [ownId, setOwnId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,12 +164,13 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
     setMounted(true);
 
     /*
-     * getSavedMatches() ist async (Supabase-Anfrage) und muss mit await
-     * bzw. then verarbeitet werden, sonst landet ein Promise im State.
+     * Die Liste braucht nur eine Zusammenfassung pro Match (getMatchDigests),
+     * nicht jeden einzelnen Wurf. Das ganze Match mit allen Würfen wird erst
+     * beim Anklicken geladen (siehe select).
      * Das eigene Profil ist optional: ohne Login (oder ohne Treffer) wird
      * die Liste neutral angezeigt.
      */
-    Promise.all([getSavedMatches(), getRegisteredPlayerIds(), getOwnProfile().catch(() => null)])
+    Promise.all([getMatchDigests(), getRegisteredPlayerIds(), getOwnProfile().catch(() => null)])
       .then(([result, registeredIds, ownProfile]) => {
         if (cancelled) {
           return;
@@ -181,7 +184,7 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
          * Sieger, Becher-Stand - keinen Sinn mehr ergeben).
          */
         const onlyRegistered = result.filter((match) =>
-          match.state.players.every((player) => registeredIds.has(player.id)),
+          match.players.every((player) => registeredIds.has(player.id)),
         );
 
         setMatches(onlyRegistered);
@@ -201,9 +204,19 @@ export default function MatchHistory({ onSelectMatch }: MatchHistoryProps) {
     };
   }, []);
 
-  const select = (match: SavedMatch) => {
+  const select = async (match: MatchDigest) => {
     setShowAll(false);
-    onSelectMatch?.(match);
+
+    try {
+      /* Erst jetzt das komplette Match mit allen Würfen laden (nur dieses eine). */
+      const full: SavedMatch | null = await getSavedMatch(match.id);
+
+      if (full) {
+        onSelectMatch?.(full);
+      }
+    } catch (err) {
+      console.error("Match konnte nicht geladen werden:", err);
+    }
   };
 
   /*

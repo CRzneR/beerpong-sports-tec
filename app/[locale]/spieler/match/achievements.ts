@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 import { isNonThrowAction } from "./matchLogic";
-import { getSavedMatches, type SavedMatch } from "./matchStorage";
+import { getSavedMatchesForPlayer, type SavedMatch } from "./matchStorage";
 import { getRegisteredPlayerIds } from "./playerProfiles";
 import {
   getMyTournamentOutcomes,
@@ -532,7 +532,8 @@ export async function syncAchievements(playerId: string): Promise<AchievementVie
   const supabase = createClient();
 
   const [matches, registeredIds, tournamentOutcomes] = await Promise.all([
-    getSavedMatches(),
+    /* Nur die Matches dieses Spielers, nicht die ganze Datenbank. */
+    getSavedMatchesForPlayer(playerId),
     getRegisteredPlayerIds(),
     /* Turnier-Daten sind eine Zugabe: Fehlt z. B. noch das SQL, läuft der Rest trotzdem. */
     getMyTournamentOutcomes(playerId).catch((err) => {

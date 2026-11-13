@@ -1,5 +1,5 @@
 import { isNonThrowAction, type Team } from "./matchLogic";
-import { getSavedMatches, type SavedMatch } from "./matchStorage";
+import { getSavedMatchesForPlayer, type SavedMatch } from "./matchStorage";
 import { getRegisteredPlayerIds } from "./playerProfiles";
 import { COMEBACK_DEFICIT } from "./playerStats";
 import {
@@ -284,7 +284,8 @@ export function evaluateProfileProgress(
 
 export async function loadProfileProgress(playerId: string): Promise<ProfileProgress> {
   const [matches, registeredIds, tournamentOutcomes] = await Promise.all([
-    getSavedMatches(),
+    /* Nur die Matches dieses Spielers, nicht die ganze Datenbank. */
+    getSavedMatchesForPlayer(playerId),
     getRegisteredPlayerIds(),
     /* Turnierdaten sind eine Zugabe: Fehlt z. B. noch das SQL, läuft der Rest trotzdem. */
     getMyTournamentOutcomes(playerId).catch((err) => {

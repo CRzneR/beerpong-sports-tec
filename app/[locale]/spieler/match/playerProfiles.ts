@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/appError";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllPages } from "@/lib/supabase/fetchAll";
+import { cachedQuery, invalidateStatsCaches } from "@/lib/supabase/queryCache";
 
 /*
  * --------------------------------------------------------------------------
@@ -150,6 +151,8 @@ export async function createPlayerProfile(name: string): Promise<PlayerProfile> 
     .select("id, name, initials")
     .single();
 
+  invalidateStatsCaches();
+
   if (error) {
     throw error;
   }
@@ -232,6 +235,8 @@ export async function deleteGuestProfile(guestId: string): Promise<DeleteGuestRe
   const supabase = createClient();
 
   const { data, error } = await supabase.rpc("delete_guest_profile", { p_guest_id: guestId });
+
+  invalidateStatsCaches();
 
   if (error) {
     throw error;
@@ -399,6 +404,8 @@ export async function saveOwnUsername(raw: string): Promise<PlayerProfile> {
 
   const { data, error } = await query.select("id, name, initials").single();
 
+  invalidateStatsCaches();
+
   if (error) {
     /* 23505 = unique violation (falls der Index aus username.sql aktiv ist) */
     if (error.code === "23505") {
@@ -487,9 +494,78 @@ export async function resetPlayerStats(playerId: string): Promise<void> {
     .update({ stats_reset_at: new Date().toISOString() })
     .eq("id", playerId);
 
+  invalidateStatsCaches();
+
   if (error) {
     throw error;
   }
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * | SPIELER-VERZEICHNIS (registrierte Spieler, Reset-Zeitpunkte)
+ * --------------------------------------------------------------------------
+ *
+ * getRegisteredPlayerIds, getRatedOpponentIds und getStatsResetTimestamps
+ * brauchten bisher je eine eigene Abfrage auf die komplette players-Tabelle.
+ * Jetzt lädt EINE Abfrage alles, und zwar nur die Zeilen, die dafür zählen:
+ * Spieler mit Account sowie gelöschte Konten. Gäste (oft die Mehrheit) werden
+ * gar nicht erst übertragen. Seitenweise wegen des 1000-Zeilen-Limits.
+ *
+ *  - registeredIds:    Spieler mit Account (user_id gesetzt)
+ *  - ratedIds:         registrierte Spieler plus gelöschte Konten
+ *  - resetTimestamps:  stats_reset_at je Spieler (fehlt ein Spieler: nie zurückgesetzt)
+ * --------------------------------------------------------------------------
+ */
+
+type PlayerDirectoryRow = {
+  id: string;
+  user_id: string | null;
+  name: string;
+  stats_reset_at: string | null;
+};
+
+type PlayerDirectory = {
+  registeredIds: Set<string>;
+  ratedIds: Set<string>;
+  resetTimestamps: Map<string, string | null>;
+};
+
+const DIRECTORY_COLUMNS = "id, user_id, name, stats_reset_at";
+
+function getPlayerDirectory(): Promise<PlayerDirectory> {
+  return cachedQuery("player-directory", async () => {
+    const supabase = createClient();
+
+    const [registered, deleted] = await Promise.all([
+      fetchAllPages<PlayerDirectoryRow>((from, to) =>
+        supabase
+          .from("players")
+          .select(DIRECTORY_COLUMNS)
+          .not("user_id", "is", null)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      fetchAllPages<PlayerDirectoryRow>((from, to) =>
+        supabase
+          .from("players")
+          .select(DIRECTORY_COLUMNS)
+          .is("user_id", null)
+          .eq("name", DELETED_PLAYER_NAME)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+    ]);
+
+    const registeredIds = new Set(registered.map((row) => row.id));
+    const ratedIds = new Set([...registered, ...deleted].map((row) => row.id));
+
+    const resetTimestamps = new Map<string, string | null>(
+      [...registered, ...deleted].map((row) => [row.id, row.stats_reset_at ?? null]),
+    );
+
+    return { registeredIds, ratedIds, resetTimestamps };
+  });
 }
 
 /*
@@ -505,17 +581,7 @@ export async function resetPlayerStats(playerId: string): Promise<void> {
  */
 
 export async function getStatsResetTimestamps(): Promise<Map<string, string | null>> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase.from("players").select("id, stats_reset_at");
-
-  if (error) {
-    throw error;
-  }
-
-  return new Map(
-    (data ?? []).map((row) => [row.id as string, (row.stats_reset_at as string | null) ?? null]),
-  );
+  return (await getPlayerDirectory()).resetTimestamps;
 }
 
 /*
@@ -532,18 +598,7 @@ export async function getStatsResetTimestamps(): Promise<Map<string, string | nu
  */
 
 export async function getRegisteredPlayerIds(): Promise<Set<string>> {
-  const supabase = createClient();
-
-  const rows = await fetchAllPages<{ id: string; user_id: string | null }>((from, to) =>
-    supabase
-      .from("players")
-      .select("id, user_id")
-      .not("user_id", "is", null)
-      .order("id", { ascending: true })
-      .range(from, to),
-  );
-
-  return new Set(rows.map((row) => row.id));
+  return (await getPlayerDirectory()).registeredIds;
 }
 
 /*
@@ -563,22 +618,7 @@ export async function getRegisteredPlayerIds(): Promise<Set<string>> {
 const DELETED_PLAYER_NAME = "Gelöschter Spieler";
 
 export async function getRatedOpponentIds(): Promise<Set<string>> {
-  const supabase = createClient();
-
-  const rows = await fetchAllPages<{ id: string; user_id: string | null; name: string }>(
-    (from, to) =>
-      supabase
-        .from("players")
-        .select("id, user_id, name")
-        .order("id", { ascending: true })
-        .range(from, to),
-  );
-
-  return new Set(
-    rows
-      .filter((row) => row.user_id !== null || row.name === DELETED_PLAYER_NAME)
-      .map((row) => row.id),
-  );
+  return (await getPlayerDirectory()).ratedIds;
 }
 
 /*

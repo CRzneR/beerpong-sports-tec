@@ -1,4 +1,4 @@
-import type { MatchState } from "./matchLogic";
+import type { MatchState, Team } from "./matchLogic";
 
 /*
  * --------------------------------------------------------------------------
@@ -22,8 +22,11 @@ import type { MatchState } from "./matchLogic";
  * --------------------------------------------------------------------------
  */
 
+/* Nur Spieler und Teams werden gebraucht: Das passt auf ein MatchState ebenso wie auf eine Match-Zusammenfassung. */
+type MatchPlayers = { players: { id: string; team: Team }[] };
+
 export function isAgainstRegisteredOpponents(
-  state: MatchState,
+  state: MatchPlayers,
   playerId: string,
   ratedIds: Set<string>,
 ): boolean {
