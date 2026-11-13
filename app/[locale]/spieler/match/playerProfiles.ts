@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/appError";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllPages } from "@/lib/supabase/fetchAll";
 
 /*
  * --------------------------------------------------------------------------
@@ -47,16 +48,17 @@ function computeInitials(name: string): string {
 export async function getAllPlayerProfiles(): Promise<PlayerProfile[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("players")
-    .select("id, name, initials")
-    .order("name", { ascending: true });
+  /* Mehr als 1000 Profile gehen nur seitenweise (siehe lib/supabase/fetchAll.ts). */
+  const rows = await fetchAllPages<PlayerProfileRow>((from, to) =>
+    supabase
+      .from("players")
+      .select("id, name, initials")
+      .order("name", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 
-  if (error) {
-    throw error;
-  }
-
-  return ((data ?? []) as PlayerProfileRow[]).map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     name: row.name,
     initials: row.initials ?? computeInitials(row.name),
@@ -532,16 +534,16 @@ export async function getStatsResetTimestamps(): Promise<Map<string, string | nu
 export async function getRegisteredPlayerIds(): Promise<Set<string>> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("players")
-    .select("id, user_id")
-    .not("user_id", "is", null);
+  const rows = await fetchAllPages<{ id: string; user_id: string | null }>((from, to) =>
+    supabase
+      .from("players")
+      .select("id, user_id")
+      .not("user_id", "is", null)
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 
-  if (error) {
-    throw error;
-  }
-
-  return new Set((data ?? []).map((row) => row.id as string));
+  return new Set(rows.map((row) => row.id));
 }
 
 /*
@@ -563,16 +565,19 @@ const DELETED_PLAYER_NAME = "Gelöschter Spieler";
 export async function getRatedOpponentIds(): Promise<Set<string>> {
   const supabase = createClient();
 
-  const { data, error } = await supabase.from("players").select("id, user_id, name");
-
-  if (error) {
-    throw error;
-  }
+  const rows = await fetchAllPages<{ id: string; user_id: string | null; name: string }>(
+    (from, to) =>
+      supabase
+        .from("players")
+        .select("id, user_id, name")
+        .order("id", { ascending: true })
+        .range(from, to),
+  );
 
   return new Set(
-    (data ?? [])
+    rows
       .filter((row) => row.user_id !== null || row.name === DELETED_PLAYER_NAME)
-      .map((row) => row.id as string),
+      .map((row) => row.id),
   );
 }
 

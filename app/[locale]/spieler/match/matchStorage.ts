@@ -3,6 +3,7 @@ import type { MatchState, Cup, RecordedFormation } from "./matchLogic";
 import { matchCountsForAnyone } from "./matchEligibility";
 import { getRatedOpponentIds, getRegisteredPlayerIds } from "./playerProfiles";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllByIds, fetchAllPages } from "@/lib/supabase/fetchAll";
 
 /*
  * --------------------------------------------------------------------------
@@ -198,78 +199,112 @@ function reconstructState(
  * --------------------------------------------------------------------------
  */
 
-export async function getSavedMatches(): Promise<SavedMatch[]> {
-  const supabase = createClient();
+/*
+ * Supabase liefert pro Anfrage höchstens 1000 Zeilen. Die Würfe (actions)
+ * übersteigen das schnell - deshalb wird hier alles seitenweise geladen
+ * (siehe lib/supabase/fetchAll.ts) und die ID-Listen werden gestückelt.
+ */
 
-  const { data: matches, error: matchesError } = await supabase
-    .from("matches")
-    .select("id, created_at, winner, is_finished, started_at, finished_at")
-    .order("created_at", { ascending: false });
+const MATCH_COLUMNS = "id, created_at, winner, is_finished, started_at, finished_at";
 
-  if (matchesError) {
-    throw matchesError;
-  }
+const ACTION_COLUMNS =
+  "id, match_id, player_id, team, action_type, hit_type, cup_ids, action_index, formation, hit_slots";
 
-  if (!matches || matches.length === 0) {
+/* Lädt Spieler, Zuordnungen und Würfe zu den übergebenen Matches und baut daraus SavedMatches. */
+async function buildSavedMatches(matches: MatchRow[]): Promise<SavedMatch[]> {
+  if (matches.length === 0) {
     return [];
   }
 
+  const supabase = createClient();
   const matchIds = matches.map((match) => match.id);
 
-  const [{ data: matchPlayers, error: matchPlayersError }, { data: actions, error: actionsError }] =
-    await Promise.all([
-      supabase.from("match_players").select("match_id, player_id, team").in("match_id", matchIds),
+  const [matchPlayers, actions] = await Promise.all([
+    fetchAllByIds<MatchPlayerRow>(matchIds, (ids, from, to) =>
+      supabase
+        .from("match_players")
+        .select("match_id, player_id, team")
+        .in("match_id", ids)
+        .order("match_id", { ascending: true })
+        .order("player_id", { ascending: true })
+        .range(from, to),
+    ),
 
+    fetchAllByIds<ActionRow>(matchIds, (ids, from, to) =>
       supabase
         .from("actions")
-        .select(
-          "id, match_id, player_id, team, action_type, hit_type, cup_ids, action_index, formation, hit_slots",
-        )
-        .in("match_id", matchIds)
-        .order("action_index", { ascending: true }),
-    ]);
-
-  if (matchPlayersError) {
-    throw matchPlayersError;
-  }
-
-  if (actionsError) {
-    throw actionsError;
-  }
+        .select(ACTION_COLUMNS)
+        .in("match_id", ids)
+        .order("match_id", { ascending: true })
+        .order("action_index", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+  ]);
 
   const playerIds = Array.from(
-    new Set([
-      ...(matchPlayers ?? []).map((item) => item.player_id),
-      ...(actions ?? []).map((item) => item.player_id),
-    ]),
+    new Set([...matchPlayers.map((item) => item.player_id), ...actions.map((item) => item.player_id)]),
   );
 
-  const { data: players, error: playersError } = playerIds.length
-    ? await supabase.from("players").select("id, name").in("id", playerIds)
-    : { data: [], error: null };
+  const players = await fetchAllByIds<PlayerRow>(playerIds, (ids, from, to) =>
+    supabase
+      .from("players")
+      .select("id, name")
+      .in("id", ids)
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 
-  if (playersError) {
-    throw playersError;
+  /* Einmal nach Match gruppieren statt für jedes Match alle Würfe zu durchsuchen. */
+  const matchPlayersByMatch = new Map<string, MatchPlayerRow[]>();
+  const actionsByMatch = new Map<string, ActionRow[]>();
+
+  for (const item of matchPlayers) {
+    const list = matchPlayersByMatch.get(item.match_id);
+
+    if (list) {
+      list.push(item);
+    } else {
+      matchPlayersByMatch.set(item.match_id, [item]);
+    }
   }
 
-  const result: SavedMatch[] = [];
+  for (const item of actions) {
+    const list = actionsByMatch.get(item.match_id);
 
-  for (const match of matches) {
-    const state = reconstructState(
+    if (list) {
+      list.push(item);
+    } else {
+      actionsByMatch.set(item.match_id, [item]);
+    }
+  }
+
+  return matches.map((match) => ({
+    id: match.id,
+    savedAt: match.created_at,
+    state: reconstructState(
       match,
-      (matchPlayers ?? []).filter((item) => item.match_id === match.id),
-      (players ?? []) as PlayerRow[],
-      (actions ?? []).filter((item) => item.match_id === match.id),
-    );
+      matchPlayersByMatch.get(match.id) ?? [],
+      players,
+      actionsByMatch.get(match.id) ?? [],
+    ),
+  }));
+}
 
-    result.push({
-      id: match.id,
-      savedAt: match.created_at,
-      state,
-    });
-  }
+export async function getSavedMatches(): Promise<SavedMatch[]> {
+  const supabase = createClient();
 
-  return result;
+  /* created_at ist nicht eindeutig - id als zweites Kriterium hält das Blättern stabil. */
+  const matches = await fetchAllPages<MatchRow>((from, to) =>
+    supabase
+      .from("matches")
+      .select(MATCH_COLUMNS)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
+
+  return buildSavedMatches(matches);
 }
 
 /*
@@ -455,9 +490,26 @@ export async function saveMatch(state: MatchState): Promise<SavedMatch> {
  */
 
 export async function getSavedMatch(matchId: string): Promise<SavedMatch | null> {
-  const matches = await getSavedMatches();
+  const supabase = createClient();
 
-  return matches.find((match) => match.id === matchId) ?? null;
+  /* Nur dieses eine Match laden, nicht erst alle Matches mit allen Würfen. */
+  const { data, error } = await supabase
+    .from("matches")
+    .select(MATCH_COLUMNS)
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const [saved] = await buildSavedMatches([data as MatchRow]);
+
+  return saved ?? null;
 }
 
 /*
