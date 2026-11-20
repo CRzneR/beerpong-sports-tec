@@ -8,6 +8,7 @@ import {
   computeKoQualifiersBy,
   distributeTeamsToGroups,
   evaluateTournamentOutcome,
+  generateDoubleRoundRobinPairs,
   generateRoundRobinPairs,
   koChampionId,
   koTeamCountAllowed,
@@ -148,7 +149,8 @@ const MATCH_COLUMNS =
 |--------------------------------------------------------------------------
 |
 | Legt Turnier, Teams (verteilt auf die Gruppen) und den kompletten
-| Spielplan (Jeder-gegen-Jeden pro Gruppe) in einem Rutsch an.
+| Spielplan (Jeder-gegen-Jeden pro Gruppe, optional mit Hin- und Rückspiel)
+| in einem Rutsch an.
 |
 */
 
@@ -156,6 +158,7 @@ export async function createTournament(
   name: string,
   teamNames: string[],
   groupCount: number,
+  doubleRoundRobin = false,
 ): Promise<Tournament> {
   const supabase = createClient();
 
@@ -217,7 +220,10 @@ export async function createTournament(
 
   for (const groupLabel of groupLabels) {
     const groupTeams = teams.filter((team) => team.groupLabel === groupLabel);
-    const pairs = generateRoundRobinPairs(groupTeams);
+    // Hin- und Rückspiel: jede Paarung zweimal (Rückspiel mit getauschten Seiten).
+    const pairs = doubleRoundRobin
+      ? generateDoubleRoundRobinPairs(groupTeams).map((entry) => entry.pair)
+      : generateRoundRobinPairs(groupTeams);
 
     for (const [teamA, teamB] of pairs) {
       matchRows.push({

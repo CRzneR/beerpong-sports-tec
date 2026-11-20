@@ -7,12 +7,14 @@ import { createTournament } from "../tournamentStorage";
 import { shuffleArray } from "../tournamentLogic";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslations } from "next-intl";
+import { useLegsContent } from "../leagueLegsContent";
 
 const MIN_TEAMS = 2;
 const MAX_TEAMS = 64;
 
 export default function NeuesTurnierPage() {
   const t = useTranslations("League.NewPage");
+  const legs = useLegsContent();
 
   const router = useRouter();
 
@@ -29,6 +31,7 @@ export default function NeuesTurnierPage() {
    * zu 2 bzw. 1. Korrigiert wird erst beim Verlassen des Feldes (onBlur).
    */
   const [teamCountText, setTeamCountText] = useState("8");
+  const [doubleRoundRobin, setDoubleRoundRobin] = useState(false);
   const [groupCountText, setGroupCountText] = useState("2");
 
   const teamCount = Number.parseInt(teamCountText, 10) || 0;
@@ -125,6 +128,7 @@ export default function NeuesTurnierPage() {
         name.trim(),
         teamNames.map((teamName) => teamName.trim()),
         groupCount,
+        doubleRoundRobin,
       );
 
       router.push({ pathname: "/turniere/[tournamentId]", params: { tournamentId: tournament.id } });
@@ -206,7 +210,45 @@ export default function NeuesTurnierPage() {
               </div>
             </div>
 
-            <p className="text-xs text-white/30">{t("dieTeamsWerdenGleichmaessig")}</p>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                {legs.optionLabel}
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={doubleRoundRobin}
+                onClick={() => setDoubleRoundRobin((value) => !value)}
+                className={`mt-2 flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:border-yellow-400/60 ${
+                  doubleRoundRobin
+                    ? "border-yellow-400/40 bg-yellow-400/[0.06]"
+                    : "border-white/[0.08] bg-white/[0.02] hover:border-white/20"
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white">{legs.optionTitle}</span>
+                  <span className="mt-0.5 block text-xs text-white/40">{legs.optionHint}</span>
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition ${
+                    doubleRoundRobin ? "bg-yellow-400" : "bg-white/15"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                      doubleRoundRobin ? "left-[22px]" : "left-0.5"
+                    }`}
+                  />
+                </span>
+              </button>
+            </div>
+
+            <p className="text-xs text-white/30">
+              {doubleRoundRobin ? legs.infoDouble : legs.infoSingle}
+            </p>
 
             <button
               type="button"

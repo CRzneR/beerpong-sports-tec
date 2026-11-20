@@ -158,6 +158,64 @@ export function generateRoundRobinPairs<T>(teams: T[]): [T, T][] {
 
 /*
 |--------------------------------------------------------------------------
+| HIN- UND RÜCKSPIEL
+|--------------------------------------------------------------------------
+|
+| Jede Paarung wird zweimal gespielt. Damit man das Rückspiel später
+| ohne zusätzliche Datenbankspalte erkennt, wird die Paarung nach der
+| ID sortiert: Hinspiel = (kleinere ID, größere ID), Rückspiel =
+| (größere ID, kleinere ID). Alle Hinspiele stehen vor allen Rückspielen
+| (klassische Hin- und Rückrunde).
+|
+*/
+
+export function generateDoubleRoundRobinPairs<T extends { id: string }>(
+  teams: T[],
+): { pair: [T, T]; isReturnLeg: boolean }[] {
+  const firstLegs = generateRoundRobinPairs(teams).map(([a, b]): [T, T] =>
+    a.id < b.id ? [a, b] : [b, a],
+  );
+
+  return [
+    ...firstLegs.map((pair) => ({ pair, isReturnLeg: false })),
+    ...firstLegs.map(([a, b]) => ({ pair: [b, a] as [T, T], isReturnLeg: true })),
+  ];
+}
+
+/*
+| Ordnet Hin- und Rückspiele eines Spielplans zu: Kommt eine Paarung
+| zweimal vor, ist die Partie mit "Team A hat die größere ID" das
+| Rückspiel, die andere das Hinspiel. Bei einfacher Runde gibt es keine
+| Doppelungen, also bleibt die Zuordnung leer.
+*/
+
+export type MatchLeg = "first" | "return";
+
+export function findMatchLegs(
+  matches: { id: string; groupLabel: string; teamAId: string; teamBId: string }[],
+): Map<string, MatchLeg> {
+  const key = (m: { groupLabel: string; teamAId: string; teamBId: string }) =>
+    `${m.groupLabel}|${[m.teamAId, m.teamBId].sort().join("|")}`;
+
+  const counts = new Map<string, number>();
+
+  for (const match of matches) {
+    counts.set(key(match), (counts.get(key(match)) ?? 0) + 1);
+  }
+
+  const result = new Map<string, MatchLeg>();
+
+  for (const match of matches) {
+    if ((counts.get(key(match)) ?? 0) > 1) {
+      result.set(match.id, match.teamAId > match.teamBId ? "return" : "first");
+    }
+  }
+
+  return result;
+}
+
+/*
+|--------------------------------------------------------------------------
 | GRUPPENTABELLE BERECHNEN
 |--------------------------------------------------------------------------
 |

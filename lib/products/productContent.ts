@@ -918,7 +918,7 @@ function leagueDe(): ProductContent {
               "2 bis 64 Teams, beliebig viele Gruppen",
               "Teams werden gleichmäßig auf die Gruppen verteilt",
               "Team-Namen eintragen oder mit „Mischen“ neu auslosen",
-              "In jeder Gruppe spielt jeder einmal gegen jeden",
+              "In jeder Gruppe spielt jeder gegen jeden – auf Wunsch mit Hin- und Rückspiel",
             ],
             plan: "free",
             image: img(
@@ -1084,7 +1084,7 @@ function leagueDe(): ProductContent {
       {
         question: "Wie werden die Tabellen berechnet?",
         answer:
-          "Für einen Sieg gibt es drei Punkte. Die Tabelle wird nach Punkten sortiert, dazu zeigt Pong League das Treffer-Verhältnis und die Differenz. In jeder Gruppe spielt jeder einmal gegen jeden.",
+          "Für einen Sieg gibt es drei Punkte. Die Tabelle wird nach Punkten sortiert, dazu zeigt Pong League das Treffer-Verhältnis und die Differenz. In jeder Gruppe spielt jeder gegen jeden, auf Wunsch mit Hin- und Rückspiel.",
       },
       {
         question: "Wie funktioniert die K.-o.-Phase?",
@@ -1150,7 +1150,7 @@ function leagueEn(): ProductContent {
               "2 to 64 teams, as many groups as you like",
               "Teams are spread evenly across the groups",
               "Enter team names or redraw them with \"Shuffle\"",
-              "In every group, everyone plays everyone once",
+              "In every group, everyone plays everyone – optionally with home and away legs",
             ],
             plan: "free",
             image: img(
@@ -1316,7 +1316,7 @@ function leagueEn(): ProductContent {
       {
         question: "How are the tables calculated?",
         answer:
-          "A win is worth three points. The table is sorted by points, and Pong League also shows the hit ratio and the difference. In every group, everyone plays everyone once.",
+          "A win is worth three points. The table is sorted by points, and Pong League also shows the hit ratio and the difference. In every group, everyone plays everyone, optionally with first and second legs.",
       },
       {
         question: "How does the knockout phase work?",

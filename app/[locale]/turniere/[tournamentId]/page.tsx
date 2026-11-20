@@ -41,6 +41,7 @@ import {
   koRoundCode,
   koTeamCountAllowed,
   koTotalRounds,
+  findMatchLegs,
   koWinnerId,
   maxQualifiersPerGroup,
   type KoMatch,
@@ -56,6 +57,7 @@ import { getOwnProStatus, getOwnProfile } from "@/app/[locale]/spieler/match/pla
 import { createClient } from "@/lib/supabase/client";
 import { useLocale, useTranslations } from "next-intl";
 import { useRoundText } from "../useRoundText";
+import { useLegsContent } from "../leagueLegsContent";
 import { LeagueBanner } from "@/components/league/LeagueArt";
 import { StatusBadge } from "@/components/league/LeagueBits";
 import type { Locale } from "@/i18n/routing";
@@ -66,6 +68,7 @@ const TAB_IDS: TabId[] = ["gruppen", "spielplan", "ko", "teams", "verwaltung"];
 
 export default function TurnierDetailPage() {
   const t = useTranslations("League.DetailPage");
+  const legsText = useLegsContent();
   const roundOf = useRoundText();
   const locale = useLocale() as Locale;
 
@@ -645,6 +648,14 @@ export default function TurnierDetailPage() {
   const shownPlanLabels = planFilter === "all" ? groupLabels : groupLabels.filter((label) => label === planFilter);
 
   /* Eine Spielzeile: Veranstalter trägt ein, alle anderen sehen nur. */
+  const matchLegs = findMatchLegs(matches);
+  const hasLegs = matchLegs.size > 0;
+
+  const legLabelOf = (match: TournamentMatch) => {
+    const leg = matchLegs.get(match.id);
+    return leg === "return" ? legsText.returnLeg : leg === "first" ? legsText.firstLeg : undefined;
+  };
+
   const renderMatch = (match: TournamentMatch, groupTag?: string) =>
     isOwner ? (
       <MatchRow
@@ -653,6 +664,7 @@ export default function TurnierDetailPage() {
         teamAName={teamById(match.teamAId)?.name ?? "?"}
         teamBName={teamById(match.teamBId)?.name ?? "?"}
         groupTag={groupTag}
+        legLabel={legLabelOf(match)}
         onSave={handleSaveResult}
       />
     ) : (
@@ -662,6 +674,7 @@ export default function TurnierDetailPage() {
         teamAName={teamById(match.teamAId)?.name ?? "?"}
         teamBName={teamById(match.teamBId)?.name ?? "?"}
         groupTag={groupTag}
+        legLabel={legLabelOf(match)}
         highlight={match.teamAId === myTeamId || match.teamBId === myTeamId}
       />
     );
@@ -828,6 +841,9 @@ export default function TurnierDetailPage() {
                     },
                   ]}
                 />
+                <p className="mt-4 text-xs font-semibold text-white/45">
+                  {legsText.modeLabel}: {hasLegs ? legsText.modeDouble : legsText.modeSingle}
+                </p>
               </SideCard>
             </aside>
           </div>
@@ -896,6 +912,9 @@ export default function TurnierDetailPage() {
                     },
                   ]}
                 />
+                <p className="mt-4 text-xs font-semibold text-white/45">
+                  {legsText.modeLabel}: {hasLegs ? legsText.modeDouble : legsText.modeSingle}
+                </p>
               </SideCard>
             </aside>
           </div>
@@ -1842,6 +1861,28 @@ function GroupCard({
   );
 }
 
+/* Linke Spalte einer Spielzeile: Gruppe (nur "Offene zuerst") und Hin-/Rückspiel. */
+function RowTag({ groupTag, legLabel }: { groupTag?: string; legLabel?: string }) {
+  if (!groupTag && !legLabel) {
+    return null;
+  }
+
+  return (
+    <span className="flex shrink-0 flex-row flex-wrap items-baseline gap-x-3 gap-y-0.5 md:w-24 md:flex-col md:gap-x-0">
+      {groupTag && (
+        <span className="text-[11px] font-black uppercase tracking-wider text-yellow-400/80">
+          {groupTag}
+        </span>
+      )}
+      {legLabel && (
+        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+          {legLabel}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /*
 |--------------------------------------------------------------------------
 | SPIEL-ZEILE MIT ERGEBNIS-EINGABE
@@ -1891,12 +1932,14 @@ function MatchRow({
   teamAName,
   teamBName,
   groupTag,
+  legLabel,
   onSave,
 }: {
   match: TournamentMatch;
   teamAName: string;
   teamBName: string;
   groupTag?: string;
+  legLabel?: string;
   onSave: (
     matchId: string,
     teamAScore: number,
@@ -1944,11 +1987,7 @@ function MatchRow({
   return (
     <div>
       <div className="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:gap-6 md:px-5">
-        {groupTag && (
-          <span className="shrink-0 text-[11px] font-black uppercase tracking-wider text-yellow-400/80 md:w-24">
-            {groupTag}
-          </span>
-        )}
+        <RowTag groupTag={groupTag} legLabel={legLabel} />
 
         <div className={ROW_GRID_CLASS}>
           <TeamCell name={teamAName} className={CELL_A_CLASS} />
@@ -2008,12 +2047,14 @@ function MatchRowReadOnly({
   teamAName,
   teamBName,
   groupTag,
+  legLabel,
   highlight,
 }: {
   match: TournamentMatch;
   teamAName: string;
   teamBName: string;
   groupTag?: string;
+  legLabel?: string;
   highlight: boolean;
 }) {
   const finished =
@@ -2030,11 +2071,7 @@ function MatchRowReadOnly({
         highlight ? "bg-yellow-400/[0.06]" : ""
       }`}
     >
-      {groupTag && (
-        <span className="shrink-0 text-[11px] font-black uppercase tracking-wider text-yellow-400/80 md:w-24">
-          {groupTag}
-        </span>
-      )}
+      <RowTag groupTag={groupTag} legLabel={legLabel} />
 
       <div className={ROW_GRID_CLASS}>
         <TeamCell name={teamAName} className={CELL_A_CLASS} />
