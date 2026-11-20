@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { AppNavbar } from "@/components/nav/AppNavbar";
+
 export const metadata: Metadata = {
   title: "Meine Statistiken",
   description:
@@ -10,6 +12,15 @@ export const metadata: Metadata = {
   },
 };
 
+/*
+ * Gemeinsame Hülle für alle Seiten unter /spieler: oben die Navigationsleiste
+ * (im Live-Match blendet sie sich selbst aus, siehe AppNavbar).
+ */
 export default function SpielerLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <AppNavbar app="stats" />
+      {children}
+    </>
+  );
 }

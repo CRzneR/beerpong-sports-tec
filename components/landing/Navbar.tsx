@@ -7,19 +7,19 @@ import { Link, usePathname } from "@/i18n/navigation";
 
 /*
  * usePathname aus @/i18n/navigation liefert den internen Pfad OHNE Sprache
- * ("/spieler" auch unter /en/pong-stats) - die Aktiv-Erkennung bleibt
+ * ("/produkte/pong-stats" auch unter /en/products/pong-stats) - die Aktiv-Erkennung bleibt
  * deshalb in beiden Sprachen gleich.
  */
 
 const navItems = [
   { key: "home", href: "/" },
-  { key: "playerStats", href: "/spieler" },
+  { key: "playerStats", href: "/produkte/pong-stats" },
   { key: "news", href: "/news" },
   { key: "contact", href: "/kontakt" },
   { key: "about", href: "/about" },
 ] as const;
 
-/* Startseite nur bei exakt "/", alle anderen auch bei Unterseiten (z. B. /spieler/123) */
+/* Startseite nur bei exakt "/", alle anderen auch bei Unterseiten (z. B. /news/mein-beitrag) */
 function isActive(href: string, pathname: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);

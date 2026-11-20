@@ -13,7 +13,7 @@ import { absoluteUrl, languageUrls } from "@/lib/seo";
  *
  * Nur öffentliche Seiten, die in Google (und KI-Suchen wie ChatGPT, Perplexity,
  * Gemini, Claude) auftauchen sollen. NICHT enthalten, weil ohne Suchwert oder
- * hinter Login: /login, /turniere/neu, /spieler/match/..., /api/...
+ * hinter Login: /login, /spieler, /turniere, /turniere/neu, /spieler/match/..., /api/...
  *
  * Zwei Listen:
  *
@@ -36,14 +36,23 @@ import { absoluteUrl, languageUrls } from "@/lib/seo";
 
 type BilingualPath = Parameters<typeof languageUrls>[0];
 
-const BILINGUAL: BilingualPath[] = ["/", "/regeln", "/about", "/kontakt", "/pokale-ringe", "/news"];
-
-const GERMAN_ONLY: BilingualPath[] = [
-  "/spieler", // Pong Stats
-  "/turniere", // Pong League
-  "/impressum",
-  "/datenschutz",
+const BILINGUAL: BilingualPath[] = [
+  "/",
+  "/produkte/pong-stats", // Produktseite Pong Stats
+  "/produkte/pong-league", // Produktseite Pong League
+  "/regeln",
+  "/about",
+  "/kontakt",
+  "/pokale-ringe",
+  "/news",
 ];
+
+/*
+ * Die Apps selbst (/spieler, /turniere) stehen bewusst NICHT mehr hier: sie sind
+ * auf noindex gestellt (Login-Bereich, ohne Anmeldung leer). Zeigen soll Google
+ * stattdessen die Produktseiten oben.
+ */
+const GERMAN_ONLY: BilingualPath[] = ["/impressum", "/datenschutz"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const bilingual = BILINGUAL.flatMap((path) =>

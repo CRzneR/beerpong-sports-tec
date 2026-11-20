@@ -49,7 +49,7 @@ export function PlatformSection() {
             }
             description={t("leagueDescription")}
             features={t.raw("leagueFeatures") as string[]}
-            href="/turniere"
+            href="/produkte/pong-league"
           />
 
           {/* PONG STATS */}
@@ -70,7 +70,7 @@ export function PlatformSection() {
             }
             description={t("statsDescription")}
             features={t.raw("statsFeatures") as string[]}
-            href="/spieler"
+            href="/produkte/pong-stats"
           />
         </div>
       </div>
@@ -105,7 +105,7 @@ function ProductCard({
   title: React.ReactNode;
   description: string;
   features: string[];
-  href: "/turniere" | "/spieler";
+  href: "/produkte/pong-league" | "/produkte/pong-stats";
 }) {
   const isLeague = type === "league";
 
@@ -190,18 +190,20 @@ function ProductCard({
         </div>
 
         {/* CTA */}
-        <Link
-          href={href}
-          className={`mt-7 inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-black uppercase tracking-wide text-black transition duration-300 ${
-            isLeague
-              ? "bg-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.18)] hover:-translate-y-0.5 hover:bg-yellow-300 hover:shadow-[0_0_35px_rgba(250,204,21,0.3)]"
-              : "bg-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.18)] hover:-translate-y-0.5 hover:bg-cyan-300 hover:shadow-[0_0_35px_rgba(34,211,238,0.3)]"
-          }`}
-        >
-          {cta}
+        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
+          <Link
+            href={href}
+            className={`inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-black uppercase tracking-wide text-black transition duration-300 ${
+              isLeague
+                ? "bg-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.18)] hover:-translate-y-0.5 hover:bg-yellow-300 hover:shadow-[0_0_35px_rgba(250,204,21,0.3)]"
+                : "bg-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.18)] hover:-translate-y-0.5 hover:bg-cyan-300 hover:shadow-[0_0_35px_rgba(34,211,238,0.3)]"
+            }`}
+          >
+            {cta}
 
-          <span className="transition-transform group-hover:translate-x-1">→</span>
-        </Link>
+            <span className="transition-transform group-hover:translate-x-1">→</span>
+          </Link>
+        </div>
       </div>
     </div>
   );

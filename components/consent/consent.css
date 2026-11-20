@@ -1,0 +1,522 @@
+/* =======================================================
+   COOKIE-BANNER
+   Datei: components/consent/consent.css
+
+   Bewusst normales CSS statt Tailwind-Klassen: Es kann nicht
+   vom Build "weggeräumt" werden und kollidiert nicht mit
+   anderen Styles (alles beginnt mit .bst-cc-).
+   Breakpoint: md = 768px.
+======================================================= */
+
+.bst-cc-banner,
+.bst-cc-overlay {
+  --cc-bg: rgba(7, 10, 12, 0.94);
+  --cc-border: rgba(255, 255, 255, 0.12);
+  --cc-text: #f5f7f7;
+  --cc-muted: rgba(245, 247, 247, 0.66);
+  --cc-accent: #34d399;
+  --cc-accent-dark: #04130c;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  color: var(--cc-text);
+}
+
+/* Unabhängig von Tailwind-Preflight: Breiten inkl. Padding rechnen. */
+.bst-cc-banner,
+.bst-cc-banner *,
+.bst-cc-overlay,
+.bst-cc-overlay * {
+  box-sizing: border-box;
+}
+
+/* ---------- Banner ---------- */
+
+.bst-cc-banner {
+  position: fixed;
+  z-index: 2147483000;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid var(--cc-border);
+  border-radius: 20px;
+  background: var(--cc-bg);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(52, 211, 153, 0.06),
+    0 0 40px rgba(52, 211, 153, 0.07);
+  animation: bst-cc-rise 220ms ease-out both;
+}
+
+@media (min-width: 768px) {
+  .bst-cc-banner {
+    left: 24px;
+    right: auto;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    width: 460px;
+    padding: 22px;
+  }
+}
+
+.bst-cc-banner-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bst-cc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cc-accent);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.8);
+  flex: none;
+}
+
+.bst-cc-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bst-cc-text {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--cc-muted);
+}
+
+.bst-cc-link {
+  color: var(--cc-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bst-cc-link:hover {
+  color: #6ee7b7;
+}
+
+/* ---------- Buttons ---------- */
+
+.bst-cc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.bst-cc-span {
+  grid-column: 1 / -1;
+}
+
+.bst-cc-btn {
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.bst-cc-btn:active {
+  transform: scale(0.98);
+}
+
+/* "Alle akzeptieren" und "Nur notwendige": gleich groß, beide gefüllt und gut lesbar. */
+.bst-cc-btn-accept {
+  background: var(--cc-accent);
+  color: var(--cc-accent-dark);
+}
+
+.bst-cc-btn-accept:hover {
+  background: #6ee7b7;
+}
+
+.bst-cc-btn-reject {
+  background: #eef2f1;
+  color: #0a1210;
+}
+
+.bst-cc-btn-reject:hover {
+  background: #ffffff;
+}
+
+.bst-cc-btn-ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.28);
+  color: var(--cc-text);
+}
+
+.bst-cc-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bst-cc-banner :focus-visible,
+.bst-cc-overlay :focus-visible {
+  outline: 2px solid var(--cc-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Dialog ---------- */
+
+.bst-cc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.62);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: bst-cc-fade 180ms ease-out both;
+}
+
+@media (min-width: 768px) {
+  .bst-cc-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+.bst-cc-dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  max-height: 92dvh;
+  border: 1px solid var(--cc-border);
+  border-radius: 22px 22px 0 0;
+  background: #0a0e10;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  outline: none;
+  animation: bst-cc-rise 220ms ease-out both;
+}
+
+@media (min-width: 768px) {
+  .bst-cc-dialog {
+    max-height: 86dvh;
+    border-radius: 22px;
+  }
+}
+
+.bst-cc-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.bst-cc-dialog-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bst-cc-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--cc-text);
+  cursor: pointer;
+}
+
+.bst-cc-close:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.bst-cc-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 20px 18px;
+  overscroll-behavior: contain;
+}
+
+.bst-cc-dialog-foot {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 14px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 768px) {
+  .bst-cc-dialog-foot {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Kategorien ---------- */
+
+.bst-cc-cat {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bst-cc-cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bst-cc-cat-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.bst-cc-cat-text {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--cc-muted);
+}
+
+.bst-cc-badge {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cc-muted);
+  white-space: nowrap;
+}
+
+.bst-cc-badge-on {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--cc-accent);
+}
+
+.bst-cc-more {
+  margin-top: 10px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--cc-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.bst-cc-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--cc-muted);
+}
+
+.bst-cc-list li + li {
+  margin-top: 8px;
+}
+
+.bst-cc-hint {
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--cc-muted);
+}
+
+/* ---------- Schalter ---------- */
+
+.bst-cc-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--cc-text);
+  cursor: pointer;
+}
+
+.bst-cc-switch-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cc-muted);
+}
+
+.bst-cc-switch-track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  transition: background-color 160ms ease;
+}
+
+.bst-cc-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ffffff;
+  transition: transform 160ms ease;
+}
+
+.bst-cc-switch[data-on="true"] .bst-cc-switch-track {
+  background: var(--cc-accent);
+}
+
+.bst-cc-switch[data-on="true"] .bst-cc-switch-thumb {
+  transform: translateX(20px);
+}
+
+/* ---------- Liste der Cookies ---------- */
+
+.bst-cc-items {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bst-cc-item {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.bst-cc-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.bst-cc-code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e7fff6;
+  word-break: break-all;
+}
+
+.bst-cc-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cc-muted);
+}
+
+.bst-cc-item-meta {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.bst-cc-item-meta dt {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245, 247, 247, 0.4);
+}
+
+.bst-cc-item-meta dd {
+  margin: 1px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--cc-muted);
+}
+
+/* ---------- Footer-Link ---------- */
+
+.bst-cc-footer-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.bst-cc-footer-link:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- Animation ---------- */
+
+@keyframes bst-cc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bst-cc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bst-cc-banner,
+  .bst-cc-overlay,
+  .bst-cc-dialog {
+    animation: none;
+  }
+
+  .bst-cc-btn,
+  .bst-cc-switch-track,
+  .bst-cc-switch-thumb {
+    transition: none;
+  }
+}
+
+@media print {
+  .bst-cc-banner,
+  .bst-cc-overlay {
+    display: none;
+  }
+}

@@ -27,8 +27,9 @@ import { useLocale, useTranslations } from "next-intl";
  * nach dem Löschen nicht mehr verwaltet werden können.
  *
  * variant (optional): "league" zeigt den Bereich als breite Zeile im Stil der
- * Pong-League-Übersicht (Symbol, Text, Button rechts). Standard ist die
- * schlichte Variante der Spielerseite.
+ * Pong-League-Übersicht (Symbol, Text, Button rechts). "panel" ist die
+ * kompakte Variante im Konto-Fenster der Navigationsleiste (ohne großen
+ * Abstand unten). Standard ist die schlichte Variante der Spielerseite.
  *
  * Zum Bestätigen muss der eigene Benutzername eingetippt werden - ein
  * versehentlicher Klick reicht nicht. Die Löschung selbst passiert
@@ -44,7 +45,7 @@ export function DeleteAccountSection({
 }: {
   tournamentCount?: number;
   showResetStats?: boolean;
-  variant?: "default" | "league";
+  variant?: "default" | "league" | "panel";
 }) {
   const t = useTranslations("Stats.DeleteAccountSection");
   const locale = useLocale();
@@ -144,7 +145,9 @@ export function DeleteAccountSection({
       className={
         variant === "league"
           ? "relative pb-16 pt-10"
-          : "border-t border-white/[0.06] pb-16 pt-8"
+          : variant === "panel"
+            ? "mt-6 border-t border-white/[0.06] pt-5"
+            : "border-t border-white/[0.06] pb-16 pt-8"
       }
     >
       {variant === "league" ? (

@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Suspense, useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 
@@ -13,7 +12,6 @@ import MatchHistory from "@/components/stats/MatchHistory";
 import MatchHistoryDetail from "@/components/stats/match/MatchHistoryDetail";
 import PlayerRanking from "@/components/stats/match/PlayerRanking";
 import PlayerDetail from "@/components/stats/match/PlayerDetail";
-import { RulesLink } from "@/components/RulesLink";
 import ProPreviewModal from "@/components/stats/ProPreviewModal";
 import { UsernameGate } from "@/components/stats/UsernameGate";
 import { AchievementsSection } from "@/components/stats/AchievementsSection";
@@ -23,7 +21,6 @@ import { ComebackStats } from "@/components/stats/ComebackStats";
 import { ProfileProgressCompact } from "@/components/stats/ProfileProgressCompact";
 import { SkillRating } from "@/components/stats/SkillRating";
 import { TournamentCard } from "@/components/stats/TournamentCard";
-import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 import { StatsRangeFilter } from "@/components/stats/StatsRangeFilter";
 import {
   DashboardCustomizeButton,
@@ -63,8 +60,6 @@ function SpielerPageInner() {
    */
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,11 +78,6 @@ function SpielerPageInner() {
         }
 
         setUserEmail(data.user?.email ?? null);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setAuthLoading(false);
-        }
       });
 
     const {
@@ -103,62 +93,6 @@ function SpielerPageInner() {
       subscription.unsubscribe();
     };
   }, []);
-
-  const handleLogout = async () => {
-    if (signingOut) {
-      return;
-    }
-
-    setSigningOut(true);
-
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Fehler beim Abmelden:", error);
-    }
-
-    setUserEmail(null);
-    setSigningOut(false);
-  };
-
-  /*
-   * MOBILES MENÜ
-   *
-   * Auf dem Handy passt die volle Leiste (Plattform-Name, Regeln,
-   * E-Mail, Abmelden) nicht nebeneinander und drückt die Seite breiter
-   * als den Bildschirm. Unter md bleiben deshalb nur Logo, Pro-Badge und
-   * ein Konto-Knopf; Regeln und Abmelden stehen im aufklappbaren Menü.
-   */
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [menuOpen]);
 
   const [isPro, setIsPro] = useState(false);
   const [proLoading, setProLoading] = useState(true);
@@ -245,138 +179,8 @@ function SpielerPageInner() {
   return (
     <main className="min-h-screen bg-[#050708] text-white">
       <UsernameGate />
-      <header className="relative z-40 border-b border-white/[0.08]">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-          <Link href="/" className="group flex shrink-0 items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10">
-              <img
-                src="/images/landing/pong-stats-logo.png"
-                alt={t("pongStatsLogo")}
-                className="h-6 w-6 object-contain"
-              />
-            </div>
-
-            <div className="leading-none">
-              <div className="text-xs font-black tracking-wider text-white">{t("beerpong")}</div>
-
-              <div className="mt-1 text-[9px] font-bold tracking-[0.25em] text-emerald-400">{t("sportsTec")}</div>
-            </div>
-          </Link>
-
-          <div className="flex shrink-0 items-center gap-2 md:gap-3">
-            <span className="hidden text-[10px] font-bold uppercase tracking-[0.25em] text-white/25 lg:block">{t("playerPlatform")}</span>
-
-            <div className="hidden h-1 w-1 rounded-full bg-cyan-400 md:block" />
-
-            <span className="hidden text-xs font-black uppercase tracking-[0.2em] text-cyan-400 md:block">{t("pongStats")}</span>
-
-            {isPro && (
-              <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-yellow-400">{t("pro")}</span>
-            )}
-
-            <LanguageSwitcher />
-
-            {/* Ab md: komplette Leiste */}
-
-            <div className="hidden items-center gap-3 md:flex">
-              <RulesLink />
-
-              <div className="ml-2 h-4 w-px bg-white/[0.08]" />
-
-              {authLoading ? null : userEmail ? (
-                <div className="flex items-center gap-2">
-                  <span className="hidden max-w-[140px] truncate text-[10px] font-bold text-white/40 lg:block">
-                    {userEmail}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={signingOut}
-                    className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white/50 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {signingOut ? "…" : t("abmelden")}
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.15]"
-                >{t("anmelden")}</Link>
-              )}
-            </div>
-
-            {/* Unter md: Konto-Knopf mit Menü (bzw. "Anmelden", wenn niemand eingeloggt ist) */}
-
-            <div className="md:hidden">
-              {authLoading ? null : userEmail ? (
-                <div ref={menuRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setMenuOpen((open) => !open)}
-                    aria-label={t("menue")}
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-400/[0.08] text-xs font-black uppercase text-cyan-400 transition hover:bg-cyan-400/[0.15]"
-                  >
-                    {userEmail.charAt(0)}
-                  </button>
-
-                  {menuOpen && (
-                    <div
-                      role="menu"
-                      className="absolute right-0 top-full z-50 mt-2 w-60 rounded-2xl border border-white/[0.1] bg-[#0c0f16] p-2 shadow-xl"
-                    >
-                      <div className="truncate px-3 py-2 text-[11px] font-bold text-white/40">
-                        {userEmail}
-                      </div>
-
-                      <div className="my-1 h-px bg-white/[0.08]" />
-
-                      <Link
-                        href="/regeln"
-                        role="menuitem"
-                        onClick={() => setMenuOpen(false)}
-                        className="block rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white/70 transition hover:bg-white/[0.06] hover:text-white"
-                      >{t("regeln")}</Link>
-
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          void handleLogout();
-                        }}
-                        disabled={signingOut}
-                        className="block w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider text-white/70 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {signingOut ? "…" : t("abmelden")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <RulesLink />
-
-                  <Link
-                    href="/login"
-                    className="rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-cyan-400 transition hover:bg-cyan-400/[0.15]"
-                  >{t("anmelden")}</Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
 
       <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <Link
-          href="/"
-          className="group mb-8 inline-flex items-center gap-2 text-xs font-semibold text-white/30 transition hover:text-white"
-        >
-          <span className="transition-transform group-hover:-translate-x-1">←</span>{t("zurueckZurStartseite")}</Link>
-
         {proRedirectStatus === "success" && (
           <div className="mb-8 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.05] px-5 py-4 text-sm font-bold text-cyan-300">{t("dankeFuerDeinenKauf")}</div>
         )}
@@ -615,7 +419,6 @@ function SpielerPageInner() {
               </Link>
             </section>
 
-            <DeleteAccountSection showResetStats />
           </>
         )}
       </div>

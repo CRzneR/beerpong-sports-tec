@@ -49,7 +49,11 @@ export const routing = defineRouting({
     "/agb": { de: "/agb", en: "/terms" },
     "/pokale-ringe": { de: "/pokale-ringe", en: "/trophies-and-rings" },
 
-    /* Pong Stats */
+    /* Produktseiten (öffentlich, für Google): Funktionen, Bilder, Preis, FAQ */
+    "/produkte/pong-stats": { de: "/produkte/pong-stats", en: "/products/pong-stats" },
+    "/produkte/pong-league": { de: "/produkte/pong-league", en: "/products/pong-league" },
+
+    /* Pong Stats (die App) */
     "/spieler": { de: "/spieler", en: "/pong-stats" },
     "/spieler/match": { de: "/spieler/match", en: "/pong-stats/match" },
     "/spieler/match/[matchId]": {
@@ -57,7 +61,7 @@ export const routing = defineRouting({
       en: "/pong-stats/match/[matchId]",
     },
 
-    /* Pong League */
+    /* Pong League (die App) */
     "/turniere": { de: "/turniere", en: "/pong-league" },
     "/turniere/neu": { de: "/turniere/neu", en: "/pong-league/new" },
     "/turniere/[tournamentId]": {

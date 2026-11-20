@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 
+import { CookieSettingsButton } from "@/components/consent/CookieSettingsButton";
 import { Link } from "@/i18n/navigation";
 
 export function Footer() {
@@ -48,9 +49,9 @@ export function Footer() {
             </h3>
 
             <nav className="mt-5 space-y-3">
-              <FooterLink href="/turniere">Pong League</FooterLink>
+              <FooterLink href="/produkte/pong-league">Pong League</FooterLink>
 
-              <FooterLink href="/spieler">Pong Stats</FooterLink>
+              <FooterLink href="/produkte/pong-stats">Pong Stats</FooterLink>
             </nav>
           </div>
 
@@ -94,6 +95,9 @@ export function Footer() {
             <Link href="/agb" className="text-xs text-white/25 transition hover:text-white/60">
               {t("terms")}
             </Link>
+
+            {/* Cookie-Einstellungen: hier kann die Einwilligung jederzeit geändert oder widerrufen werden. */}
+            <CookieSettingsButton />
           </div>
         </div>
       </div>
@@ -109,7 +113,7 @@ function FooterLink({
   href,
   children,
 }: {
-  href: "/turniere" | "/spieler" | "/about" | "/kontakt" | "/news";
+  href: "/produkte/pong-league" | "/produkte/pong-stats" | "/about" | "/kontakt" | "/news";
   children: React.ReactNode;
 }) {
   return (

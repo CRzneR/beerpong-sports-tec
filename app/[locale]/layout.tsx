@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 
+import { CookieBanner } from "@/components/consent/CookieBanner";
 import { routing, type Locale } from "@/i18n/routing";
 import { OG_LOCALE, SITE_URL } from "@/lib/seo";
 
@@ -29,7 +30,8 @@ const geistMono = Geist_Mono({
 | - setzt <html lang="de|en"> - wichtig für Suchmaschinen, Screenreader
 |   und die Silbentrennung des Browsers,
 | - lädt die Übersetzungen für Client-Komponenten,
-| - liefert die Standard-Metadaten in der jeweiligen Sprache.
+| - liefert die Standard-Metadaten in der jeweiligen Sprache,
+| - bindet das Cookie-Banner ein (components/consent/CookieBanner.tsx).
 |
 | Bewusst KEIN globales canonical mehr: Es zeigte vorher auf jeder Seite auf
 | die Startseite. Jede Seite setzt ihr eigenes canonical (siehe lib/seo.ts).
@@ -61,6 +63,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
     description,
     icons: {
       icon: [
+        { url: "/images/icons/favicon.svg", type: "image/svg+xml", sizes: "any" },
         { url: "/images/icons/icon-16.png", sizes: "16x16", type: "image/png" },
         { url: "/images/icons/icon-32.png", sizes: "32x32", type: "image/png" },
         { url: "/images/icons/icon-48.png", sizes: "48x48", type: "image/png" },
@@ -105,7 +108,10 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[lo
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          {children}
+          <CookieBanner />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -51,7 +51,7 @@ export default async function Home({ params }: PageProps<"/[locale]">) {
         "@id": `${SITE_URL}/#organization`,
         name: SITE_NAME,
         url: SITE_URL,
-        logo: `${SITE_URL}/images/landing/pong-stats-logo.png`,
+        logo: `${SITE_URL}/images/icons/icon-512.png`,
         address: {
           "@type": "PostalAddress",
           addressLocality: "München",

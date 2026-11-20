@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import {
-  ArrowLeft,
   ArrowRight,
   CalendarDays,
   CircleCheck,
@@ -20,7 +19,6 @@ import type { TournamentProgress } from "./tournamentStorage";
 import type { Tournament } from "./tournamentLogic";
 import { createClient } from "@/lib/supabase/client";
 import { UsernameGate } from "@/components/stats/UsernameGate";
-import { DeleteAccountSection } from "@/components/stats/DeleteAccountSection";
 import { CardSwoosh, LeagueBanner, TrophyArt } from "@/components/league/LeagueArt";
 import { StatusBadge } from "@/components/league/LeagueBits";
 import { useTranslations } from "next-intl";
@@ -32,12 +30,13 @@ import { useTranslations } from "next-intl";
 |
 | Aufbau von oben nach unten:
 |
-|   1. Zurück / Abmelden
-|   2. Seitenkopf mit Illustration
-|   3. Kennzahlen (aktiv, geplant, abgeschlossen, Teams) + "Neues Turnier"
-|   4. Filter (Alle / Aktiv / Geplant / Abgeschlossen) + Ansichtsumschalter
-|   5. Turniere als Karten oder als Liste
-|   6. Konto
+|   1. Seitenkopf mit Illustration
+|   2. Kennzahlen (aktiv, geplant, abgeschlossen, Teams) + "Neues Turnier"
+|   3. Filter (Alle / Aktiv / Geplant / Abgeschlossen) + Ansichtsumschalter
+|   4. Turniere als Karten oder als Liste
+|
+| Navigation, Abmelden und Konto-Verwaltung liegen in der Leiste oben
+| (components/nav/AppNavbar.tsx, eingebunden in turniere/layout.tsx).
 |
 | Die gewählte Ansicht (Karten/Liste) wird pro Gerät gemerkt.
 |
@@ -150,19 +149,6 @@ export default function TurnierePage() {
     setTournaments((current) => current.filter((tournament) => tournament.id !== tournamentId));
   };
 
-  /*
-   * Die Liste enthält auch Turniere, bei denen man nur über den
-   * Beitritts-Link mit einem Team verknüpft ist. Die gehören dem
-   * Veranstalter und lassen sich hier nicht löschen.
-   */
-  const ownedCount = tournaments.filter((tournament) => tournament.userId === userId).length;
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-  };
-
   /* Kennzahlen und Filterzähler */
   const activeCount = tournaments.filter((tournament) => tournament.status === "active").length;
   const plannedCount = tournaments.filter((tournament) => tournament.status === "setup").length;
@@ -193,32 +179,8 @@ export default function TurnierePage() {
       <LeagueBanner />
 
       <div className="relative mx-auto max-w-[1464px] px-5 py-8 md:px-8 md:py-10">
-        {/* 1. Zurück / Abmelden */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/"
-            className="group inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white"
-          >
-            <ArrowLeft
-              size={16}
-              strokeWidth={2}
-              className="transition-transform group-hover:-translate-x-1"
-              aria-hidden="true"
-            />
-            {t("zurueckZurStartseite")}
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-sm font-semibold text-white/70 transition hover:text-white"
-          >
-            {t("abmelden")}
-          </button>
-        </div>
-
-        {/* 2. Seitenkopf */}
-        <header className="mt-12 md:mt-14">
+        {/* 1. Seitenkopf */}
+        <header>
           <div className="text-xs font-black uppercase tracking-[0.3em] text-yellow-400">
             {t("pongLeague")}
           </div>
@@ -228,7 +190,7 @@ export default function TurnierePage() {
           <p className="mt-3 max-w-xl text-base text-white/50 md:text-lg">{t("subtitle")}</p>
         </header>
 
-        {/* 3. Kennzahlen + Neues Turnier */}
+        {/* 2. Kennzahlen + Neues Turnier */}
         <div className="mt-7 flex flex-col gap-3 md:mt-10 md:flex-row md:items-center md:justify-between md:gap-6">
           <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4">
             {stats.map((stat) => (
@@ -249,7 +211,7 @@ export default function TurnierePage() {
           </Link>
         </div>
 
-        {/* 4. Filter + Ansicht */}
+        {/* 3. Filter + Ansicht */}
         <div className="mt-6 flex items-center justify-between gap-3 md:mt-8 md:flex-wrap md:gap-4">
           <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,#000_88%,transparent)] [scrollbar-width:none] md:flex-none md:flex-wrap md:gap-2.5 md:overflow-visible md:pr-0 md:[mask-image:none] [&::-webkit-scrollbar]:hidden">
             {filters.map((item) => {
@@ -298,7 +260,7 @@ export default function TurnierePage() {
           </div>
         </div>
 
-        {/* 5. Turniere */}
+        {/* 4. Turniere */}
         <div className="mt-6">
           {loading ? (
             <div className="space-y-4" role="status">
@@ -340,11 +302,6 @@ export default function TurnierePage() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* 6. Konto: dieselbe Löschfunktion wie auf der Spielerseite */}
-        <div className="mt-14 md:mt-16">
-          <DeleteAccountSection tournamentCount={ownedCount} variant="league" />
         </div>
       </div>
     </main>
