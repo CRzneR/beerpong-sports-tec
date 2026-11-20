@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Link } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
-import { absoluteUrl, pageAlternates } from "@/lib/seo";
+import { pageAlternates, pageSocial } from "@/lib/seo";
 
 /*
  * --------------------------------------------------------------------------
@@ -41,7 +41,7 @@ export async function generateMetadata({
     title: { absolute: t("rulesTitle") },
     description: t("rulesDescription"),
     alternates: pageAlternates(locale as Locale, "/regeln"),
-    openGraph: { url: absoluteUrl(locale as Locale, "/regeln") },
+    ...pageSocial(locale as Locale, "/regeln", t("rulesTitle"), t("rulesDescription")),
   };
 }
 

@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Link } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
-import { absoluteUrl, pageAlternates } from "@/lib/seo";
+import { pageAlternates, pageSocial } from "@/lib/seo";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/about">): Promise<Metadata> {
   const { locale } = await params;
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/about">)
     title: { absolute: t("aboutTitle") },
     description: t("aboutDescription"),
     alternates: pageAlternates(locale as Locale, "/about"),
-    openGraph: { url: absoluteUrl(locale as Locale, "/about") },
+    ...pageSocial(locale as Locale, "/about", t("aboutTitle"), t("aboutDescription")),
   };
 }
 

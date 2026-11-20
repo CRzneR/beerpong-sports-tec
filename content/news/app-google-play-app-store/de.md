@@ -15,7 +15,7 @@ Beer Pong spielst du nicht am Schreibtisch, sondern am Tisch, mit dem Handy in d
 
 ## Was dich erwartet
 
-- **Pong Stats und Pong League in einer App:** Würfe und Matches erfassen, Statistiken ansehen und Turniere organisieren, alles an einem Ort.
+- **[Pong Stats](/produkte/pong-stats) und [Pong League](/produkte/pong-league) in einer App:** Würfe und Matches erfassen, Statistiken ansehen und Turniere organisieren, alles an einem Ort.
 - **Gemacht fürs Handy:** Große Flächen, klare Teamfarben und ein Design, das auch in einer dunklen Bar gut lesbar bleibt.
 - **Ohne Umweg:** Du öffnest die App und bist direkt im Geschehen. Die Startseite der Webseite brauchst du dafür nicht mehr.
 

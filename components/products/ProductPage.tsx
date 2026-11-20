@@ -103,6 +103,25 @@ function buildJsonLd(content: ProductContent, locale: Locale) {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: "BeerPongSportsTec",
+        url: SITE_URL,
+        logo: `${SITE_URL}/images/icons/icon-512.png`,
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: content.metaTitle,
+        description: content.metaDescription,
+        inLanguage: locale === "de" ? "de-DE" : "en",
+        isPartOf: { "@id": `${absoluteUrl(locale, "/")}#website` },
+        primaryImageOfPage: `${SITE_URL}${content.hero.image.src}`,
+        breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+        about: { "@id": `${pageUrl}#app` },
+      },
+      {
         "@type": "SoftwareApplication",
         "@id": `${pageUrl}#app`,
         name: content.name,

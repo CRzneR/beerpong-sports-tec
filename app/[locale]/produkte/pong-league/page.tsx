@@ -37,7 +37,13 @@ export async function generateMetadata({
   }
 
   const content = getProductContent("league", locale as Locale);
-  const image = content.hero.image;
+  /* Eigenes Vorschaubild 1200x630 für Google, WhatsApp & Co. (public/images/products/og-*.png) */
+  const ogImage = {
+    url: `${SITE_URL}/images/products/og-pong-league-${locale}.png`,
+    width: 1200,
+    height: 630,
+    alt: content.hero.image.alt,
+  };
 
   return {
     title: { absolute: content.metaTitle },
@@ -50,9 +56,13 @@ export async function generateMetadata({
       title: content.metaTitle,
       description: content.metaDescription,
       locale: OG_LOCALE[locale as Locale],
-      images: [
-        { url: `${SITE_URL}${image.src}`, width: image.width, height: image.height, alt: image.alt },
-      ],
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: content.metaTitle,
+      description: content.metaDescription,
+      images: [ogImage.url],
     },
   };
 }

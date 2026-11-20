@@ -1,31 +1,31 @@
-# BeerPongSportsTec
+# BeerPong Sports Tec
 
-> BeerPongSportsTec is a web app for beer pong (German: "Beerpong"): record matches live, follow statistics and a skill rating, and organize tournaments with group stage, standings and knockout bracket. Based in Munich, Germany. Available in German and English.
+> BeerPong Sports Tec ist eine Webplattform für Beer Pong mit zwei Anwendungen: Pong Stats erfasst Matches live und wertet sie aus (Trefferquote, Skill-Rating, Becher-Heatmap). Pong League organisiert Turniere mit Gruppenphase, Tabellen, Spielplan und K.-o.-Baum. Beides läuft im Browser, ohne Installation. Basisfunktionen sind kostenlos, Pro wird einmalig freigeschaltet (kein Abo) und gilt für beide Anwendungen.
 >
-> BeerPongSportsTec ist eine Web-App für Beer Pong: Matches live erfassen, Statistiken und ein Skill-Rating verfolgen und Turniere mit Gruppenphase, Tabellen und K.-o.-Phase organisieren. Standort: München. Auf Deutsch und Englisch verfügbar.
+> BeerPong Sports Tec is a web platform for beer pong with two apps: Pong Stats records matches live and analyses them (hit rate, skill rating, cup heatmap). Pong League runs tournaments with group stage, standings, schedule and knockout bracket. Both run in the browser, no installation needed. Core features are free; Pro is a one-time unlock (no subscription) and covers both apps.
 
-The platform has two areas: Pong Stats (player profile, match tracking, statistics, ranking) and Pong League (tournaments).
+## Produkte / Products
 
-## Pages in English
+- [Pong Stats](https://www.beerpongsportstec.de/produkte/pong-stats): Beer-Pong-Statistik, Skill-Rating, Heatmap nach Becherposition, Spielverlauf, Bilanz gegen Gegner und Partner (Deutsch)
+- [Pong Stats (English)](https://www.beerpongsportstec.de/en/products/pong-stats): Beer pong statistics, skill rating, cup heatmap, game flow, head-to-head records
+- [Pong League](https://www.beerpongsportstec.de/produkte/pong-league): Turniere mit Gruppenphase, Live-Tabellen, Spielplan, K.-o.-Phase, Einladung per Link und QR-Code (Deutsch)
+- [Pong League (English)](https://www.beerpongsportstec.de/en/products/pong-league): Beer pong tournaments with groups, live tables, schedule, knockout bracket, invites by link and QR code
 
-- [Home](https://www.beerpongsportstec.de/en): Overview of the platform.
-- [Beer pong rules](https://www.beerpongsportstec.de/en/rules): Cup setup, elbow rule, bounce shots, multiple hits, swatting and rebuttal.
-- [About us](https://www.beerpongsportstec.de/en/about)
-- [Contact](https://www.beerpongsportstec.de/en/contact): Support, partnerships and feedback, with contact form and FAQ.
+## Wissen / Guides
 
-## Produkte (Deutsch)
+- [Beer-Pong-Regeln](https://www.beerpongsportstec.de/regeln): Aufstellung, Ellenbogenregel, Aufsetzer, Mehrfachtreffer, Abwehren, Spielende
+- [Beer pong rules (English)](https://www.beerpongsportstec.de/en/rules)
+- [Pokale und Championship-Ringe](https://www.beerpongsportstec.de/pokale-ringe): Auszeichnungen für Turniersieger
+- [News](https://www.beerpongsportstec.de/news): Neuigkeiten und Beiträge rund um Pong Stats und Pong League
+- [News (English)](https://www.beerpongsportstec.de/en/news)
 
-- [Pong Stats](https://www.beerpongsportstec.de/spieler): Profil mit Statistiken zu Trefferquote, Becherpositionen, Spielverlauf, Achievements, Match-Historie, Rangliste und Skill-Rating (0 bis 1000). Matches werden Wurf für Wurf live erfasst.
-- [Pong League](https://www.beerpongsportstec.de/turniere): Turniere mit automatischer Gruppenverteilung, Spielplan und Tabellen.
+## Über uns / About
 
-## Seiten auf Deutsch
-
-- [Startseite](https://www.beerpongsportstec.de/)
-- [Beer-Pong-Regeln](https://www.beerpongsportstec.de/regeln)
 - [Über uns](https://www.beerpongsportstec.de/about)
 - [Kontakt](https://www.beerpongsportstec.de/kontakt)
-
-## Rechtliches
-
 - [Impressum](https://www.beerpongsportstec.de/impressum)
 - [Datenschutz](https://www.beerpongsportstec.de/datenschutz)
+
+## Optional
+
+- [Sitemap](https://www.beerpongsportstec.de/sitemap.xml)

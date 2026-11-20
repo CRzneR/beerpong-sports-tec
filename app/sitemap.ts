@@ -2,7 +2,8 @@ import type { MetadataRoute } from "next";
 
 import { routing } from "@/i18n/routing";
 import { getAllPosts, getPostLocales } from "@/lib/news";
-import { absoluteUrl, languageUrls } from "@/lib/seo";
+import { getProductContent, type ProductSlug } from "@/lib/products/productContent";
+import { SITE_URL, absoluteUrl, languageUrls } from "@/lib/seo";
 
 /*
  * --------------------------------------------------------------------------
@@ -52,6 +53,23 @@ const BILINGUAL: BilingualPath[] = [
  * auf noindex gestellt (Login-Bereich, ohne Anmeldung leer). Zeigen soll Google
  * stattdessen die Produktseiten oben.
  */
+/* Produktseiten: Vorschaubilder gehören mit in die Sitemap (Google Bilder). */
+const PRODUCT_SLUGS: Record<string, ProductSlug> = {
+  "/produkte/pong-stats": "stats",
+  "/produkte/pong-league": "league",
+};
+
+function productImages(path: BilingualPath, locale: (typeof routing.locales)[number]): string[] | undefined {
+  const slug = typeof path === "string" ? PRODUCT_SLUGS[path] : undefined;
+
+  if (!slug) return undefined;
+
+  const content = getProductContent(slug, locale);
+  const sources = [content.hero.image.src, ...content.groups.flatMap((g) => g.features.map((f) => f.image.src))];
+
+  return [...new Set(sources)].map((src) => `${SITE_URL}${src}`);
+}
+
 const GERMAN_ONLY: BilingualPath[] = ["/impressum", "/datenschutz"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -59,6 +77,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     routing.locales.map((locale) => ({
       url: absoluteUrl(locale, path),
       alternates: { languages: languageUrls(path) },
+      images: productImages(path, locale),
     })),
   );
 

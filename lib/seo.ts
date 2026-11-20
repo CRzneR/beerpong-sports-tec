@@ -68,3 +68,44 @@ export const OG_LOCALE: Record<Locale, string> = {
   de: "de_DE",
   en: "en_US",
 };
+
+/*
+ * Vollständige Social-Media-Angaben (Open Graph + Twitter) für eine Seite.
+ *
+ * Wichtig: Next.js ersetzt "openGraph" einer Seite komplett (kein Zusammenführen
+ * mit dem Layout). Wer nur { url } setzt, verliert Titel, Beschreibung UND Bild
+ * in der Vorschau bei WhatsApp, Facebook, LinkedIn usw. Deshalb setzen Seiten
+ * ohne eigenes Bild diese Funktion ein:
+ *
+ *   ...pageSocial(locale as Locale, "/regeln", t("rulesTitle"), t("rulesDescription"))
+ */
+export function pageSocial(
+  locale: Locale,
+  href: PathKey,
+  title: string,
+  description: string,
+  image: { url: string; width: number; height: number } = {
+    url: `${SITE_URL}/og-image.png`,
+    width: 1200,
+    height: 630,
+  },
+) {
+  return {
+    openGraph: {
+      type: "website" as const,
+      url: absoluteUrl(locale, href),
+      siteName: "BeerPongSportsTec",
+      title,
+      description,
+      locale: OG_LOCALE[locale],
+      alternateLocale: routing.locales.filter((code) => code !== locale).map((code) => OG_LOCALE[code]),
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: [image.url],
+    },
+  };
+}

@@ -11,7 +11,7 @@ import { CommunityStats } from "@/components/landing/CommunityStats";
 import { NewsSection } from "@/components/landing/NewsSection";
 import { Footer } from "@/components/landing/Footer";
 import { routing, type Locale } from "@/i18n/routing";
-import { SITE_URL, absoluteUrl, pageAlternates } from "@/lib/seo";
+import { SITE_URL, absoluteUrl, pageAlternates, pageSocial } from "@/lib/seo";
 
 const SITE_NAME = "BeerPongSportsTec";
 
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">): Prom
     title: { absolute: t("homeTitle") },
     description: t("homeDescription"),
     alternates: pageAlternates(locale as Locale, "/"),
-    openGraph: { url: absoluteUrl(locale as Locale, "/") },
+    ...pageSocial(locale as Locale, "/", t("homeTitle"), t("homeDescription")),
   };
 }
 
@@ -69,6 +69,25 @@ export default async function Home({ params }: PageProps<"/[locale]">) {
         description: t("homeDescription"),
         inLanguage: locale === "de" ? "de-DE" : "en",
         publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+      {
+        /* Die beiden Produkte: Google sieht so, dass die Seite aus zwei Anwendungen besteht. */
+        "@type": "ItemList",
+        "@id": `${absoluteUrl(locale as Locale, "/")}#products`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Pong Stats",
+            url: absoluteUrl(locale as Locale, "/produkte/pong-stats"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Pong League",
+            url: absoluteUrl(locale as Locale, "/produkte/pong-league"),
+          },
+        ],
       },
     ],
   };

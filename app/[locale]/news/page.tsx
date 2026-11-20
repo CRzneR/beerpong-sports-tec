@@ -7,7 +7,7 @@ import { Footer } from "@/components/landing/Footer";
 import { Navbar } from "@/components/landing/Navbar";
 import { NewsCard } from "@/components/news/NewsCard";
 import { routing, type Locale } from "@/i18n/routing";
-import { absoluteUrl, pageAlternates } from "@/lib/seo";
+import { pageAlternates, pageSocial } from "@/lib/seo";
 import { getAllPosts } from "@/lib/news";
 
 /*
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/news">):
     title: { absolute: t("newsTitle") },
     description: t("newsDescription"),
     alternates: pageAlternates(locale as Locale, "/news"),
-    openGraph: { url: absoluteUrl(locale as Locale, "/news") },
+    ...pageSocial(locale as Locale, "/news", t("newsTitle"), t("newsDescription")),
   };
 }
 

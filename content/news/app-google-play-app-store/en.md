@@ -15,7 +15,7 @@ You do not play beer pong at a desk, but at the table with your phone in your ha
 
 ## What to expect
 
-- **Pong Stats and Pong League in one app:** Record throws and matches, look at your statistics and organize tournaments, all in one place.
+- **[Pong Stats](/en/products/pong-stats) and [Pong League](/en/products/pong-league) in one app:** Record throws and matches, look at your statistics and organize tournaments, all in one place.
 - **Made for your phone:** Large touch areas, clear team colors and a design that stays easy to read in a dark bar.
 - **No detours:** You open the app and you are right in the action. You no longer need the website's landing page for that.
 
