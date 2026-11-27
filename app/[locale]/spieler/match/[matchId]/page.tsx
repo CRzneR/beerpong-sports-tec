@@ -24,7 +24,13 @@ import type { MatchAction, MatchState, RecordedFormation } from "../matchLogic";
 import { getMatchStats } from "../matchStats";
 import MatchResult from "@/components/stats/match/MatchResult";
 import { saveMatch } from "../matchStorage";
-import { finishMatchLobby } from "../matchLobby";
+import { finishMatchLobby, getMatchLobby } from "../matchLobby";
+import {
+  clearMatchSession,
+  loadMatchSession,
+  pruneOldMatchSessions,
+  saveMatchSession,
+} from "../matchSession";
 import { useTranslations } from "next-intl";
 type MatchEvent =
   | {
@@ -339,6 +345,34 @@ function StatIcon({ kind }: { kind: "throws" | "hits" | "cups"; team?: "A" | "B"
   );
 }
 
+/*
+ * Alles, was für die Wiederherstellung nach einem Neuladen gespeichert
+ * wird (siehe matchSession.ts). Nur JSON-taugliche Werte.
+ */
+
+type PersistedMatch = {
+  setupDone: boolean;
+  players: MatchPlayer[];
+  teamACups: Cup[];
+  teamBCups: Cup[];
+  events: MatchEvent[];
+  roundHits: RoundHit[];
+  extraOwed: number;
+  extraTeam: "A" | "B" | null;
+  extraPlayerName: string;
+  selectedPlayer: MatchPlayer | null;
+  showHitOverlay: boolean;
+  specialPlayer: MatchPlayer | null;
+  startingTeam: "A" | "B" | null;
+  phase: MatchPhase;
+  finalWinner: "A" | "B" | null;
+  redemptionRound: RedemptionThrow[];
+  pendingRedemptionOutcome: { allHit: boolean } | null;
+  turnEpochStart: number;
+  undoFloor: number;
+  overtimeCount: number;
+};
+
 export default function MatchPage() {
   const t = useTranslations("Match.LivePage");
 
@@ -366,6 +400,13 @@ export default function MatchPage() {
    * läuft" an und kämen nie mehr raus.
    */
 
+  /*
+   * true, sobald der zwischengespeicherte Spielstand nicht mehr gebraucht
+   * wird (Match gespeichert oder abgebrochen) - siehe matchSession.ts.
+   */
+
+  const sessionClosedRef = useRef(false);
+
   const [showAbortConfirm, setShowAbortConfirm] = useState(false);
   const [aborting, setAborting] = useState(false);
 
@@ -375,6 +416,9 @@ export default function MatchPage() {
     }
 
     setAborting(true);
+
+    sessionClosedRef.current = true;
+    clearMatchSession(lobbyId);
 
     try {
       await finishMatchLobby(lobbyId);
@@ -927,6 +971,9 @@ export default function MatchPage() {
 
     saveMatch(matchState)
       .then(() => {
+        sessionClosedRef.current = true;
+        clearMatchSession(lobbyId);
+
         finishMatchLobby(lobbyId).catch((err) => {
           console.error("Lobby konnte nicht als beendet markiert werden:", err);
         });
@@ -962,6 +1009,143 @@ export default function MatchPage() {
    */
 
   useScreenWakeLock(!state.isFinished);
+
+  /*
+   * SPIELSTAND ZWISCHENSPEICHERN UND WIEDERHERSTELLEN
+   *
+   * Aktualisiert das Spiel-Gerät die Seite, geht der Spielstand sonst
+   * verloren und die Seite zeigt "Match läuft" (siehe matchSession.ts).
+   * Gespeichert wird nach jeder Änderung; beim Öffnen wird er - falls die
+   * Lobby noch läuft - wiederhergestellt.
+   */
+
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    pruneOldMatchSessions();
+
+    const snapshot = loadMatchSession<PersistedMatch>(lobbyId);
+
+    if (!snapshot || !snapshot.data.setupDone) {
+      setSessionChecked(true);
+      return;
+    }
+
+    const restore = () => {
+      const d = snapshot.data;
+
+      setPlayers(d.players);
+      setTeamACups(d.teamACups);
+      setTeamBCups(d.teamBCups);
+      setEvents(d.events);
+      setRoundHits(d.roundHits);
+      setExtraOwed(d.extraOwed);
+      setExtraTeam(d.extraTeam);
+      setExtraPlayerName(d.extraPlayerName);
+      setSelectedPlayer(d.selectedPlayer);
+      setShowHitOverlay(d.showHitOverlay);
+      setSpecialPlayer(d.specialPlayer);
+      setStartingTeam(d.startingTeam);
+      setPhase(d.phase);
+      setFinalWinner(d.finalWinner);
+      setRedemptionRound(d.redemptionRound);
+      setPendingRedemptionOutcome(d.pendingRedemptionOutcome);
+      setTurnEpochStart(d.turnEpochStart);
+      setUndoFloor(d.undoFloor);
+      setOvertimeCount(d.overtimeCount);
+      setSetupDone(true);
+      setSessionChecked(true);
+    };
+
+    /*
+     * Nur wiederherstellen, wenn die Lobby noch läuft. Wurde das Match
+     * inzwischen beendet/abgebrochen, ist der Zwischenstand veraltet.
+     * Ist die Abfrage nicht möglich (offline), wird trotzdem
+     * wiederhergestellt - sonst wäre der Spielstand verloren.
+     */
+
+    getMatchLobby(lobbyId)
+      .then((lobby) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (lobby && lobby.status !== "live") {
+          sessionClosedRef.current = true;
+          clearMatchSession(lobbyId);
+          setSessionChecked(true);
+          return;
+        }
+
+        restore();
+      })
+      .catch(() => {
+        if (!cancelled) {
+          restore();
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lobbyId]);
+
+  useEffect(() => {
+    if (!sessionChecked || !setupDone || sessionClosedRef.current) {
+      return;
+    }
+
+    const persisted: PersistedMatch = {
+      setupDone,
+      players,
+      teamACups,
+      teamBCups,
+      events,
+      roundHits,
+      extraOwed,
+      extraTeam,
+      extraPlayerName,
+      selectedPlayer,
+      showHitOverlay,
+      specialPlayer,
+      startingTeam,
+      phase,
+      finalWinner,
+      redemptionRound,
+      pendingRedemptionOutcome,
+      turnEpochStart,
+      undoFloor,
+      overtimeCount,
+    };
+
+    saveMatchSession(lobbyId, persisted, savedFinishedMatchRef.current);
+  }, [
+    sessionChecked,
+    setupDone,
+    lobbyId,
+    players,
+    teamACups,
+    teamBCups,
+    events,
+    roundHits,
+    extraOwed,
+    extraTeam,
+    extraPlayerName,
+    selectedPlayer,
+    showHitOverlay,
+    specialPlayer,
+    startingTeam,
+    phase,
+    finalWinner,
+    redemptionRound,
+    pendingRedemptionOutcome,
+    turnEpochStart,
+    undoFloor,
+    overtimeCount,
+  ]);
 
   /*
    * RUNDE AUFLÖSEN
@@ -1590,6 +1774,14 @@ export default function MatchPage() {
   /*
    * SPIELER-LOBBY
    */
+
+  if (!sessionChecked) {
+    return (
+      <main className="min-h-screen bg-[#07090d] px-5 py-6 text-white">
+        <div className="mx-auto max-w-3xl text-sm font-bold text-white/40">Lade Match …</div>
+      </main>
+    );
+  }
 
   if (!setupDone) {
     return (
