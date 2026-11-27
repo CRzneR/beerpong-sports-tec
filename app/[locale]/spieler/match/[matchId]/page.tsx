@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 
 import { useRouter } from "@/i18n/navigation";
 
+import { useScreenWakeLock } from "../useScreenWakeLock";
+
 import BeerPongTable, {
   Cup,
   getFormationTier,
@@ -951,6 +953,15 @@ export default function MatchPage() {
 
     handleSaveMatch(state);
   }, [state]);
+
+  /*
+   * DISPLAY AN LASSEN
+   *
+   * Solange das Match (inkl. Spieler-Setup) läuft, darf sich das Display
+   * nicht ausschalten. Nach Spielende wird die Sperre wieder freigegeben.
+   */
+
+  useScreenWakeLock(!state.isFinished);
 
   /*
    * RUNDE AUFLÖSEN
